@@ -29,7 +29,7 @@ export function LanguageMenu() {
     <Dropdown
       label={t("languageMenu")}
       panelClassName="w-44"
-      buttonClassName={`inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm text-ink hover:bg-ink/5 aria-expanded:bg-ink/5 ${pending ? "opacity-60" : ""}`}
+      buttonClassName={`inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm text-ink hover:bg-ink/5 aria-expanded:bg-ink/5 ${pending ? "opacity-60" : ""}`}
       buttonContent={
         <>
           <Languages aria-hidden className="size-[18px] text-ink-muted" strokeWidth={1.75} />

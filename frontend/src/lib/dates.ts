@@ -1,17 +1,46 @@
-"use client";
+/**
+ * Dates in the reader's language, built from CLDR month and weekday names stored in the message
+ * files (messages/*.json, "dates"). Why not Intl in the browser: Chrome ships trimmed locale data,
+ * so Punjabi months came out as "M11", and the server (Node, full data) rendered differently from
+ * the browser, which broke hydration. Dates arrive as ISO calendar days and never shift by zone.
+ */
+import { useTranslations } from "next-intl";
 
-import { useFormatter } from "next-intl";
+type Parts = { year: number; month: number; day: number; weekday: number };
 
-/** Dates arrive as ISO calendar days; format them in the reader's language, never shifting the day. */
+function parts(iso: string): Parts {
+  const date = new Date(`${iso}T00:00:00Z`);
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth(), day: date.getUTCDate(), weekday: date.getUTCDay() };
+}
+
 export function useDates() {
-  const format = useFormatter();
-  const asDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
+  const t = useTranslations("dates");
+  const monthsLong = t.raw("monthsLong") as string[];
+  const monthsShort = t.raw("monthsShort") as string[];
+  const weekdaysLong = t.raw("weekdaysLong") as string[];
+  const weekdaysShort = t.raw("weekdaysShort") as string[];
   return {
-    weekday: (iso: string) => format.dateTime(asDate(iso), { weekday: "long", timeZone: "UTC" }),
-    dayMonth: (iso: string) => format.dateTime(asDate(iso), { day: "numeric", month: "long", timeZone: "UTC" }),
-    short: (iso: string) => format.dateTime(asDate(iso), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }),
-    full: (iso: string) => format.dateTime(asDate(iso), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }),
-    range: (startIso: string, endIso: string) => format.dateTimeRange(asDate(startIso), asDate(endIso), { day: "numeric", month: "long", timeZone: "UTC" }),
+    weekday: (iso: string) => weekdaysLong[parts(iso).weekday]!,
+    dayMonth: (iso: string) => {
+      const { day, month } = parts(iso);
+      return t("dayMonth", { day, month: monthsLong[month]! });
+    },
+    short: (iso: string) => {
+      const { day, month, weekday } = parts(iso);
+      return t("short", { weekday: weekdaysShort[weekday]!, day, month: monthsShort[month]! });
+    },
+    full: (iso: string) => {
+      const { day, month, weekday } = parts(iso);
+      return t("full", { weekday: weekdaysLong[weekday]!, day, month: monthsLong[month]! });
+    },
+    range: (startIso: string, endIso: string) => {
+      const start = parts(startIso);
+      const end = parts(endIso);
+      if (start.month === end.month && start.year === end.year) {
+        return t("rangeSameMonth", { startDay: start.day, endDay: end.day, month: monthsLong[start.month]! });
+      }
+      return t("rangeCrossMonth", { startDay: start.day, startMonth: monthsShort[start.month]!, endDay: end.day, endMonth: monthsShort[end.month]! });
+    },
   };
 }
 

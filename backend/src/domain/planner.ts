@@ -10,11 +10,10 @@
  * approval is a conditional write, so two writers cannot both win.
  */
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { dateToDay, dayToDate, learnRate, type FieldPromise, type FieldRequestInput, type Pin, type SolveRequest, type SolveResponse } from "../shared";
 import type { Config } from "../config";
 import type { EngineClient } from "../engine/client";
+import { loadVillages } from "../demo/seed";
 import {
   StoreConflictError,
   type ChcRecord,
@@ -39,6 +38,7 @@ const PROMISE_REASON_BY_CAUSE: Record<ReplanCause, PromiseReason> = {
   rain: "rain",
   manual_move: "manual_move",
   new_request: "replan",
+  farmer_update: "replan",
 };
 
 export function currentPromise(history: PromiseRecord[]): PromiseRecord | null {
@@ -92,13 +92,9 @@ export class Planner {
     return dayToDate(this.config.SEASON_START_DATE, day);
   }
 
-  /** Village points are static reference data (OpenStreetMap, committed in data/derived), not a table. */
+  /** Village points are static reference data (OpenStreetMap, data/villages.json), not a table. */
   villages(): VillageRecord[] {
-    if (!this.villageCache) {
-      const file = path.join(this.config.DATA_DIR, "derived/villages_sangrur.json");
-      const parsed = JSON.parse(readFileSync(file, "utf8")) as { villages: VillageRecord[] };
-      this.villageCache = parsed.villages.map(({ id, name, namePa, lat, lon }) => ({ id, name, namePa: namePa ?? null, lat, lon }));
-    }
+    this.villageCache ??= loadVillages(this.config);
     return this.villageCache;
   }
 
@@ -216,7 +212,8 @@ export class Planner {
           promise: promiseOut.promise,
           state: "held",
           at: now,
-          reason: "first_promise",
+          // A field that held a promise before (released by "I cannot wait longer") gets a re-plan, not a first promise.
+          reason: history.length > 0 ? PROMISE_REASON_BY_CAUSE[cause] : "first_promise",
         });
         holdsPromise = true;
       }
@@ -327,6 +324,43 @@ export class Planner {
         await this.store.putPromise({ chcId, fieldId, version: held.version + 1, promise: firm, state: "held", at: now, reason: "narrowed" });
       }
       return approved;
+    });
+  }
+
+  /**
+   * "I cannot wait longer": the farmer's last waiting day moves earlier and the plan is redone.
+   * Every other farmer's promise stays a hard constraint, but this farmer's own promise is released
+   * for the solve: kept as a hard constraint, it pinned the field inside the old dates and the new
+   * last day was silently ignored (the old window still "held"). If the solver cannot do at least as
+   * well as the old promise, the old promise is restored, so asking for sooner never makes it later.
+   * Only shortening is allowed from a slot link; a longer wait would quietly lower the field's
+   * priority without anyone deciding that.
+   */
+  async shortenWaitingLimit(chcId: string, fieldId: string, waitingLimitDays: number): Promise<FieldRecord> {
+    return this.withChcLock(chcId, async () => {
+      const field = await this.store.getField(chcId, fieldId);
+      if (!field) throw new NotFoundError("field not found");
+      if (field.state === "done") throw new ConflictError("this field has already been sown");
+      if (waitingLimitDays >= field.waitingLimitDays) throw new ConflictError("the new waiting limit must be shorter than the current one");
+      const heldBefore = currentPromise(groupPromises(await this.store.listPromises(chcId)).get(fieldId) ?? []);
+      await this.store.putField({ ...field, waitingLimitDays });
+      if (heldBefore) await this.store.putPromise({ ...heldBefore, state: "replaced", at: new Date().toISOString() });
+      await this.replanLocked(chcId, "farmer_update", null);
+
+      if (heldBefore) {
+        const heldAfter = currentPromise(groupPromises(await this.store.listPromises(chcId)).get(fieldId) ?? []);
+        // No promise at all counts as worse than any date.
+        const latestDay = (promise: FieldPromise | null) => (promise === null ? Number.POSITIVE_INFINITY : promise.kind === "firm" ? promise.day : promise.endDay);
+        if (!heldAfter || latestDay(heldAfter.promise) > latestDay(heldBefore.promise)) {
+          const now = new Date().toISOString();
+          if (heldAfter) await this.store.putPromise({ ...heldAfter, state: "replaced", at: now });
+          await this.store.putPromise({ ...heldBefore, version: (heldAfter?.version ?? heldBefore.version) + 1, state: "held", at: now });
+          await this.replanLocked(chcId, "farmer_update", null);
+        }
+      }
+      const saved = await this.store.getField(chcId, fieldId);
+      if (!saved) throw new NotFoundError("field vanished during planning");
+      return saved;
     });
   }
 

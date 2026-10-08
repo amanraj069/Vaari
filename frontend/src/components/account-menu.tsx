@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import type { Me } from "@/shared";
 import { Dropdown, MENU_ITEM_CLASS } from "./dropdown";
 
-const ROLE_HOME: Record<string, string> = { farmer: "/farmer", facilitator: "/farmer", operator: "/operator", officer: "/proof" };
+const ROLE_HOME: Record<string, string> = { farmer: "/farmer", facilitator: "/book", operator: "/operator", officer: "/proof" };
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -33,7 +33,7 @@ export function AccountMenu({ me }: { me: Me }) {
   return (
     <Dropdown
       label={t("accountMenu")}
-      buttonClassName="grid size-10 place-items-center rounded-full bg-wheat-soft text-sm font-semibold text-ink ring-offset-2 ring-offset-paper hover:ring-2 hover:ring-line-strong aria-expanded:ring-2 aria-expanded:ring-wheat"
+      buttonClassName="grid size-11 place-items-center rounded-full bg-wheat-soft text-sm font-semibold text-ink ring-offset-2 ring-offset-paper hover:ring-2 hover:ring-line-strong aria-expanded:ring-2 aria-expanded:ring-wheat"
       buttonContent={<span aria-hidden>{initials(me.name)}</span>}
     >
       {(close) => (

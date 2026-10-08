@@ -8,6 +8,7 @@ import { z } from "zod";
 import { queueItemSchema, type Risk } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
 import { SimulatedBadge } from "@/components/simulated-badge";
+import { PageHeader, PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
 import { Button, Pill, Skeleton, StateMessage } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -28,12 +29,8 @@ export default function OperatorQueuePage() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-4xl">{t("title")}</h1>
-          {queue.data ? <SimulatedBadge demoDate={dates.short(queue.data.today)} /> : null}
-        </div>
-        <p className="mt-2 max-w-2xl text-ink-muted">{t("subtitle")}</p>
+      <PageMain>
+        <PageHeader badge={queue.data ? <SimulatedBadge demoDate={dates.short(queue.data.today)} /> : null} title={t("title")} description={t("subtitle")} />
         <div role="group" className="mt-5 flex flex-wrap gap-2">
           {FILTERS.map((option) => (
             <button
@@ -80,7 +77,7 @@ export default function OperatorQueuePage() {
             ))}
           </ul>
         )}
-      </main>
+      </PageMain>
     </>
   );
 }

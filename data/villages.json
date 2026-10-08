@@ -1,0 +1,7749 @@
+{
+ "source": "OpenStreetMap via Overpass API: nodes with place=village or place=hamlet and a name",
+ "license": "ODbL 1.0, (c) OpenStreetMap contributors",
+ "osmSnapshot": "2026-10-08T07:22:51Z",
+ "box": {
+  "west": 75.2,
+  "south": 29.8,
+  "east": 76.2,
+  "north": 30.6
+ },
+ "villages": [
+  {
+   "id": "v6046182804",
+   "name": "Abhaipur",
+   "namePa": null,
+   "lat": 30.42914,
+   "lon": 76.05771,
+   "place": "village"
+  },
+  {
+   "id": "v5996264114",
+   "name": "Achal",
+   "namePa": null,
+   "lat": 30.37536,
+   "lon": 76.05618,
+   "place": "village"
+  },
+  {
+   "id": "v6690388445",
+   "name": "Achanak",
+   "namePa": null,
+   "lat": 29.84886,
+   "lon": 75.60132,
+   "place": "village"
+  },
+  {
+   "id": "v6045105502",
+   "name": "Achral Kalan",
+   "namePa": null,
+   "lat": 30.22883,
+   "lon": 76.18227,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6045105503",
+   "name": "Achral Khurd",
+   "namePa": null,
+   "lat": 30.23155,
+   "lon": 76.17139,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6738147060",
+   "name": "Adampura",
+   "namePa": "ਆਦਮਪੁਰਾ",
+   "lat": 30.50892,
+   "lon": 75.25916,
+   "place": "village"
+  },
+  {
+   "id": "v6051851807",
+   "name": "Adamwal",
+   "namePa": null,
+   "lat": 30.48496,
+   "lon": 75.87536,
+   "place": "village"
+  },
+  {
+   "id": "v6045933062",
+   "name": "Agaul",
+   "namePa": null,
+   "lat": 30.45456,
+   "lon": 76.19306,
+   "place": "village"
+  },
+  {
+   "id": "v6045933055",
+   "name": "Ageta",
+   "namePa": null,
+   "lat": 30.33325,
+   "lon": 76.18727,
+   "place": "village"
+  },
+  {
+   "id": "v6687917946",
+   "name": "Ahmedpur",
+   "namePa": null,
+   "lat": 29.93318,
+   "lon": 75.51437,
+   "place": "village"
+  },
+  {
+   "id": "v6051851799",
+   "name": "Ahnon",
+   "namePa": null,
+   "lat": 30.49509,
+   "lon": 75.84094,
+   "place": "village"
+  },
+  {
+   "id": "v6044799503",
+   "name": "Akbarpur",
+   "namePa": null,
+   "lat": 30.16517,
+   "lon": 76.00119,
+   "place": "village"
+  },
+  {
+   "id": "v6687949553",
+   "name": "Akbarpur Khudal",
+   "namePa": null,
+   "lat": 29.86961,
+   "lon": 75.7366,
+   "place": "village"
+  },
+  {
+   "id": "v6028992918",
+   "name": "Akkanwali",
+   "namePa": null,
+   "lat": 29.86819,
+   "lon": 75.42106,
+   "place": "village"
+  },
+  {
+   "id": "v6694951894",
+   "name": "Aklia",
+   "namePa": null,
+   "lat": 30.1826,
+   "lon": 75.40081,
+   "place": "village"
+  },
+  {
+   "id": "v6051469970",
+   "name": "Akoi",
+   "namePa": null,
+   "lat": 30.2849,
+   "lon": 75.84309,
+   "place": "village"
+  },
+  {
+   "id": "v6016332439",
+   "name": "Alal",
+   "namePa": null,
+   "lat": 30.37243,
+   "lon": 75.72726,
+   "place": "village"
+  },
+  {
+   "id": "v6044799499",
+   "name": "Alampur",
+   "namePa": null,
+   "lat": 30.14453,
+   "lon": 76.07406,
+   "place": "village"
+  },
+  {
+   "id": "v6681353383",
+   "name": "Alampur",
+   "namePa": null,
+   "lat": 29.88358,
+   "lon": 75.76927,
+   "place": "village"
+  },
+  {
+   "id": "v6044107220",
+   "name": "Alampur Bodla",
+   "namePa": null,
+   "lat": 30.01963,
+   "lon": 75.67059,
+   "place": "village"
+  },
+  {
+   "id": "v6690296814",
+   "name": "Alampur Mandran",
+   "namePa": null,
+   "lat": 29.83435,
+   "lon": 75.45329,
+   "place": "village"
+  },
+  {
+   "id": "v6738591952",
+   "name": "Alike",
+   "namePa": null,
+   "lat": 30.34299,
+   "lon": 75.33158,
+   "place": "village"
+  },
+  {
+   "id": "v6051237227",
+   "name": "Alipur",
+   "namePa": null,
+   "lat": 30.36214,
+   "lon": 75.99591,
+   "place": "village"
+  },
+  {
+   "id": "v6703252927",
+   "name": "Alipur Khalsa",
+   "namePa": null,
+   "lat": 30.49461,
+   "lon": 75.75777,
+   "place": "village"
+  },
+  {
+   "id": "v6681334180",
+   "name": "Alisher",
+   "namePa": null,
+   "lat": 29.86642,
+   "lon": 75.77375,
+   "place": "village"
+  },
+  {
+   "id": "v6696790636",
+   "name": "Alisher Kalan",
+   "namePa": null,
+   "lat": 30.12768,
+   "lon": 75.49577,
+   "place": "village"
+  },
+  {
+   "id": "v6696790635",
+   "name": "Alisher Khurd",
+   "namePa": null,
+   "lat": 30.12143,
+   "lon": 75.49321,
+   "place": "village"
+  },
+  {
+   "id": "v6023079190",
+   "name": "Alkhra",
+   "namePa": null,
+   "lat": 30.50046,
+   "lon": 75.29463,
+   "place": "village"
+  },
+  {
+   "id": "v5996264112",
+   "name": "Aluharka",
+   "namePa": null,
+   "lat": 30.28525,
+   "lon": 76.06552,
+   "place": "village"
+  },
+  {
+   "id": "v6051358113",
+   "name": "Amla Singh Wala",
+   "namePa": null,
+   "lat": 30.4284,
+   "lon": 75.5722,
+   "place": "village"
+  },
+  {
+   "id": "v6026790809",
+   "name": "Amritsari Chak",
+   "namePa": null,
+   "lat": 30.12431,
+   "lon": 76.18821,
+   "place": "village"
+  },
+  {
+   "id": "v6027288735",
+   "name": "Andana",
+   "namePa": null,
+   "lat": 29.81131,
+   "lon": 76.03827,
+   "place": "village"
+  },
+  {
+   "id": "v6051603603",
+   "name": "Andheri",
+   "namePa": null,
+   "lat": 30.26993,
+   "lon": 75.813,
+   "place": "village"
+  },
+  {
+   "id": "v6696482762",
+   "name": "Anupgarh",
+   "namePa": null,
+   "lat": 30.15437,
+   "lon": 75.48503,
+   "place": "village"
+  },
+  {
+   "id": "v6680986833",
+   "name": "Arkbas",
+   "namePa": null,
+   "lat": 29.95916,
+   "lon": 75.81111,
+   "place": "village"
+  },
+  {
+   "id": "v6696733721",
+   "name": "Aspaal",
+   "namePa": null,
+   "lat": 30.00286,
+   "lon": 75.30065,
+   "place": "village"
+  },
+  {
+   "id": "v6700099573",
+   "name": "Aspal Kalan",
+   "namePa": null,
+   "lat": 30.20395,
+   "lon": 75.53857,
+   "place": "village"
+  },
+  {
+   "id": "v6700099574",
+   "name": "Aspal Khurd",
+   "namePa": null,
+   "lat": 30.20716,
+   "lon": 75.54473,
+   "place": "village"
+  },
+  {
+   "id": "v6026961519",
+   "name": "Atalan",
+   "namePa": null,
+   "lat": 29.99189,
+   "lon": 76.10626,
+   "place": "village"
+  },
+  {
+   "id": "v6016332646",
+   "name": "Atar Singhwala",
+   "namePa": null,
+   "lat": 30.24454,
+   "lon": 75.59763,
+   "place": "village"
+  },
+  {
+   "id": "v6696803768",
+   "name": "Atla Kalan",
+   "namePa": null,
+   "lat": 30.10162,
+   "lon": 75.48478,
+   "place": "village"
+  },
+  {
+   "id": "v6696818988",
+   "name": "Atla Khurd",
+   "namePa": null,
+   "lat": 30.0868,
+   "lon": 75.50102,
+   "place": "village"
+  },
+  {
+   "id": "v6044227803",
+   "name": "Autanwali",
+   "namePa": null,
+   "lat": 29.96118,
+   "lon": 75.28004,
+   "place": "village"
+  },
+  {
+   "id": "v6051358174",
+   "name": "Babbanpur",
+   "namePa": null,
+   "lat": 30.41855,
+   "lon": 75.87158,
+   "place": "village"
+  },
+  {
+   "id": "v6687650452",
+   "name": "Bachhoana",
+   "namePa": null,
+   "lat": 29.95672,
+   "lon": 75.60819,
+   "place": "village"
+  },
+  {
+   "id": "v6026961506",
+   "name": "Badalgarh",
+   "namePa": null,
+   "lat": 29.8817,
+   "lon": 75.99904,
+   "place": "village"
+  },
+  {
+   "id": "v5284891146",
+   "name": "Badbar",
+   "namePa": null,
+   "lat": 30.25359,
+   "lon": 75.66448,
+   "place": "village"
+  },
+  {
+   "id": "v6026961528",
+   "name": "Badhshahpur",
+   "namePa": null,
+   "lat": 30.00293,
+   "lon": 76.1822,
+   "place": "village"
+  },
+  {
+   "id": "v6715516145",
+   "name": "Badiala",
+   "namePa": null,
+   "lat": 30.23478,
+   "lon": 75.32142,
+   "place": "village"
+  },
+  {
+   "id": "v6700061792",
+   "name": "Badra",
+   "namePa": null,
+   "lat": 30.22445,
+   "lon": 75.50171,
+   "place": "village"
+  },
+  {
+   "id": "v6051603605",
+   "name": "Badru Khan",
+   "namePa": null,
+   "lat": 30.25202,
+   "lon": 75.79064,
+   "place": "village"
+  },
+  {
+   "id": "v6051358150",
+   "name": "Badshahpur",
+   "namePa": null,
+   "lat": 30.39028,
+   "lon": 75.77099,
+   "place": "village"
+  },
+  {
+   "id": "v6041344060",
+   "name": "Baghrol",
+   "namePa": null,
+   "lat": 30.10756,
+   "lon": 76.09337,
+   "place": "village"
+  },
+  {
+   "id": "v6044108400",
+   "name": "Baglanwali",
+   "namePa": null,
+   "lat": 29.95137,
+   "lon": 75.4614,
+   "place": "village"
+  },
+  {
+   "id": "v5996264138",
+   "name": "Bagrian",
+   "namePa": null,
+   "lat": 30.42895,
+   "lon": 76.03354,
+   "place": "village"
+  },
+  {
+   "id": "v6051603602",
+   "name": "Baguana",
+   "namePa": null,
+   "lat": 30.245,
+   "lon": 75.82056,
+   "place": "village"
+  },
+  {
+   "id": "v6051469963",
+   "name": "Bahadurpur",
+   "namePa": null,
+   "lat": 30.25736,
+   "lon": 75.74494,
+   "place": "village"
+  },
+  {
+   "id": "v6687950191",
+   "name": "Bahadurpur",
+   "namePa": null,
+   "lat": 29.88052,
+   "lon": 75.70144,
+   "place": "village"
+  },
+  {
+   "id": "v1491013677",
+   "name": "Bahmania",
+   "namePa": null,
+   "lat": 30.57793,
+   "lon": 75.60991,
+   "place": "village"
+  },
+  {
+   "id": "v6041344069",
+   "name": "Bahmna",
+   "namePa": null,
+   "lat": 30.17989,
+   "lon": 76.12852,
+   "place": "village"
+  },
+  {
+   "id": "v6028992912",
+   "name": "Bajewala",
+   "namePa": null,
+   "lat": 29.88447,
+   "lon": 75.3004,
+   "place": "village"
+  },
+  {
+   "id": "v2643428103",
+   "name": "Bakhatgarh",
+   "namePa": null,
+   "lat": 30.45554,
+   "lon": 75.43778,
+   "place": "village"
+  },
+  {
+   "id": "v6674217343",
+   "name": "Bakhora Kalan",
+   "namePa": null,
+   "lat": 29.87072,
+   "lon": 75.81437,
+   "place": "village"
+  },
+  {
+   "id": "v6674217354",
+   "name": "Bakhora Kalan",
+   "namePa": null,
+   "lat": 29.88295,
+   "lon": 75.81415,
+   "place": "village"
+  },
+  {
+   "id": "v6044799523",
+   "name": "Bakhshiwala",
+   "namePa": null,
+   "lat": 30.09219,
+   "lon": 75.78103,
+   "place": "village"
+  },
+  {
+   "id": "v6046026949",
+   "name": "Bakhtara",
+   "namePa": null,
+   "lat": 30.31491,
+   "lon": 76.06895,
+   "place": "village"
+  },
+  {
+   "id": "v5996264087",
+   "name": "Bakhtari",
+   "namePa": null,
+   "lat": 30.30226,
+   "lon": 76.07436,
+   "place": "village"
+  },
+  {
+   "id": "v6046026948",
+   "name": "Bakhu Pir",
+   "namePa": null,
+   "lat": 30.30498,
+   "lon": 76.06474,
+   "place": "village"
+  },
+  {
+   "id": "v6687180835",
+   "name": "Bakshiwala",
+   "namePa": null,
+   "lat": 29.84725,
+   "lon": 75.75908,
+   "place": "village"
+  },
+  {
+   "id": "v6045105222",
+   "name": "Balad Kalan",
+   "namePa": null,
+   "lat": 30.25677,
+   "lon": 76.08547,
+   "place": "village"
+  },
+  {
+   "id": "v6045105221",
+   "name": "Balad Khurd",
+   "namePa": null,
+   "lat": 30.24824,
+   "lon": 76.07552,
+   "place": "village"
+  },
+  {
+   "id": "v5996268571",
+   "name": "Balal",
+   "namePa": null,
+   "lat": 30.23293,
+   "lon": 76.04809,
+   "place": "village"
+  },
+  {
+   "id": "v6041343721",
+   "name": "Balamgarh",
+   "namePa": null,
+   "lat": 30.12349,
+   "lon": 76.07706,
+   "place": "village"
+  },
+  {
+   "id": "v6051851815",
+   "name": "Balamgarh",
+   "namePa": null,
+   "lat": 30.43044,
+   "lon": 75.84895,
+   "place": "village"
+  },
+  {
+   "id": "v6016332446",
+   "name": "Balian",
+   "namePa": null,
+   "lat": 30.30815,
+   "lon": 75.67885,
+   "place": "village"
+  },
+  {
+   "id": "v6051469980",
+   "name": "Balian",
+   "namePa": null,
+   "lat": 30.27982,
+   "lon": 75.89956,
+   "place": "village"
+  },
+  {
+   "id": "v6715521583",
+   "name": "Balloh",
+   "namePa": null,
+   "lat": 30.21893,
+   "lon": 75.3555,
+   "place": "village"
+  },
+  {
+   "id": "v6698611492",
+   "name": "Balloke",
+   "namePa": null,
+   "lat": 30.38577,
+   "lon": 75.32629,
+   "place": "village"
+  },
+  {
+   "id": "v6674108431",
+   "name": "Balran",
+   "namePa": null,
+   "lat": 29.84131,
+   "lon": 75.84854,
+   "place": "village"
+  },
+  {
+   "id": "v6051358176",
+   "name": "Bamal",
+   "namePa": null,
+   "lat": 30.41978,
+   "lon": 75.82493,
+   "place": "village"
+  },
+  {
+   "id": "v6044227801",
+   "name": "Bananwala",
+   "namePa": null,
+   "lat": 29.93902,
+   "lon": 75.23096,
+   "place": "village"
+  },
+  {
+   "id": "v6027289485",
+   "name": "Banarsi",
+   "namePa": null,
+   "lat": 29.83082,
+   "lon": 76.08092,
+   "place": "village"
+  },
+  {
+   "id": "v6051358168",
+   "name": "Banbhauri",
+   "namePa": null,
+   "lat": 30.45282,
+   "lon": 75.91737,
+   "place": "village"
+  },
+  {
+   "id": "v6019067831",
+   "name": "Bandhaura",
+   "namePa": null,
+   "lat": 30.46917,
+   "lon": 75.95012,
+   "place": "village"
+  },
+  {
+   "id": "v6681238550",
+   "name": "Bangan",
+   "namePa": null,
+   "lat": 29.86239,
+   "lon": 75.99575,
+   "place": "village"
+  },
+  {
+   "id": "v6051237201",
+   "name": "Banganwali",
+   "namePa": null,
+   "lat": 30.40989,
+   "lon": 75.91604,
+   "place": "village"
+  },
+  {
+   "id": "v6051358143",
+   "name": "Banganwali",
+   "namePa": null,
+   "lat": 30.29109,
+   "lon": 75.8224,
+   "place": "village"
+  },
+  {
+   "id": "v6026961521",
+   "name": "Banwala",
+   "namePa": null,
+   "lat": 29.95947,
+   "lon": 76.09457,
+   "place": "village"
+  },
+  {
+   "id": "v6027289484",
+   "name": "Baopur",
+   "namePa": null,
+   "lat": 29.81883,
+   "lon": 76.06195,
+   "place": "village"
+  },
+  {
+   "id": "v6044108402",
+   "name": "Bapiana",
+   "namePa": null,
+   "lat": 29.99724,
+   "lon": 75.48732,
+   "place": "village"
+  },
+  {
+   "id": "v6046182826",
+   "name": "Bara Kot",
+   "namePa": null,
+   "lat": 30.34484,
+   "lon": 76.04067,
+   "place": "village"
+  },
+  {
+   "id": "v6051469982",
+   "name": "Baragraon",
+   "namePa": null,
+   "lat": 30.29987,
+   "lon": 75.86377,
+   "place": "village"
+  },
+  {
+   "id": "v6045933071",
+   "name": "Bararwal",
+   "namePa": null,
+   "lat": 30.42329,
+   "lon": 76.18439,
+   "place": "village"
+  },
+  {
+   "id": "v6051237199",
+   "name": "Bararwal",
+   "namePa": null,
+   "lat": 30.3979,
+   "lon": 75.88823,
+   "place": "village"
+  },
+  {
+   "id": "v5999925468",
+   "name": "Bareh",
+   "namePa": null,
+   "lat": 29.89976,
+   "lon": 75.49376,
+   "place": "village"
+  },
+  {
+   "id": "v6044108401",
+   "name": "Barnala",
+   "namePa": null,
+   "lat": 29.95114,
+   "lon": 75.4347,
+   "place": "village"
+  },
+  {
+   "id": "v6041343722",
+   "name": "Basantpur",
+   "namePa": null,
+   "lat": 30.12464,
+   "lon": 76.05835,
+   "place": "village"
+  },
+  {
+   "id": "v6044799513",
+   "name": "Basihark",
+   "namePa": null,
+   "lat": 30.14773,
+   "lon": 76.04629,
+   "place": "village"
+  },
+  {
+   "id": "v6051851801",
+   "name": "Bathan",
+   "namePa": null,
+   "lat": 30.51229,
+   "lon": 76.0114,
+   "place": "village"
+  },
+  {
+   "id": "v6044799505",
+   "name": "Batriana",
+   "namePa": null,
+   "lat": 30.20312,
+   "lon": 75.9926,
+   "place": "village"
+  },
+  {
+   "id": "v6051358146",
+   "name": "Batuha",
+   "namePa": null,
+   "lat": 30.31377,
+   "lon": 75.72164,
+   "place": "village"
+  },
+  {
+   "id": "v6044927537",
+   "name": "Batwahar Kalan",
+   "namePa": null,
+   "lat": 30.22752,
+   "lon": 75.91952,
+   "place": "village"
+  },
+  {
+   "id": "v6046026952",
+   "name": "Bawra Bara",
+   "namePa": null,
+   "lat": 30.34269,
+   "lon": 76.11641,
+   "place": "village"
+  },
+  {
+   "id": "v6046026955",
+   "name": "Bawra Chhota",
+   "namePa": null,
+   "lat": 30.34881,
+   "lon": 76.09268,
+   "place": "village"
+  },
+  {
+   "id": "v6051358111",
+   "name": "Bazidka Kalan",
+   "namePa": null,
+   "lat": 30.45844,
+   "lon": 75.57126,
+   "place": "village"
+  },
+  {
+   "id": "v6051358112",
+   "name": "Bazidka Khurd",
+   "namePa": null,
+   "lat": 30.46673,
+   "lon": 75.57572,
+   "place": "village"
+  },
+  {
+   "id": "v6026892279",
+   "name": "Belu Majra",
+   "namePa": null,
+   "lat": 30.06935,
+   "lon": 76.17328,
+   "place": "village"
+  },
+  {
+   "id": "v1463003674",
+   "name": "Benra",
+   "namePa": null,
+   "lat": 30.33413,
+   "lon": 75.84968,
+   "place": "village"
+  },
+  {
+   "id": "v6700261746",
+   "name": "Bhadalwad",
+   "namePa": null,
+   "lat": 30.42409,
+   "lon": 75.56812,
+   "place": "village"
+  },
+  {
+   "id": "v6044107222",
+   "name": "Bhadra",
+   "namePa": null,
+   "lat": 30.00408,
+   "lon": 75.64516,
+   "place": "village"
+  },
+  {
+   "id": "v6698724857",
+   "name": "Bhagatpura",
+   "namePa": null,
+   "lat": 30.39781,
+   "lon": 75.40872,
+   "place": "village"
+  },
+  {
+   "id": "v7190181167",
+   "name": "Bhagike",
+   "namePa": null,
+   "lat": 30.55259,
+   "lon": 75.33819,
+   "place": "village"
+  },
+  {
+   "id": "v6051358129",
+   "name": "Bhagtanwala",
+   "namePa": null,
+   "lat": 30.44542,
+   "lon": 75.67915,
+   "place": "village"
+  },
+  {
+   "id": "v6696590151",
+   "name": "Bhai Desa",
+   "namePa": null,
+   "lat": 30.05572,
+   "lon": 75.31626,
+   "place": "village"
+  },
+  {
+   "id": "v6042805775",
+   "name": "Bhaini",
+   "namePa": null,
+   "lat": 30.01084,
+   "lon": 75.77476,
+   "place": "village"
+  },
+  {
+   "id": "v4809622923",
+   "name": "Bhaini Bagha",
+   "namePa": null,
+   "lat": 30.05847,
+   "lon": 75.36154,
+   "place": "village"
+  },
+  {
+   "id": "v6715695299",
+   "name": "Bhaini Chuhar",
+   "namePa": null,
+   "lat": 30.12384,
+   "lon": 75.30243,
+   "place": "village"
+  },
+  {
+   "id": "v6700092163",
+   "name": "Bhaini Fatta",
+   "namePa": null,
+   "lat": 30.19602,
+   "lon": 75.47674,
+   "place": "village"
+  },
+  {
+   "id": "v6051469959",
+   "name": "Bhaini Jassa",
+   "namePa": null,
+   "lat": 30.26733,
+   "lon": 75.52719,
+   "place": "village"
+  },
+  {
+   "id": "v6051358166",
+   "name": "Bhaini Kalan",
+   "namePa": null,
+   "lat": 30.46721,
+   "lon": 75.90587,
+   "place": "village"
+  },
+  {
+   "id": "v6051604405",
+   "name": "Bhaini Mahraj",
+   "namePa": null,
+   "lat": 30.2819,
+   "lon": 75.68275,
+   "place": "village"
+  },
+  {
+   "id": "v6693888076",
+   "name": "Bhalaike",
+   "namePa": null,
+   "lat": 29.8568,
+   "lon": 75.30371,
+   "place": "village"
+  },
+  {
+   "id": "v6046182829",
+   "name": "Bhalwan",
+   "namePa": null,
+   "lat": 30.32292,
+   "lon": 75.94419,
+   "place": "village"
+  },
+  {
+   "id": "v6028992920",
+   "name": "Bhama Kalan",
+   "namePa": null,
+   "lat": 29.87745,
+   "lon": 75.35265,
+   "place": "village"
+  },
+  {
+   "id": "v6051469962",
+   "name": "Bhamandaddi",
+   "namePa": null,
+   "lat": 30.24279,
+   "lon": 75.75524,
+   "place": "village"
+  },
+  {
+   "id": "v6694008794",
+   "name": "Bhamme Khurd",
+   "namePa": null,
+   "lat": 29.85761,
+   "lon": 75.36122,
+   "place": "village"
+  },
+  {
+   "id": "v6045762381",
+   "name": "Bharaj",
+   "namePa": null,
+   "lat": 30.28742,
+   "lon": 76.18855,
+   "place": "village"
+  },
+  {
+   "id": "v6045762487",
+   "name": "Bharauh",
+   "namePa": null,
+   "lat": 30.31195,
+   "lon": 76.15075,
+   "place": "village"
+  },
+  {
+   "id": "v6051358125",
+   "name": "Bhari",
+   "namePa": null,
+   "lat": 30.46939,
+   "lon": 75.70765,
+   "place": "village"
+  },
+  {
+   "id": "v6051237226",
+   "name": "Bhari Mansaian",
+   "namePa": null,
+   "lat": 30.39207,
+   "lon": 75.99342,
+   "place": "village"
+  },
+  {
+   "id": "v5999925419",
+   "name": "Bharur",
+   "namePa": null,
+   "lat": 30.17926,
+   "lon": 75.82047,
+   "place": "village"
+  },
+  {
+   "id": "v6051358169",
+   "name": "Bhasaur",
+   "namePa": null,
+   "lat": 30.43746,
+   "lon": 75.89416,
+   "place": "village"
+  },
+  {
+   "id": "v6680094919",
+   "name": "Bhathuwan",
+   "namePa": null,
+   "lat": 29.85805,
+   "lon": 75.91488,
+   "place": "village"
+  },
+  {
+   "id": "v6046182801",
+   "name": "Bhatian Kalan",
+   "namePa": null,
+   "lat": 30.39823,
+   "lon": 76.01501,
+   "place": "village"
+  },
+  {
+   "id": "v6046182819",
+   "name": "Bhatian Kalan",
+   "namePa": null,
+   "lat": 30.39864,
+   "lon": 76.02792,
+   "place": "village"
+  },
+  {
+   "id": "v5996268570",
+   "name": "Bhatiwal Kalan",
+   "namePa": null,
+   "lat": 30.21317,
+   "lon": 76.04041,
+   "place": "village"
+  },
+  {
+   "id": "v6044799496",
+   "name": "Bhatiwal Khurd",
+   "namePa": null,
+   "lat": 30.20516,
+   "lon": 76.05577,
+   "place": "village"
+  },
+  {
+   "id": "v6016332709",
+   "name": "Bhatlan",
+   "namePa": null,
+   "lat": 30.29131,
+   "lon": 75.63229,
+   "place": "village"
+  },
+  {
+   "id": "v6041344065",
+   "name": "Bhedpur",
+   "namePa": null,
+   "lat": 30.15429,
+   "lon": 76.14478,
+   "place": "village"
+  },
+  {
+   "id": "v1721622858",
+   "name": "Bhikhi",
+   "namePa": "ਭੀਖੀ",
+   "lat": 30.10672,
+   "lon": 75.69709,
+   "place": "village"
+  },
+  {
+   "id": "v6046182712",
+   "name": "Bhilwal",
+   "namePa": null,
+   "lat": 30.43648,
+   "lon": 76.06698,
+   "place": "village"
+  },
+  {
+   "id": "v6051237224",
+   "name": "Bhindar",
+   "namePa": null,
+   "lat": 30.4071,
+   "lon": 75.99874,
+   "place": "village"
+  },
+  {
+   "id": "v6051469977",
+   "name": "Bhindran",
+   "namePa": null,
+   "lat": 30.26652,
+   "lon": 75.91433,
+   "place": "village"
+  },
+  {
+   "id": "v971645731",
+   "name": "Bhogiwal",
+   "namePa": null,
+   "lat": 30.58862,
+   "lon": 75.88126,
+   "place": "village"
+  },
+  {
+   "id": "v6051469966",
+   "name": "Bhojowali",
+   "namePa": null,
+   "lat": 30.34458,
+   "lon": 75.92379,
+   "place": "village"
+  },
+  {
+   "id": "v6045932997",
+   "name": "Bhora",
+   "namePa": null,
+   "lat": 30.47087,
+   "lon": 76.14148,
+   "place": "village"
+  },
+  {
+   "id": "v2643421748",
+   "name": "Bhotna",
+   "namePa": null,
+   "lat": 30.47369,
+   "lon": 75.4279,
+   "place": "village"
+  },
+  {
+   "id": "v6051237216",
+   "name": "Bhullarheri",
+   "namePa": null,
+   "lat": 30.35488,
+   "lon": 75.94527,
+   "place": "village"
+  },
+  {
+   "id": "v6051851805",
+   "name": "Bhulran",
+   "namePa": null,
+   "lat": 30.47353,
+   "lon": 75.94756,
+   "place": "village"
+  },
+  {
+   "id": "v6680040799",
+   "name": "Bhundar Bhaini",
+   "namePa": null,
+   "lat": 29.83425,
+   "lon": 75.92414,
+   "place": "village"
+  },
+  {
+   "id": "v2063147152",
+   "name": "Bhunder",
+   "namePa": null,
+   "lat": 30.20781,
+   "lon": 75.22268,
+   "place": "village"
+  },
+  {
+   "id": "v6696738547",
+   "name": "Bhupal",
+   "namePa": null,
+   "lat": 30.09225,
+   "lon": 75.45598,
+   "place": "village"
+  },
+  {
+   "id": "v6696775023",
+   "name": "Bhupal Khurd",
+   "namePa": null,
+   "lat": 30.10467,
+   "lon": 75.45984,
+   "place": "village"
+  },
+  {
+   "id": "v6016332549",
+   "name": "Bhure",
+   "namePa": null,
+   "lat": 30.23816,
+   "lon": 75.62018,
+   "place": "village"
+  },
+  {
+   "id": "v4943591135",
+   "name": "Bhurthala Mandher",
+   "namePa": null,
+   "lat": 30.57309,
+   "lon": 76.03801,
+   "place": "village"
+  },
+  {
+   "id": "v6673967136",
+   "name": "Bhutal Kalan",
+   "namePa": null,
+   "lat": 29.90739,
+   "lon": 75.87456,
+   "place": "village"
+  },
+  {
+   "id": "v6676319305",
+   "name": "Bhutal Khurd",
+   "namePa": null,
+   "lat": 29.88486,
+   "lon": 75.89631,
+   "place": "village"
+  },
+  {
+   "id": "v6676474199",
+   "name": "Bhutgarh",
+   "namePa": null,
+   "lat": 29.90594,
+   "lon": 75.95221,
+   "place": "village"
+  },
+  {
+   "id": "v6044799489",
+   "name": "Bigharwal",
+   "namePa": null,
+   "lat": 30.13095,
+   "lon": 75.86197,
+   "place": "village"
+  },
+  {
+   "id": "v2653349955",
+   "name": "Bihla",
+   "namePa": null,
+   "lat": 30.52547,
+   "lon": 75.42525,
+   "place": "village"
+  },
+  {
+   "id": "v6044799510",
+   "name": "Bijalpur",
+   "namePa": null,
+   "lat": 30.14901,
+   "lon": 76.00301,
+   "place": "village"
+  },
+  {
+   "id": "v2647701269",
+   "name": "Bilaspur",
+   "namePa": "ਬਿਲਾਸਪੁਰ",
+   "lat": 30.57539,
+   "lon": 75.36659,
+   "place": "village"
+  },
+  {
+   "id": "v6045762488",
+   "name": "Bimari",
+   "namePa": null,
+   "lat": 30.30591,
+   "lon": 76.1295,
+   "place": "village"
+  },
+  {
+   "id": "v6045762491",
+   "name": "Bimwar",
+   "namePa": null,
+   "lat": 30.30124,
+   "lon": 76.11663,
+   "place": "village"
+  },
+  {
+   "id": "v5996264126",
+   "name": "Binnaheri",
+   "namePa": null,
+   "lat": 30.35344,
+   "lon": 76.06561,
+   "place": "village"
+  },
+  {
+   "id": "v6044755040",
+   "name": "Bir Kalan",
+   "namePa": null,
+   "lat": 30.09368,
+   "lon": 75.65503,
+   "place": "village"
+  },
+  {
+   "id": "v6044107090",
+   "name": "Bir Khurd",
+   "namePa": null,
+   "lat": 30.07177,
+   "lon": 75.61804,
+   "place": "village"
+  },
+  {
+   "id": "v6693850768",
+   "name": "Birewala Jattan",
+   "namePa": "ਬੀਰੇਵਾਲਾ ਜੱਟਾਂ",
+   "lat": 29.87002,
+   "lon": 75.2815,
+   "place": "village"
+  },
+  {
+   "id": "v6687531639",
+   "name": "Biroke Kalan",
+   "namePa": null,
+   "lat": 29.99487,
+   "lon": 75.59168,
+   "place": "village"
+  },
+  {
+   "id": "v6045105567",
+   "name": "Bishanpura",
+   "namePa": null,
+   "lat": 30.19955,
+   "lon": 76.14373,
+   "place": "village"
+  },
+  {
+   "id": "v1491330623",
+   "name": "BishanPura",
+   "namePa": null,
+   "lat": 30.14388,
+   "lon": 75.8392,
+   "place": "village"
+  },
+  {
+   "id": "v6687564419",
+   "name": "Borawal",
+   "namePa": null,
+   "lat": 29.99597,
+   "lon": 75.54267,
+   "place": "village"
+  },
+  {
+   "id": "v6027173096",
+   "name": "Brahman Majra",
+   "namePa": null,
+   "lat": 30.04859,
+   "lon": 76.08994,
+   "place": "village"
+  },
+  {
+   "id": "v6027173097",
+   "name": "Bras",
+   "namePa": null,
+   "lat": 30.04666,
+   "lon": 76.05861,
+   "place": "village"
+  },
+  {
+   "id": "v6016332550",
+   "name": "Buggar",
+   "namePa": null,
+   "lat": 30.21483,
+   "lon": 75.59233,
+   "place": "village"
+  },
+  {
+   "id": "v6051358152",
+   "name": "Bugra",
+   "namePa": null,
+   "lat": 30.35651,
+   "lon": 75.78481,
+   "place": "village"
+  },
+  {
+   "id": "v6712210777",
+   "name": "Bugran",
+   "namePa": null,
+   "lat": 30.31248,
+   "lon": 75.30992,
+   "place": "village"
+  },
+  {
+   "id": "v5996268487",
+   "name": "Bujrak",
+   "namePa": null,
+   "lat": 30.0978,
+   "lon": 76.11557,
+   "place": "village"
+  },
+  {
+   "id": "v6026961371",
+   "name": "Bukraha",
+   "namePa": null,
+   "lat": 29.96865,
+   "lon": 76.15399,
+   "place": "village"
+  },
+  {
+   "id": "v6027173075",
+   "name": "Burar",
+   "namePa": null,
+   "lat": 29.99153,
+   "lon": 76.06565,
+   "place": "village"
+  },
+  {
+   "id": "v6051851814",
+   "name": "Burj",
+   "namePa": null,
+   "lat": 30.47797,
+   "lon": 75.84306,
+   "place": "village"
+  },
+  {
+   "id": "v6051851800",
+   "name": "Burj Bhaghel Singh",
+   "namePa": null,
+   "lat": 30.49435,
+   "lon": 75.99325,
+   "place": "village"
+  },
+  {
+   "id": "v6693831384",
+   "name": "Burj Bhalaike",
+   "namePa": "ਬੁਰਜ ਭਲਾਈਕੇ",
+   "lat": 29.84162,
+   "lon": 75.27534,
+   "place": "village"
+  },
+  {
+   "id": "v6696372019",
+   "name": "Burj Dhillwan",
+   "namePa": null,
+   "lat": 30.12102,
+   "lon": 75.35032,
+   "place": "village"
+  },
+  {
+   "id": "v6698623814",
+   "name": "Burj Fatehgarh",
+   "namePa": null,
+   "lat": 30.399,
+   "lon": 75.37873,
+   "place": "village"
+  },
+  {
+   "id": "v6738443038",
+   "name": "Burj Gill",
+   "namePa": null,
+   "lat": 30.39189,
+   "lon": 75.2325,
+   "place": "village"
+  },
+  {
+   "id": "v7190037364",
+   "name": "Burj Hamira",
+   "namePa": null,
+   "lat": 30.53286,
+   "lon": 75.24863,
+   "place": "village"
+  },
+  {
+   "id": "v6696547695",
+   "name": "Burj Hari",
+   "namePa": null,
+   "lat": 30.08537,
+   "lon": 75.38099,
+   "place": "village"
+  },
+  {
+   "id": "v6696401771",
+   "name": "Burj Jhabran",
+   "namePa": null,
+   "lat": 30.14168,
+   "lon": 75.38605,
+   "place": "village"
+  },
+  {
+   "id": "v2653372374",
+   "name": "Burj Kalara",
+   "namePa": null,
+   "lat": 30.58806,
+   "lon": 75.40849,
+   "place": "village"
+  },
+  {
+   "id": "v6712314210",
+   "name": "Burj Mansa",
+   "namePa": null,
+   "lat": 30.30531,
+   "lon": 75.27644,
+   "place": "village"
+  },
+  {
+   "id": "v6696584793",
+   "name": "Burj Rathi",
+   "namePa": null,
+   "lat": 30.08027,
+   "lon": 75.33984,
+   "place": "village"
+  },
+  {
+   "id": "v6681233460",
+   "name": "Bushera",
+   "namePa": null,
+   "lat": 29.84802,
+   "lon": 75.97016,
+   "place": "village"
+  },
+  {
+   "id": "v6683965818",
+   "name": "Buta Singhwala",
+   "namePa": null,
+   "lat": 30.02998,
+   "lon": 76.15005,
+   "place": "village"
+  },
+  {
+   "id": "v6694017130",
+   "name": "Chachohar",
+   "namePa": null,
+   "lat": 29.83985,
+   "lon": 75.39448,
+   "place": "village"
+  },
+  {
+   "id": "v6044227800",
+   "name": "Chahlanwala",
+   "namePa": null,
+   "lat": 29.95137,
+   "lon": 75.21841,
+   "place": "village"
+  },
+  {
+   "id": "v2643481818",
+   "name": "Chak Bhai Ka",
+   "namePa": null,
+   "lat": 30.5832,
+   "lon": 75.50237,
+   "place": "village"
+  },
+  {
+   "id": "v6687695164",
+   "name": "Chakk Bhaike",
+   "namePa": null,
+   "lat": 29.95373,
+   "lon": 75.57676,
+   "place": "village"
+  },
+  {
+   "id": "v2643283340",
+   "name": "Chananwal",
+   "namePa": null,
+   "lat": 30.50388,
+   "lon": 75.48522,
+   "place": "village"
+  },
+  {
+   "id": "v6681161096",
+   "name": "Chandu",
+   "namePa": null,
+   "lat": 29.82312,
+   "lon": 76.0048,
+   "place": "village"
+  },
+  {
+   "id": "v6051358142",
+   "name": "Changal",
+   "namePa": null,
+   "lat": 30.28553,
+   "lon": 75.7927,
+   "place": "village"
+  },
+  {
+   "id": "v6051358115",
+   "name": "Changli",
+   "namePa": null,
+   "lat": 30.44557,
+   "lon": 75.76309,
+   "place": "village"
+  },
+  {
+   "id": "v6680967414",
+   "name": "Changliwala",
+   "namePa": null,
+   "lat": 29.96102,
+   "lon": 75.79703,
+   "place": "village"
+  },
+  {
+   "id": "v3634042686",
+   "name": "Channa Gulab Singh",
+   "namePa": null,
+   "lat": 30.42974,
+   "lon": 75.29963,
+   "place": "village"
+  },
+  {
+   "id": "v1491364234",
+   "name": "Channo",
+   "namePa": null,
+   "lat": 30.27124,
+   "lon": 76.17218,
+   "place": "village"
+  },
+  {
+   "id": "v1667064874",
+   "name": "Chatha",
+   "namePa": null,
+   "lat": 30.19841,
+   "lon": 75.79924,
+   "place": "village"
+  },
+  {
+   "id": "v6046182822",
+   "name": "Chattha",
+   "namePa": null,
+   "lat": 30.3942,
+   "lon": 76.05032,
+   "place": "village"
+  },
+  {
+   "id": "v5996268567",
+   "name": "Chatthe Nanhere",
+   "namePa": null,
+   "lat": 30.06791,
+   "lon": 75.8827,
+   "place": "village"
+  },
+  {
+   "id": "v6045933066",
+   "name": "Chaudhri Mazra",
+   "namePa": null,
+   "lat": 30.40305,
+   "lon": 76.13809,
+   "place": "village"
+  },
+  {
+   "id": "v6715522508",
+   "name": "Chauke",
+   "namePa": null,
+   "lat": 30.18492,
+   "lon": 75.33578,
+   "place": "village"
+  },
+  {
+   "id": "v6019129442",
+   "name": "Chaunda",
+   "namePa": null,
+   "lat": 30.51131,
+   "lon": 76.05335,
+   "place": "village"
+  },
+  {
+   "id": "v2643249067",
+   "name": "Chaunke Kalan",
+   "namePa": null,
+   "lat": 30.47365,
+   "lon": 75.54985,
+   "place": "village"
+  },
+  {
+   "id": "v2643248120",
+   "name": "Chaunke Khurd",
+   "namePa": null,
+   "lat": 30.47167,
+   "lon": 75.53291,
+   "place": "village"
+  },
+  {
+   "id": "v2643432839",
+   "name": "Cheema",
+   "namePa": null,
+   "lat": 30.40521,
+   "lon": 75.45987,
+   "place": "village"
+  },
+  {
+   "id": "v6683945882",
+   "name": "Chhabilpur",
+   "namePa": null,
+   "lat": 29.99008,
+   "lon": 76.14863,
+   "place": "village"
+  },
+  {
+   "id": "v1330403807",
+   "name": "Chhahar",
+   "namePa": null,
+   "lat": 30.03118,
+   "lon": 75.90796,
+   "place": "village"
+  },
+  {
+   "id": "v6042805776",
+   "name": "Chhajla",
+   "namePa": null,
+   "lat": 30.03358,
+   "lon": 75.79605,
+   "place": "village"
+  },
+  {
+   "id": "v6042704252",
+   "name": "Chhajli",
+   "namePa": null,
+   "lat": 30.03581,
+   "lon": 75.82815,
+   "place": "village"
+  },
+  {
+   "id": "v6046026954",
+   "name": "Chhaju Bhat",
+   "namePa": null,
+   "lat": 30.34703,
+   "lon": 76.085,
+   "place": "village"
+  },
+  {
+   "id": "v6045933068",
+   "name": "Chhanna",
+   "namePa": null,
+   "lat": 30.40009,
+   "lon": 76.18984,
+   "place": "village"
+  },
+  {
+   "id": "v6051237211",
+   "name": "Chhannan",
+   "namePa": null,
+   "lat": 30.32188,
+   "lon": 75.97501,
+   "place": "village"
+  },
+  {
+   "id": "v6051469981",
+   "name": "Chhannan Bahadur Singh",
+   "namePa": null,
+   "lat": 30.3081,
+   "lon": 75.87145,
+   "place": "village"
+  },
+  {
+   "id": "v2643500583",
+   "name": "Chhapa",
+   "namePa": null,
+   "lat": 30.55271,
+   "lon": 75.65347,
+   "place": "village"
+  },
+  {
+   "id": "v6028992911",
+   "name": "Chhapianwali",
+   "namePa": null,
+   "lat": 29.90991,
+   "lon": 75.29699,
+   "place": "village"
+  },
+  {
+   "id": "v6046182825",
+   "name": "Chhata Kot",
+   "namePa": null,
+   "lat": 30.36184,
+   "lon": 76.0532,
+   "place": "village"
+  },
+  {
+   "id": "v1514218714",
+   "name": "Chhathe",
+   "namePa": null,
+   "lat": 30.15635,
+   "lon": 75.83392,
+   "place": "village"
+  },
+  {
+   "id": "v2653352804",
+   "name": "Chhiniwal Kalan",
+   "namePa": null,
+   "lat": 30.51988,
+   "lon": 75.50763,
+   "place": "village"
+  },
+  {
+   "id": "v2653524243",
+   "name": "Chhiniwal Khurd",
+   "namePa": null,
+   "lat": 30.58047,
+   "lon": 75.44769,
+   "place": "village"
+  },
+  {
+   "id": "v5996264159",
+   "name": "Chhintanwala",
+   "namePa": null,
+   "lat": 30.35703,
+   "lon": 76.01715,
+   "place": "village"
+  },
+  {
+   "id": "v6027289491",
+   "name": "Chicharwala",
+   "namePa": null,
+   "lat": 29.9013,
+   "lon": 76.18066,
+   "place": "village"
+  },
+  {
+   "id": "v6051237225",
+   "name": "Chima",
+   "namePa": null,
+   "lat": 30.39764,
+   "lon": 75.984,
+   "place": "village"
+  },
+  {
+   "id": "v6000018601",
+   "name": "Chiman",
+   "namePa": null,
+   "lat": 30.09384,
+   "lon": 75.68625,
+   "place": "village"
+  },
+  {
+   "id": "v6026961502",
+   "name": "Chonagra",
+   "namePa": null,
+   "lat": 29.94259,
+   "lon": 76.02582,
+   "place": "village"
+  },
+  {
+   "id": "v6028271806",
+   "name": "Chotian",
+   "namePa": null,
+   "lat": 29.84587,
+   "lon": 75.79004,
+   "place": "village"
+  },
+  {
+   "id": "v6712174659",
+   "name": "Chotian",
+   "namePa": null,
+   "lat": 30.31668,
+   "lon": 75.292,
+   "place": "village"
+  },
+  {
+   "id": "v6044108399",
+   "name": "Chukerian",
+   "namePa": null,
+   "lat": 29.97631,
+   "lon": 75.44848,
+   "place": "village"
+  },
+  {
+   "id": "v6051358117",
+   "name": "Chung",
+   "namePa": null,
+   "lat": 30.47472,
+   "lon": 75.81717,
+   "place": "village"
+  },
+  {
+   "id": "v6702918628",
+   "name": "Chunghan",
+   "namePa": null,
+   "lat": 30.45828,
+   "lon": 75.40778,
+   "place": "village"
+  },
+  {
+   "id": "v6026892280",
+   "name": "Chupki",
+   "namePa": null,
+   "lat": 30.05944,
+   "lon": 76.16441,
+   "place": "village"
+  },
+  {
+   "id": "v6674227685",
+   "name": "Chural Kalan",
+   "namePa": null,
+   "lat": 29.82141,
+   "lon": 75.80775,
+   "place": "village"
+  },
+  {
+   "id": "v6674227703",
+   "name": "Chural Khurd",
+   "namePa": null,
+   "lat": 29.82146,
+   "lon": 75.7936,
+   "place": "village"
+  },
+  {
+   "id": "v13591989901",
+   "name": "Churia",
+   "namePa": null,
+   "lat": 29.81782,
+   "lon": 75.24886,
+   "place": "village"
+  },
+  {
+   "id": "v2643496900",
+   "name": "Dadhahur",
+   "namePa": null,
+   "lat": 30.58497,
+   "lon": 75.57467,
+   "place": "village"
+  },
+  {
+   "id": "v6026961505",
+   "name": "Daftriwala",
+   "namePa": null,
+   "lat": 30.00698,
+   "lon": 76.06813,
+   "place": "village"
+  },
+  {
+   "id": "v6697154954",
+   "name": "Dalel Singhwala",
+   "namePa": null,
+   "lat": 30.02583,
+   "lon": 75.47694,
+   "place": "village"
+  },
+  {
+   "id": "v6690270938",
+   "name": "Dalel Wala",
+   "namePa": null,
+   "lat": 29.82944,
+   "lon": 75.41506,
+   "place": "village"
+  },
+  {
+   "id": "v6051851813",
+   "name": "Dalelgarh",
+   "namePa": null,
+   "lat": 30.45454,
+   "lon": 75.8509,
+   "place": "village"
+  },
+  {
+   "id": "v6044227802",
+   "name": "Dalianwali",
+   "namePa": null,
+   "lat": 29.96765,
+   "lon": 75.26236,
+   "place": "village"
+  },
+  {
+   "id": "v6045933065",
+   "name": "Dalladi",
+   "namePa": null,
+   "lat": 30.38517,
+   "lon": 76.13208,
+   "place": "village"
+  },
+  {
+   "id": "v6016332066",
+   "name": "Dan Singhwala",
+   "namePa": null,
+   "lat": 30.29969,
+   "lon": 75.60036,
+   "place": "village"
+  },
+  {
+   "id": "v6694042128",
+   "name": "Danewala",
+   "namePa": null,
+   "lat": 29.81109,
+   "lon": 75.39401,
+   "place": "village"
+  },
+  {
+   "id": "v6698800439",
+   "name": "Daraj",
+   "namePa": null,
+   "lat": 30.31011,
+   "lon": 75.34431,
+   "place": "village"
+  },
+  {
+   "id": "v6026961523",
+   "name": "Darauli",
+   "namePa": null,
+   "lat": 29.9704,
+   "lon": 76.11877,
+   "place": "village"
+  },
+  {
+   "id": "v6690218706",
+   "name": "Dariapur",
+   "namePa": null,
+   "lat": 29.89129,
+   "lon": 75.59977,
+   "place": "village"
+  },
+  {
+   "id": "v6051851806",
+   "name": "Darogewala",
+   "namePa": null,
+   "lat": 30.47231,
+   "lon": 75.93205,
+   "place": "village"
+  },
+  {
+   "id": "v2501400376",
+   "name": "Dasandha Singh Wala",
+   "namePa": null,
+   "lat": 30.55964,
+   "lon": 75.68172,
+   "place": "village"
+  },
+  {
+   "id": "v6693996147",
+   "name": "Dasaundia",
+   "namePa": null,
+   "lat": 29.85275,
+   "lon": 75.32486,
+   "place": "village"
+  },
+  {
+   "id": "v6000873313",
+   "name": "Daska",
+   "namePa": null,
+   "lat": 29.94713,
+   "lon": 75.67589,
+   "place": "village"
+  },
+  {
+   "id": "v6028397309",
+   "name": "Datewas",
+   "namePa": null,
+   "lat": 29.90577,
+   "lon": 75.61804,
+   "place": "village"
+  },
+  {
+   "id": "v6051237198",
+   "name": "Daulatpur",
+   "namePa": null,
+   "lat": 30.39923,
+   "lon": 75.85579,
+   "place": "village"
+  },
+  {
+   "id": "v6051237223",
+   "name": "Daulatpur",
+   "namePa": null,
+   "lat": 30.41548,
+   "lon": 76.01445,
+   "place": "village"
+  },
+  {
+   "id": "v6046026947",
+   "name": "Dayalpura",
+   "namePa": null,
+   "lat": 30.30298,
+   "lon": 76.0526,
+   "place": "village"
+  },
+  {
+   "id": "v5996268486",
+   "name": "Dedhna",
+   "namePa": null,
+   "lat": 30.04263,
+   "lon": 76.11978,
+   "place": "village"
+  },
+  {
+   "id": "v6698433548",
+   "name": "Deepgarh",
+   "namePa": null,
+   "lat": 30.49718,
+   "lon": 75.37804,
+   "place": "village"
+  },
+  {
+   "id": "v6680086530",
+   "name": "Dehla",
+   "namePa": null,
+   "lat": 29.86629,
+   "lon": 75.88992,
+   "place": "village"
+  },
+  {
+   "id": "v6045762486",
+   "name": "Dehlewal",
+   "namePa": null,
+   "lat": 30.30378,
+   "lon": 76.14914,
+   "place": "village"
+  },
+  {
+   "id": "v6697246570",
+   "name": "Deluana",
+   "namePa": null,
+   "lat": 29.89219,
+   "lon": 75.40872,
+   "place": "village"
+  },
+  {
+   "id": "v6026961501",
+   "name": "Deogarh",
+   "namePa": null,
+   "lat": 29.93534,
+   "lon": 76.04342,
+   "place": "village"
+  },
+  {
+   "id": "v6683483783",
+   "name": "Dera Bela Singh Wala",
+   "namePa": null,
+   "lat": 29.92499,
+   "lon": 76.14174,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6003559729",
+   "name": "Dhabian Gujran",
+   "namePa": null,
+   "lat": 29.81369,
+   "lon": 76.12706,
+   "place": "village"
+  },
+  {
+   "id": "v1960933920",
+   "name": "Dhade",
+   "namePa": null,
+   "lat": 30.1795,
+   "lon": 75.24898,
+   "place": "village"
+  },
+  {
+   "id": "v6051358160",
+   "name": "Dhadogal",
+   "namePa": null,
+   "lat": 30.43269,
+   "lon": 75.97222,
+   "place": "village"
+  },
+  {
+   "id": "v6044799530",
+   "name": "Dhadrian",
+   "namePa": null,
+   "lat": 30.17073,
+   "lon": 75.5892,
+   "place": "village"
+  },
+  {
+   "id": "v6044107089",
+   "name": "Dhaipai",
+   "namePa": null,
+   "lat": 30.08744,
+   "lon": 75.61109,
+   "place": "village"
+  },
+  {
+   "id": "v6044107219",
+   "name": "Dhalewan",
+   "namePa": null,
+   "lat": 30.02593,
+   "lon": 75.57796,
+   "place": "village"
+  },
+  {
+   "id": "v6702721720",
+   "name": "Dhanaula Khurd",
+   "namePa": null,
+   "lat": 30.32286,
+   "lon": 75.51364,
+   "place": "village"
+  },
+  {
+   "id": "v6046182820",
+   "name": "Dhanauri",
+   "namePa": null,
+   "lat": 30.40638,
+   "lon": 76.04007,
+   "place": "village"
+  },
+  {
+   "id": "v6003559728",
+   "name": "Dhandauli",
+   "namePa": null,
+   "lat": 29.81287,
+   "lon": 76.14851,
+   "place": "village"
+  },
+  {
+   "id": "v6026961503",
+   "name": "Dhandial",
+   "namePa": null,
+   "lat": 29.95888,
+   "lon": 76.01273,
+   "place": "village"
+  },
+  {
+   "id": "v6051358148",
+   "name": "Dhandiwal",
+   "namePa": null,
+   "lat": 30.3434,
+   "lon": 75.71889,
+   "place": "village"
+  },
+  {
+   "id": "v1330377521",
+   "name": "Dhandoli Kalan",
+   "namePa": null,
+   "lat": 30.05841,
+   "lon": 75.92972,
+   "place": "village"
+  },
+  {
+   "id": "v1330375141",
+   "name": "Dhandoli Khurd",
+   "namePa": null,
+   "lat": 30.09778,
+   "lon": 75.94431,
+   "place": "village"
+  },
+  {
+   "id": "v6051237202",
+   "name": "Dhandra",
+   "namePa": null,
+   "lat": 30.3982,
+   "lon": 75.91261,
+   "place": "village"
+  },
+  {
+   "id": "v2896944529",
+   "name": "Dhaner",
+   "namePa": null,
+   "lat": 30.56779,
+   "lon": 75.51134,
+   "place": "village"
+  },
+  {
+   "id": "v6013786900",
+   "name": "Dhapali",
+   "namePa": null,
+   "lat": 30.36695,
+   "lon": 75.26768,
+   "place": "village"
+  },
+  {
+   "id": "v6041344062",
+   "name": "Dharamgarh",
+   "namePa": null,
+   "lat": 30.11707,
+   "lon": 76.1259,
+   "place": "village"
+  },
+  {
+   "id": "v6680936172",
+   "name": "Dharampura",
+   "namePa": null,
+   "lat": 29.95654,
+   "lon": 76.03383,
+   "place": "village"
+  },
+  {
+   "id": "v6690840420",
+   "name": "Dharampura",
+   "namePa": null,
+   "lat": 29.82804,
+   "lon": 75.64289,
+   "place": "village"
+  },
+  {
+   "id": "v6041850428",
+   "name": "Dhararhgarh Chanan",
+   "namePa": null,
+   "lat": 30.0506,
+   "lon": 76.04221,
+   "place": "village"
+  },
+  {
+   "id": "v6044107096",
+   "name": "Dharmgarh",
+   "namePa": null,
+   "lat": 30.04599,
+   "lon": 75.68164,
+   "place": "village"
+  },
+  {
+   "id": "v6044107227",
+   "name": "Dhaula Bas",
+   "namePa": null,
+   "lat": 30.06263,
+   "lon": 75.72842,
+   "place": "village"
+  },
+  {
+   "id": "v10097119582",
+   "name": "Dhilwan",
+   "namePa": null,
+   "lat": 30.3427,
+   "lon": 75.38563,
+   "place": "village"
+  },
+  {
+   "id": "v6676199054",
+   "name": "Dhindsa",
+   "namePa": null,
+   "lat": 29.90317,
+   "lon": 75.90948,
+   "place": "village"
+  },
+  {
+   "id": "v6044227798",
+   "name": "Dhingar",
+   "namePa": null,
+   "lat": 29.96616,
+   "lon": 75.20459,
+   "place": "village"
+  },
+  {
+   "id": "v6738597663",
+   "name": "Dhinger",
+   "namePa": null,
+   "lat": 30.34269,
+   "lon": 75.29141,
+   "place": "village"
+  },
+  {
+   "id": "v6046182814",
+   "name": "Dhingi",
+   "namePa": null,
+   "lat": 30.40638,
+   "lon": 76.10195,
+   "place": "village"
+  },
+  {
+   "id": "v6051237204",
+   "name": "Dhura",
+   "namePa": null,
+   "lat": 30.35599,
+   "lon": 75.88858,
+   "place": "village"
+  },
+  {
+   "id": "v6026961531",
+   "name": "Dhuriwala",
+   "namePa": null,
+   "lat": 30.00556,
+   "lon": 76.16268,
+   "place": "village"
+  },
+  {
+   "id": "v6700078377",
+   "name": "Dhurkot",
+   "namePa": null,
+   "lat": 30.24506,
+   "lon": 75.46223,
+   "place": "village"
+  },
+  {
+   "id": "v7187296634",
+   "name": "Dhurkot Ransih",
+   "namePa": null,
+   "lat": 30.59427,
+   "lon": 75.29953,
+   "place": "village"
+  },
+  {
+   "id": "v6044799514",
+   "name": "Dialgarh",
+   "namePa": null,
+   "lat": 30.13611,
+   "lon": 76.03123,
+   "place": "village"
+  },
+  {
+   "id": "v6042016912",
+   "name": "Dialpura",
+   "namePa": null,
+   "lat": 30.01564,
+   "lon": 75.86266,
+   "place": "village"
+  },
+  {
+   "id": "v6051358157",
+   "name": "Dialpura",
+   "namePa": null,
+   "lat": 30.45163,
+   "lon": 75.99483,
+   "place": "village"
+  },
+  {
+   "id": "v6687900200",
+   "name": "Dialpura",
+   "namePa": null,
+   "lat": 29.89187,
+   "lon": 75.66149,
+   "place": "village"
+  },
+  {
+   "id": "v6737946681",
+   "name": "Dialpura Bhaika",
+   "namePa": "ਦਿਆਲਪੁਰਾ ਭਾਈਕੇ",
+   "lat": 30.48123,
+   "lon": 75.2031,
+   "place": "village"
+  },
+  {
+   "id": "v7184151296",
+   "name": "Didare Wala",
+   "namePa": null,
+   "lat": 30.59451,
+   "lon": 75.20943,
+   "place": "village"
+  },
+  {
+   "id": "v6051358108",
+   "name": "Didargarh",
+   "namePa": null,
+   "lat": 30.40723,
+   "lon": 75.72206,
+   "place": "village"
+  },
+  {
+   "id": "v6715684586",
+   "name": "Dikh",
+   "namePa": null,
+   "lat": 30.15537,
+   "lon": 75.27029,
+   "place": "village"
+  },
+  {
+   "id": "v7184369552",
+   "name": "Dina",
+   "namePa": "ਦੀਨਾ",
+   "lat": 30.52009,
+   "lon": 75.23689,
+   "place": "village"
+  },
+  {
+   "id": "v5992592032",
+   "name": "Dirba",
+   "namePa": null,
+   "lat": 30.07225,
+   "lon": 75.99528,
+   "place": "village"
+  },
+  {
+   "id": "v971645752",
+   "name": "Direa",
+   "namePa": null,
+   "lat": 30.07698,
+   "lon": 75.98066,
+   "place": "village"
+  },
+  {
+   "id": "v6051237214",
+   "name": "Dittupur",
+   "namePa": null,
+   "lat": 30.33369,
+   "lon": 75.99393,
+   "place": "village"
+  },
+  {
+   "id": "v2653523769",
+   "name": "Diwana",
+   "namePa": null,
+   "lat": 30.57457,
+   "lon": 75.42174,
+   "place": "village"
+  },
+  {
+   "id": "v6045762380",
+   "name": "Diwangarh",
+   "namePa": null,
+   "lat": 30.30317,
+   "lon": 76.19207,
+   "place": "village"
+  },
+  {
+   "id": "v6046182808",
+   "name": "Doda",
+   "namePa": null,
+   "lat": 30.42858,
+   "lon": 76.09114,
+   "place": "village"
+  },
+  {
+   "id": "v6041344067",
+   "name": "Dodra",
+   "namePa": null,
+   "lat": 30.14171,
+   "lon": 76.15182,
+   "place": "village"
+  },
+  {
+   "id": "v6687521338",
+   "name": "Dodra",
+   "namePa": null,
+   "lat": 29.97784,
+   "lon": 75.62683,
+   "place": "village"
+  },
+  {
+   "id": "v1330419501",
+   "name": "Dogal",
+   "namePa": null,
+   "lat": 29.98826,
+   "lon": 76.03485,
+   "place": "village"
+  },
+  {
+   "id": "v6026961515",
+   "name": "Dotal",
+   "namePa": null,
+   "lat": 29.93523,
+   "lon": 76.09371,
+   "place": "village"
+  },
+  {
+   "id": "v6679976576",
+   "name": "Dudian",
+   "namePa": null,
+   "lat": 29.88419,
+   "lon": 75.94295,
+   "place": "village"
+  },
+  {
+   "id": "v6051469961",
+   "name": "Duggan",
+   "namePa": null,
+   "lat": 30.24646,
+   "lon": 75.73387,
+   "place": "village"
+  },
+  {
+   "id": "v6051358173",
+   "name": "Dugni",
+   "namePa": null,
+   "lat": 30.43417,
+   "lon": 75.83817,
+   "place": "village"
+  },
+  {
+   "id": "v6738400196",
+   "name": "Dule Wala",
+   "namePa": null,
+   "lat": 30.45191,
+   "lon": 75.25405,
+   "place": "village"
+  },
+  {
+   "id": "v6023079188",
+   "name": "Dullewala",
+   "namePa": null,
+   "lat": 30.45835,
+   "lon": 75.24648,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6044227807",
+   "name": "Dulowal",
+   "namePa": null,
+   "lat": 29.92704,
+   "lon": 75.36149,
+   "place": "village"
+  },
+  {
+   "id": "v6051237215",
+   "name": "Faizgarh",
+   "namePa": null,
+   "lat": 30.3434,
+   "lon": 76.01878,
+   "place": "village"
+  },
+  {
+   "id": "v6051358171",
+   "name": "Faizgarh",
+   "namePa": null,
+   "lat": 30.44647,
+   "lon": 75.85841,
+   "place": "village"
+  },
+  {
+   "id": "v6051851795",
+   "name": "Faridpur Kalan",
+   "namePa": null,
+   "lat": 30.48587,
+   "lon": 75.81935,
+   "place": "village"
+  },
+  {
+   "id": "v6051851796",
+   "name": "Faridpur Khurd",
+   "namePa": null,
+   "lat": 30.48137,
+   "lon": 75.82562,
+   "place": "village"
+  },
+  {
+   "id": "v6683321333",
+   "name": "Fatehgarh",
+   "namePa": null,
+   "lat": 29.98488,
+   "lon": 75.73007,
+   "place": "village"
+  },
+  {
+   "id": "v6046182834",
+   "name": "Fatehgarh Bhadsaun",
+   "namePa": null,
+   "lat": 30.32695,
+   "lon": 76.03166,
+   "place": "village"
+  },
+  {
+   "id": "v6699971227",
+   "name": "Fatehgarh Channa",
+   "namePa": null,
+   "lat": 30.28254,
+   "lon": 75.51426,
+   "place": "village"
+  },
+  {
+   "id": "v6044799495",
+   "name": "Fatehgarh Chhanan",
+   "namePa": null,
+   "lat": 30.20901,
+   "lon": 76.08161,
+   "place": "village"
+  },
+  {
+   "id": "v6693988456",
+   "name": "Fatehgarh Sahnianwali",
+   "namePa": null,
+   "lat": 29.82295,
+   "lon": 75.32854,
+   "place": "village"
+  },
+  {
+   "id": "v6703149659",
+   "name": "Fatehghar",
+   "namePa": null,
+   "lat": 30.52237,
+   "lon": 75.70505,
+   "place": "village"
+  },
+  {
+   "id": "v6046182807",
+   "name": "Gadalan",
+   "namePa": null,
+   "lat": 30.43713,
+   "lon": 76.07466,
+   "place": "village"
+  },
+  {
+   "id": "v6681470123",
+   "name": "Gaga",
+   "namePa": null,
+   "lat": 29.93984,
+   "lon": 75.78821,
+   "place": "village"
+  },
+  {
+   "id": "v2653533631",
+   "name": "Gagewal",
+   "namePa": null,
+   "lat": 30.59137,
+   "lon": 75.48413,
+   "place": "village"
+  },
+  {
+   "id": "v6044927544",
+   "name": "Gaggarpur",
+   "namePa": null,
+   "lat": 30.19503,
+   "lon": 75.91003,
+   "place": "village"
+  },
+  {
+   "id": "v6044799493",
+   "name": "Gajebas",
+   "namePa": null,
+   "lat": 30.20122,
+   "lon": 76.108,
+   "place": "village"
+  },
+  {
+   "id": "v7190036831",
+   "name": "Gajiana",
+   "namePa": null,
+   "lat": 30.54493,
+   "lon": 75.25227,
+   "place": "village"
+  },
+  {
+   "id": "v6025255825",
+   "name": "Gaju Mazra",
+   "namePa": null,
+   "lat": 30.26235,
+   "lon": 76.19921,
+   "place": "village"
+  },
+  {
+   "id": "v6027289498",
+   "name": "Galauli",
+   "namePa": null,
+   "lat": 29.83216,
+   "lon": 76.16813,
+   "place": "village"
+  },
+  {
+   "id": "v6046182803",
+   "name": "Galwati",
+   "namePa": null,
+   "lat": 30.41791,
+   "lon": 76.05803,
+   "place": "village"
+  },
+  {
+   "id": "v6690711702",
+   "name": "Gami Wala",
+   "namePa": null,
+   "lat": 29.8021,
+   "lon": 75.53243,
+   "place": "village"
+  },
+  {
+   "id": "v6041850424",
+   "name": "Gamri",
+   "namePa": null,
+   "lat": 30.03841,
+   "lon": 75.99269,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6042805774",
+   "name": "Gandhuan",
+   "namePa": null,
+   "lat": 30.00274,
+   "lon": 75.75305,
+   "place": "village"
+  },
+  {
+   "id": "v6071569657",
+   "name": "Ganghoran",
+   "namePa": null,
+   "lat": 30.55016,
+   "lon": 75.59062,
+   "place": "village"
+  },
+  {
+   "id": "v6041344063",
+   "name": "Ganghroli",
+   "namePa": null,
+   "lat": 30.12189,
+   "lon": 76.11551,
+   "place": "village"
+  },
+  {
+   "id": "v6738077693",
+   "name": "Gaunspura",
+   "namePa": null,
+   "lat": 30.49943,
+   "lon": 75.21135,
+   "place": "village"
+  },
+  {
+   "id": "v2643478723",
+   "name": "Gehal",
+   "namePa": null,
+   "lat": 30.54831,
+   "lon": 75.44533,
+   "place": "village"
+  },
+  {
+   "id": "v6691289204",
+   "name": "Gehle",
+   "namePa": null,
+   "lat": 29.95942,
+   "lon": 75.35412,
+   "place": "village"
+  },
+  {
+   "id": "v6051469876",
+   "name": "Ghabdan",
+   "namePa": null,
+   "lat": 30.26812,
+   "lon": 75.93719,
+   "place": "village"
+  },
+  {
+   "id": "v5996268566",
+   "name": "Ghagga",
+   "namePa": null,
+   "lat": 30.02069,
+   "lon": 76.10526,
+   "place": "village"
+  },
+  {
+   "id": "v6044799502",
+   "name": "Ghanaur Jattan",
+   "namePa": null,
+   "lat": 30.17448,
+   "lon": 76.02031,
+   "place": "village"
+  },
+  {
+   "id": "v6051358178",
+   "name": "Ghanaur Kalan",
+   "namePa": null,
+   "lat": 30.42566,
+   "lon": 75.79515,
+   "place": "village"
+  },
+  {
+   "id": "v6051358177",
+   "name": "Ghanaur Khurd",
+   "namePa": null,
+   "lat": 30.42011,
+   "lon": 75.81287,
+   "place": "village"
+  },
+  {
+   "id": "v6051358179",
+   "name": "Ghanauri",
+   "namePa": null,
+   "lat": 30.41996,
+   "lon": 75.77897,
+   "place": "village"
+  },
+  {
+   "id": "v6051358107",
+   "name": "Ghanauri Khurd",
+   "namePa": null,
+   "lat": 30.40612,
+   "lon": 75.74747,
+   "place": "village"
+  },
+  {
+   "id": "v6013786899",
+   "name": "Ghanda Bana",
+   "namePa": null,
+   "lat": 30.41563,
+   "lon": 75.27358,
+   "place": "village"
+  },
+  {
+   "id": "v6046026951",
+   "name": "Ghanurki",
+   "namePa": null,
+   "lat": 30.32562,
+   "lon": 76.0956,
+   "place": "village"
+  },
+  {
+   "id": "v1491349256",
+   "name": "Gharachon",
+   "namePa": null,
+   "lat": 30.21498,
+   "lon": 75.96222,
+   "place": "village"
+  },
+  {
+   "id": "v6044227809",
+   "name": "Gharangna",
+   "namePa": null,
+   "lat": 29.93909,
+   "lon": 75.34836,
+   "place": "village"
+  },
+  {
+   "id": "v6044799500",
+   "name": "Ghaslwala",
+   "namePa": null,
+   "lat": 30.09954,
+   "lon": 75.75571,
+   "place": "village"
+  },
+  {
+   "id": "v6025256003",
+   "name": "Ghazipur",
+   "namePa": null,
+   "lat": 30.20638,
+   "lon": 76.15403,
+   "place": "village"
+  },
+  {
+   "id": "v6051237212",
+   "name": "Ghillan",
+   "namePa": null,
+   "lat": 30.31628,
+   "lon": 75.99041,
+   "place": "village"
+  },
+  {
+   "id": "v6680986831",
+   "name": "Ghoranab",
+   "namePa": null,
+   "lat": 29.96037,
+   "lon": 75.87851,
+   "place": "village"
+  },
+  {
+   "id": "v6693959755",
+   "name": "Ghudduwala",
+   "namePa": null,
+   "lat": 29.81068,
+   "lon": 75.29546,
+   "place": "village"
+  },
+  {
+   "id": "v6715746113",
+   "name": "Ghuman Kalan",
+   "namePa": null,
+   "lat": 30.08213,
+   "lon": 75.2807,
+   "place": "village"
+  },
+  {
+   "id": "v6715756990",
+   "name": "Ghuman Khurd",
+   "namePa": null,
+   "lat": 30.09494,
+   "lon": 75.26693,
+   "place": "village"
+  },
+  {
+   "id": "v6698878164",
+   "name": "Ghunas",
+   "namePa": null,
+   "lat": 30.31298,
+   "lon": 75.42118,
+   "place": "village"
+  },
+  {
+   "id": "v6715059110",
+   "name": "Ghuraila",
+   "namePa": null,
+   "lat": 30.26095,
+   "lon": 75.3599,
+   "place": "village"
+  },
+  {
+   "id": "v6714994050",
+   "name": "Ghurelli",
+   "namePa": null,
+   "lat": 30.27924,
+   "lon": 75.35679,
+   "place": "village"
+  },
+  {
+   "id": "v6683221794",
+   "name": "Gidrani",
+   "namePa": null,
+   "lat": 29.94508,
+   "lon": 75.72646,
+   "place": "village"
+  },
+  {
+   "id": "v6714957639",
+   "name": "Gill Kalan",
+   "namePa": null,
+   "lat": 30.27232,
+   "lon": 75.27484,
+   "place": "village"
+  },
+  {
+   "id": "v2643497063",
+   "name": "Gobindgarh",
+   "namePa": null,
+   "lat": 30.59796,
+   "lon": 75.59211,
+   "place": "village"
+  },
+  {
+   "id": "v6045933069",
+   "name": "Gobindgarh Chhanna",
+   "namePa": null,
+   "lat": 30.42318,
+   "lon": 76.16632,
+   "place": "village"
+  },
+  {
+   "id": "v6042805773",
+   "name": "Gobindgarh Jejian",
+   "namePa": null,
+   "lat": 30.0041,
+   "lon": 75.80672,
+   "place": "village"
+  },
+  {
+   "id": "v6681010887",
+   "name": "Gobindgarh Khokhar",
+   "namePa": null,
+   "lat": 29.98961,
+   "lon": 75.80651,
+   "place": "village"
+  },
+  {
+   "id": "v6044799490",
+   "name": "Gobindpura",
+   "namePa": null,
+   "lat": 30.15485,
+   "lon": 75.93596,
+   "place": "village"
+  },
+  {
+   "id": "v6051358126",
+   "name": "Gobindpura",
+   "namePa": null,
+   "lat": 30.45689,
+   "lon": 75.68816,
+   "place": "village"
+  },
+  {
+   "id": "v6690187916",
+   "name": "Gobindpura",
+   "namePa": null,
+   "lat": 29.87132,
+   "lon": 75.63156,
+   "place": "village"
+  },
+  {
+   "id": "v6681470432",
+   "name": "Gobindpura Jawarwala",
+   "namePa": null,
+   "lat": 29.89341,
+   "lon": 75.80395,
+   "place": "village"
+  },
+  {
+   "id": "v6680060363",
+   "name": "Gobindpura Papra",
+   "namePa": null,
+   "lat": 29.84909,
+   "lon": 75.87521,
+   "place": "village"
+  },
+  {
+   "id": "v6046182811",
+   "name": "Gujarheri",
+   "namePa": null,
+   "lat": 30.47087,
+   "lon": 76.1295,
+   "place": "village"
+  },
+  {
+   "id": "v5996268569",
+   "name": "Gujran",
+   "namePa": null,
+   "lat": 30.12323,
+   "lon": 75.97346,
+   "place": "village"
+  },
+  {
+   "id": "v6027289482",
+   "name": "Gulaharh",
+   "namePa": null,
+   "lat": 29.86182,
+   "lon": 76.07131,
+   "place": "village"
+  },
+  {
+   "id": "v6051358128",
+   "name": "Gumti",
+   "namePa": null,
+   "lat": 30.45489,
+   "lon": 75.66078,
+   "place": "village"
+  },
+  {
+   "id": "v6046026950",
+   "name": "Guneki",
+   "namePa": null,
+   "lat": 30.32317,
+   "lon": 76.07221,
+   "place": "village"
+  },
+  {
+   "id": "v6044107223",
+   "name": "Guraddi",
+   "namePa": null,
+   "lat": 30.01248,
+   "lon": 75.61692,
+   "place": "village"
+  },
+  {
+   "id": "v6051358122",
+   "name": "Gurbakhshpura",
+   "namePa": null,
+   "lat": 30.49469,
+   "lon": 75.70593,
+   "place": "village"
+  },
+  {
+   "id": "v6051469976",
+   "name": "Gurdaspura",
+   "namePa": null,
+   "lat": 30.25091,
+   "lon": 75.94248,
+   "place": "village"
+  },
+  {
+   "id": "v6046182806",
+   "name": "Gurdatpura",
+   "namePa": null,
+   "lat": 30.44105,
+   "lon": 76.08251,
+   "place": "village"
+  },
+  {
+   "id": "v6026791036",
+   "name": "Gurdialpura",
+   "namePa": null,
+   "lat": 30.05745,
+   "lon": 76.18416,
+   "place": "village"
+  },
+  {
+   "id": "v6687612821",
+   "name": "Gurne Kalan",
+   "namePa": null,
+   "lat": 29.97342,
+   "lon": 75.544,
+   "place": "village"
+  },
+  {
+   "id": "v6687759511",
+   "name": "Gurne Khurd",
+   "namePa": null,
+   "lat": 29.96072,
+   "lon": 75.53179,
+   "place": "village"
+  },
+  {
+   "id": "v6674247264",
+   "name": "Gurney",
+   "namePa": null,
+   "lat": 29.87281,
+   "lon": 75.80004,
+   "place": "village"
+  },
+  {
+   "id": "v6051358127",
+   "name": "Gurram",
+   "namePa": null,
+   "lat": 30.44941,
+   "lon": 75.63941,
+   "place": "village"
+  },
+  {
+   "id": "v6045762757",
+   "name": "Gurthari",
+   "namePa": null,
+   "lat": 30.26493,
+   "lon": 76.10667,
+   "place": "village"
+  },
+  {
+   "id": "v6697041849",
+   "name": "Gurthari",
+   "namePa": null,
+   "lat": 30.11673,
+   "lon": 75.54682,
+   "place": "village"
+  },
+  {
+   "id": "v6044107226",
+   "name": "Hambal Bas",
+   "namePa": null,
+   "lat": 30.05966,
+   "lon": 75.7358,
+   "place": "village"
+  },
+  {
+   "id": "v6051358123",
+   "name": "Hamidi",
+   "namePa": null,
+   "lat": 30.46687,
+   "lon": 75.60722,
+   "place": "village"
+  },
+  {
+   "id": "v6680014916",
+   "name": "Hamirgarh",
+   "namePa": null,
+   "lat": 29.84659,
+   "lon": 75.93483,
+   "place": "village"
+  },
+  {
+   "id": "v6026961511",
+   "name": "Hamjheri",
+   "namePa": null,
+   "lat": 29.91659,
+   "lon": 76.05299,
+   "place": "village"
+  },
+  {
+   "id": "v2822331295",
+   "name": "Handiaya",
+   "namePa": null,
+   "lat": 30.32664,
+   "lon": 75.50275,
+   "place": "village"
+  },
+  {
+   "id": "v6051358114",
+   "name": "Harbanspura",
+   "namePa": null,
+   "lat": 30.37057,
+   "lon": 75.62074,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6026961532",
+   "name": "Harchandpura",
+   "namePa": null,
+   "lat": 30.03559,
+   "lon": 76.1877,
+   "place": "village"
+  },
+  {
+   "id": "v2694095128",
+   "name": "Hardaspura",
+   "namePa": null,
+   "lat": 30.57496,
+   "lon": 75.64503,
+   "place": "village"
+  },
+  {
+   "id": "v6026961499",
+   "name": "Hariau Kalan",
+   "namePa": null,
+   "lat": 29.90997,
+   "lon": 76.01604,
+   "place": "village"
+  },
+  {
+   "id": "v6026961500",
+   "name": "Hariau Khurd",
+   "namePa": null,
+   "lat": 29.92608,
+   "lon": 76.01363,
+   "place": "village"
+  },
+  {
+   "id": "v6044799501",
+   "name": "Harigarh",
+   "namePa": null,
+   "lat": 30.10229,
+   "lon": 75.77198,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6046182802",
+   "name": "Harigarh",
+   "namePa": null,
+   "lat": 30.41348,
+   "lon": 76.06395,
+   "place": "village"
+  },
+  {
+   "id": "v6051604404",
+   "name": "Harigarh",
+   "namePa": null,
+   "lat": 30.26544,
+   "lon": 75.63486,
+   "place": "village"
+  },
+  {
+   "id": "v6680969408",
+   "name": "Harigarh",
+   "namePa": null,
+   "lat": 29.96143,
+   "lon": 75.94048,
+   "place": "village"
+  },
+  {
+   "id": "v6051469972",
+   "name": "Harkishanpura",
+   "namePa": null,
+   "lat": 30.27365,
+   "lon": 75.97615,
+   "place": "village"
+  },
+  {
+   "id": "v6738700800",
+   "name": "Harnam Singh Wala",
+   "namePa": null,
+   "lat": 30.36979,
+   "lon": 75.23483,
+   "place": "village"
+  },
+  {
+   "id": "v6051469968",
+   "name": "Harshandpura",
+   "namePa": null,
+   "lat": 30.36547,
+   "lon": 75.90343,
+   "place": "village"
+  },
+  {
+   "id": "v6000873312",
+   "name": "Haryau",
+   "namePa": null,
+   "lat": 29.96399,
+   "lon": 75.70777,
+   "place": "village"
+  },
+  {
+   "id": "v6046182824",
+   "name": "Hasanpur",
+   "namePa": null,
+   "lat": 30.37547,
+   "lon": 76.04221,
+   "place": "village"
+  },
+  {
+   "id": "v6051358140",
+   "name": "Hasanpur",
+   "namePa": null,
+   "lat": 30.34007,
+   "lon": 75.75721,
+   "place": "village"
+  },
+  {
+   "id": "v6687747507",
+   "name": "Hasanpur",
+   "namePa": null,
+   "lat": 29.96331,
+   "lon": 75.52307,
+   "place": "village"
+  },
+  {
+   "id": "v6051358170",
+   "name": "Hathan",
+   "namePa": null,
+   "lat": 30.45134,
+   "lon": 75.82146,
+   "place": "village"
+  },
+  {
+   "id": "v6051358110",
+   "name": "Herike",
+   "namePa": null,
+   "lat": 30.3942,
+   "lon": 75.71056,
+   "place": "village"
+  },
+  {
+   "id": "v6023079226",
+   "name": "Himmatpura",
+   "namePa": null,
+   "lat": 30.52796,
+   "lon": 75.36252,
+   "place": "village"
+  },
+  {
+   "id": "v6044227812",
+   "name": "Hirewala",
+   "namePa": null,
+   "lat": 29.91484,
+   "lon": 75.43376,
+   "place": "village"
+  },
+  {
+   "id": "v6044755039",
+   "name": "Hiron Kalan",
+   "namePa": null,
+   "lat": 30.11783,
+   "lon": 75.62681,
+   "place": "village"
+  },
+  {
+   "id": "v6044107092",
+   "name": "Hiron Khurd",
+   "namePa": null,
+   "lat": 30.04116,
+   "lon": 75.63203,
+   "place": "village"
+  },
+  {
+   "id": "v6044107218",
+   "name": "Hodla Kalan",
+   "namePa": null,
+   "lat": 30.05097,
+   "lon": 75.61143,
+   "place": "village"
+  },
+  {
+   "id": "v1363467519",
+   "name": "Hotipur",
+   "namePa": null,
+   "lat": 29.86118,
+   "lon": 76.04555,
+   "place": "village"
+  },
+  {
+   "id": "v6044927543",
+   "name": "Ilwal",
+   "namePa": null,
+   "lat": 30.20527,
+   "lon": 75.89394,
+   "place": "village"
+  },
+  {
+   "id": "v6051358130",
+   "name": "Ina Bajwar",
+   "namePa": null,
+   "lat": 30.41478,
+   "lon": 75.69374,
+   "place": "village"
+  },
+  {
+   "id": "v6051358120",
+   "name": "Isapur",
+   "namePa": null,
+   "lat": 30.49158,
+   "lon": 75.7873,
+   "place": "village"
+  },
+  {
+   "id": "v6698693184",
+   "name": "Ishar Singh Wala",
+   "namePa": null,
+   "lat": 30.39664,
+   "lon": 75.35978,
+   "place": "village"
+  },
+  {
+   "id": "v6051358159",
+   "name": "Isra",
+   "namePa": null,
+   "lat": 30.43754,
+   "lon": 75.94248,
+   "place": "village"
+  },
+  {
+   "id": "v6051358163",
+   "name": "Isri",
+   "namePa": null,
+   "lat": 30.42011,
+   "lon": 75.93651,
+   "place": "village"
+  },
+  {
+   "id": "v13586122301",
+   "name": "Jagatgarh Bandran",
+   "namePa": null,
+   "lat": 29.82175,
+   "lon": 75.23077,
+   "place": "village"
+  },
+  {
+   "id": "v6051358154",
+   "name": "Jahangir",
+   "namePa": null,
+   "lat": 30.39116,
+   "lon": 75.81811,
+   "place": "village"
+  },
+  {
+   "id": "v6715097250",
+   "name": "Jaidan",
+   "namePa": null,
+   "lat": 30.24988,
+   "lon": 75.31662,
+   "place": "village"
+  },
+  {
+   "id": "v6026961524",
+   "name": "Jaikhar",
+   "namePa": null,
+   "lat": 29.94013,
+   "lon": 76.14229,
+   "place": "village"
+  },
+  {
+   "id": "v6698763237",
+   "name": "Jaimalsingh Wala",
+   "namePa": null,
+   "lat": 30.35206,
+   "lon": 75.33853,
+   "place": "village"
+  },
+  {
+   "id": "v6051237205",
+   "name": "jakhlan",
+   "namePa": null,
+   "lat": 30.38028,
+   "lon": 75.94059,
+   "place": "village"
+  },
+  {
+   "id": "v6026961526",
+   "name": "Jalalpur",
+   "namePa": null,
+   "lat": 29.98207,
+   "lon": 76.17079,
+   "place": "village"
+  },
+  {
+   "id": "v6051469974",
+   "name": "Jalan",
+   "namePa": null,
+   "lat": 30.29179,
+   "lon": 75.96561,
+   "place": "village"
+  },
+  {
+   "id": "v6690179033",
+   "name": "Jalvehra",
+   "namePa": null,
+   "lat": 29.85964,
+   "lon": 75.66173,
+   "place": "village"
+  },
+  {
+   "id": "v2696062937",
+   "name": "Jalwana",
+   "namePa": null,
+   "lat": 30.59624,
+   "lon": 75.69684,
+   "place": "village"
+  },
+  {
+   "id": "v1330377520",
+   "name": "Janal",
+   "namePa": null,
+   "lat": 30.07015,
+   "lon": 75.94925,
+   "place": "village"
+  },
+  {
+   "id": "v6023079189",
+   "name": "Jangiana",
+   "namePa": null,
+   "lat": 30.46859,
+   "lon": 75.27663,
+   "place": "village"
+  },
+  {
+   "id": "v6044799525",
+   "name": "Jassarwal",
+   "namePa": null,
+   "lat": 30.15311,
+   "lon": 75.58238,
+   "place": "village"
+  },
+  {
+   "id": "v6044107216",
+   "name": "Jassarwala",
+   "namePa": null,
+   "lat": 30.05661,
+   "lon": 75.58276,
+   "place": "village"
+  },
+  {
+   "id": "v6051358172",
+   "name": "Jati Mazra",
+   "namePa": null,
+   "lat": 30.4338,
+   "lon": 75.84459,
+   "place": "village"
+  },
+  {
+   "id": "v6046026946",
+   "name": "Jaulia",
+   "namePa": null,
+   "lat": 30.32573,
+   "lon": 76.04972,
+   "place": "village"
+  },
+  {
+   "id": "v6693959671",
+   "name": "Jaurkian",
+   "namePa": null,
+   "lat": 29.85012,
+   "lon": 75.20782,
+   "place": "village"
+  },
+  {
+   "id": "v6044108398",
+   "name": "Jawaharke",
+   "namePa": null,
+   "lat": 29.96769,
+   "lon": 75.40132,
+   "place": "village"
+  },
+  {
+   "id": "v6715078912",
+   "name": "Jeond",
+   "namePa": null,
+   "lat": 30.25516,
+   "lon": 75.32667,
+   "place": "village"
+  },
+  {
+   "id": "v6715022613",
+   "name": "Jethuke",
+   "namePa": null,
+   "lat": 30.29036,
+   "lon": 75.32168,
+   "place": "village"
+  },
+  {
+   "id": "v6019067810",
+   "name": "Jhal",
+   "namePa": null,
+   "lat": 30.48286,
+   "lon": 76.00629,
+   "place": "village"
+  },
+  {
+   "id": "v6676173490",
+   "name": "Jhaloor",
+   "namePa": null,
+   "lat": 29.9399,
+   "lon": 75.92085,
+   "place": "village"
+  },
+  {
+   "id": "v6051358136",
+   "name": "Jhalur",
+   "namePa": null,
+   "lat": 30.39442,
+   "lon": 75.65701,
+   "place": "village"
+  },
+  {
+   "id": "v6000018595",
+   "name": "Jharon",
+   "namePa": null,
+   "lat": 30.13191,
+   "lon": 75.6516,
+   "place": "village"
+  },
+  {
+   "id": "v6693889557",
+   "name": "Jherianwali",
+   "namePa": null,
+   "lat": 29.87061,
+   "lon": 75.25751,
+   "place": "village"
+  },
+  {
+   "id": "v1463179396",
+   "name": "Jhneri",
+   "namePa": null,
+   "lat": 30.21925,
+   "lon": 75.97941,
+   "place": "village"
+  },
+  {
+   "id": "v5332939920",
+   "name": "Jhunir",
+   "namePa": "ਝੁਨੀਰ",
+   "lat": 29.80386,
+   "lon": 75.34862,
+   "place": "village"
+  },
+  {
+   "id": "v6687630723",
+   "name": "Jitgarh",
+   "namePa": null,
+   "lat": 29.9758,
+   "lon": 75.56977,
+   "place": "village"
+  },
+  {
+   "id": "v6702627350",
+   "name": "Jodhpur",
+   "namePa": null,
+   "lat": 30.37917,
+   "lon": 75.45423,
+   "place": "village"
+  },
+  {
+   "id": "v6027289481",
+   "name": "Jogewala",
+   "namePa": null,
+   "lat": 29.87135,
+   "lon": 76.10178,
+   "place": "village"
+  },
+  {
+   "id": "v6690334809",
+   "name": "Joian",
+   "namePa": null,
+   "lat": 29.86067,
+   "lon": 75.447,
+   "place": "village"
+  },
+  {
+   "id": "v6026790022",
+   "name": "Jora Majra",
+   "namePa": null,
+   "lat": 30.07931,
+   "lon": 76.18697,
+   "place": "village"
+  },
+  {
+   "id": "v6690905612",
+   "name": "Juglan",
+   "namePa": null,
+   "lat": 29.82684,
+   "lon": 75.69861,
+   "place": "village"
+  },
+  {
+   "id": "v6044799492",
+   "name": "Kadirabad",
+   "namePa": null,
+   "lat": 30.23197,
+   "lon": 76.12478,
+   "place": "village"
+  },
+  {
+   "id": "v6687185741",
+   "name": "Kahangarh",
+   "namePa": null,
+   "lat": 29.83742,
+   "lon": 75.73855,
+   "place": "village"
+  },
+  {
+   "id": "v6051358155",
+   "name": "Kaheru",
+   "namePa": null,
+   "lat": 30.39168,
+   "lon": 75.83141,
+   "place": "village"
+  },
+  {
+   "id": "v6700043647",
+   "name": "Kahneke",
+   "namePa": null,
+   "lat": 30.25607,
+   "lon": 75.48167,
+   "place": "village"
+  },
+  {
+   "id": "v6044799512",
+   "name": "Kahngarh",
+   "namePa": null,
+   "lat": 30.16661,
+   "lon": 76.04702,
+   "place": "village"
+  },
+  {
+   "id": "v6041344068",
+   "name": "Kahngarh Bhutna",
+   "namePa": null,
+   "lat": 30.1859,
+   "lon": 76.1577,
+   "place": "village"
+  },
+  {
+   "id": "v6027172387",
+   "name": "Kahngarh Gharachon",
+   "namePa": null,
+   "lat": 29.94794,
+   "lon": 76.07028,
+   "place": "village"
+  },
+  {
+   "id": "v6041850376",
+   "name": "Kaimpur",
+   "namePa": null,
+   "lat": 30.03759,
+   "lon": 75.97773,
+   "place": "village"
+  },
+  {
+   "id": "v2643268862",
+   "name": "Kaire",
+   "namePa": null,
+   "lat": 30.44705,
+   "lon": 75.46718,
+   "place": "village"
+  },
+  {
+   "id": "v6051358153",
+   "name": "Kakarwal",
+   "namePa": null,
+   "lat": 30.36791,
+   "lon": 75.83467,
+   "place": "village"
+  },
+  {
+   "id": "v5996264113",
+   "name": "Kakra",
+   "namePa": null,
+   "lat": 30.28746,
+   "lon": 76.02891,
+   "place": "village"
+  },
+  {
+   "id": "v5996264137",
+   "name": "Kakrala",
+   "namePa": null,
+   "lat": 30.36991,
+   "lon": 76.08994,
+   "place": "village"
+  },
+  {
+   "id": "v5996268512",
+   "name": "Kakrala",
+   "namePa": null,
+   "lat": 30.07251,
+   "lon": 76.12907,
+   "place": "village"
+  },
+  {
+   "id": "v6041850423",
+   "name": "Kakuwala",
+   "namePa": null,
+   "lat": 30.00497,
+   "lon": 76.00857,
+   "place": "village"
+  },
+  {
+   "id": "v6674259965",
+   "name": "Kal Banjara",
+   "namePa": null,
+   "lat": 29.93462,
+   "lon": 75.89026,
+   "place": "village"
+  },
+  {
+   "id": "v6051358109",
+   "name": "Kala Bula",
+   "namePa": null,
+   "lat": 30.41804,
+   "lon": 75.72395,
+   "place": "village"
+  },
+  {
+   "id": "v6045762382",
+   "name": "Kala Jhar",
+   "namePa": null,
+   "lat": 30.27093,
+   "lon": 76.15156,
+   "place": "village"
+  },
+  {
+   "id": "v3008305579",
+   "name": "Kalal Majra",
+   "namePa": null,
+   "lat": 30.56494,
+   "lon": 75.55262,
+   "place": "village"
+  },
+  {
+   "id": "v3008282705",
+   "name": "Kalala",
+   "namePa": null,
+   "lat": 30.49607,
+   "lon": 75.52259,
+   "place": "village"
+  },
+  {
+   "id": "v6676463548",
+   "name": "Kalar Bhaini",
+   "namePa": null,
+   "lat": 29.90375,
+   "lon": 75.97043,
+   "place": "village"
+  },
+  {
+   "id": "v5996264160",
+   "name": "Kalbanun",
+   "namePa": null,
+   "lat": 30.0034,
+   "lon": 76.13277,
+   "place": "village"
+  },
+  {
+   "id": "v6051358116",
+   "name": "Kaleran",
+   "namePa": null,
+   "lat": 30.45075,
+   "lon": 75.79419,
+   "place": "village"
+  },
+  {
+   "id": "v6045933053",
+   "name": "Kalhana",
+   "namePa": null,
+   "lat": 30.32595,
+   "lon": 76.13547,
+   "place": "village"
+  },
+  {
+   "id": "v6681323809",
+   "name": "Kalia",
+   "namePa": null,
+   "lat": 29.81818,
+   "lon": 75.75441,
+   "place": "village"
+  },
+  {
+   "id": "v6696727985",
+   "name": "Kalloh",
+   "namePa": null,
+   "lat": 30.02738,
+   "lon": 75.27243,
+   "place": "village"
+  },
+  {
+   "id": "v6016332665",
+   "name": "Kaloke",
+   "namePa": null,
+   "lat": 30.23742,
+   "lon": 75.53942,
+   "place": "village"
+  },
+  {
+   "id": "v1485704210",
+   "name": "Kaloudi",
+   "namePa": null,
+   "lat": 30.2376,
+   "lon": 75.93381,
+   "place": "village"
+  },
+  {
+   "id": "v2643496689",
+   "name": "Kalsan",
+   "namePa": null,
+   "lat": 30.58684,
+   "lon": 75.5451,
+   "place": "village"
+  },
+  {
+   "id": "v6027173093",
+   "name": "Kamalpur",
+   "namePa": null,
+   "lat": 30.1118,
+   "lon": 76.04676,
+   "place": "village"
+  },
+  {
+   "id": "v6044227799",
+   "name": "Kamalu Sawaich",
+   "namePa": null,
+   "lat": 29.9762,
+   "lon": 75.23558,
+   "place": "village"
+  },
+  {
+   "id": "v6044927542",
+   "name": "Kamboh Majra",
+   "namePa": null,
+   "lat": 30.20949,
+   "lon": 75.87596,
+   "place": "village"
+  },
+  {
+   "id": "v6046182809",
+   "name": "Kameli",
+   "namePa": null,
+   "lat": 30.43778,
+   "lon": 76.11019,
+   "place": "village"
+  },
+  {
+   "id": "v6044927541",
+   "name": "Kanai",
+   "namePa": null,
+   "lat": 30.19269,
+   "lon": 75.85467,
+   "place": "village"
+  },
+  {
+   "id": "v6044107224",
+   "name": "Kanakwal Bhanguan",
+   "namePa": null,
+   "lat": 30.01917,
+   "lon": 75.7052,
+   "place": "village"
+  },
+  {
+   "id": "v6044107221",
+   "name": "Kanakwal Chehlan",
+   "namePa": null,
+   "lat": 30.02754,
+   "lon": 75.66816,
+   "place": "village"
+  },
+  {
+   "id": "v6051237230",
+   "name": "Kandhargarh",
+   "namePa": null,
+   "lat": 30.37595,
+   "lon": 75.98458,
+   "place": "village"
+  },
+  {
+   "id": "v6738104602",
+   "name": "Kangar",
+   "namePa": "ਕਾਂਗੜ",
+   "lat": 30.49636,
+   "lon": 75.23305,
+   "place": "village"
+  },
+  {
+   "id": "v6027289494",
+   "name": "Kanghala",
+   "namePa": null,
+   "lat": 29.85453,
+   "lon": 76.13178,
+   "place": "village"
+  },
+  {
+   "id": "v6051358147",
+   "name": "Kanjali",
+   "namePa": null,
+   "lat": 30.30361,
+   "lon": 75.74232,
+   "place": "village"
+  },
+  {
+   "id": "v6016332444",
+   "name": "Kanjhla",
+   "namePa": null,
+   "lat": 30.30858,
+   "lon": 75.77262,
+   "place": "village"
+  },
+  {
+   "id": "v6044799506",
+   "name": "Kapial",
+   "namePa": null,
+   "lat": 30.19514,
+   "lon": 76.01046,
+   "place": "village"
+  },
+  {
+   "id": "v6018905931",
+   "name": "Kapur Garh",
+   "namePa": null,
+   "lat": 30.56476,
+   "lon": 76.11621,
+   "place": "village"
+  },
+  {
+   "id": "v5992656920",
+   "name": "Karail",
+   "namePa": null,
+   "lat": 30.05515,
+   "lon": 76.02676,
+   "place": "village"
+  },
+  {
+   "id": "v6681123686",
+   "name": "Karail",
+   "namePa": null,
+   "lat": 29.80084,
+   "lon": 75.84769,
+   "place": "village"
+  },
+  {
+   "id": "v6051358133",
+   "name": "Karamgarh",
+   "namePa": null,
+   "lat": 30.41382,
+   "lon": 75.6092,
+   "place": "village"
+  },
+  {
+   "id": "v6712255691",
+   "name": "Kararwala",
+   "namePa": null,
+   "lat": 30.29496,
+   "lon": 75.29326,
+   "place": "village"
+  },
+  {
+   "id": "v6690233667",
+   "name": "Karipur",
+   "namePa": null,
+   "lat": 29.89627,
+   "lon": 75.55386,
+   "place": "village"
+  },
+  {
+   "id": "v6683487698",
+   "name": "Kartarpur",
+   "namePa": null,
+   "lat": 29.93012,
+   "lon": 76.15054,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6690333414",
+   "name": "Kasampur Chhina",
+   "namePa": null,
+   "lat": 29.85326,
+   "lon": 75.47107,
+   "place": "village"
+  },
+  {
+   "id": "v2696062909",
+   "name": "Kasba",
+   "namePa": null,
+   "lat": 30.57283,
+   "lon": 75.69341,
+   "place": "village"
+  },
+  {
+   "id": "v2817474768",
+   "name": "Katron",
+   "namePa": null,
+   "lat": 30.44869,
+   "lon": 75.74529,
+   "place": "village"
+  },
+  {
+   "id": "v6016332496",
+   "name": "Kattu",
+   "namePa": null,
+   "lat": 30.30873,
+   "lon": 75.63366,
+   "place": "village"
+  },
+  {
+   "id": "v6680968642",
+   "name": "Kauhrian",
+   "namePa": null,
+   "lat": 29.99151,
+   "lon": 75.91378,
+   "place": "village"
+  },
+  {
+   "id": "v6045933000",
+   "name": "Kaul",
+   "namePa": null,
+   "lat": 30.42277,
+   "lon": 76.12345,
+   "place": "village"
+  },
+  {
+   "id": "v6738710392",
+   "name": "Kauloke",
+   "namePa": null,
+   "lat": 30.37303,
+   "lon": 75.22287,
+   "place": "village"
+  },
+  {
+   "id": "v6051237231",
+   "name": "Kaulsaheri",
+   "namePa": null,
+   "lat": 30.36969,
+   "lon": 75.94439,
+   "place": "village"
+  },
+  {
+   "id": "v6673891425",
+   "name": "Khai",
+   "namePa": null,
+   "lat": 29.93716,
+   "lon": 75.8247,
+   "place": "village"
+  },
+  {
+   "id": "v7187074604",
+   "name": "Khai",
+   "namePa": null,
+   "lat": 30.55971,
+   "lon": 75.22597,
+   "place": "village"
+  },
+  {
+   "id": "v5992582404",
+   "name": "Khanal Kalan",
+   "namePa": null,
+   "lat": 30.12091,
+   "lon": 76.01133,
+   "place": "village"
+  },
+  {
+   "id": "v6027173094",
+   "name": "Khanal Khurd",
+   "namePa": null,
+   "lat": 30.10378,
+   "lon": 76.00265,
+   "place": "village"
+  },
+  {
+   "id": "v6027289483",
+   "name": "Khanauri Khurd",
+   "namePa": null,
+   "lat": 29.81846,
+   "lon": 76.10045,
+   "place": "village"
+  },
+  {
+   "id": "v6673967135",
+   "name": "Khandebad",
+   "namePa": null,
+   "lat": 29.9304,
+   "lon": 75.85819,
+   "place": "village"
+  },
+  {
+   "id": "v6026961508",
+   "name": "Khanewal",
+   "namePa": null,
+   "lat": 29.88616,
+   "lon": 76.02011,
+   "place": "village"
+  },
+  {
+   "id": "v6026961509",
+   "name": "Khang",
+   "namePa": null,
+   "lat": 29.88002,
+   "lon": 76.0456,
+   "place": "village"
+  },
+  {
+   "id": "v6041465867",
+   "name": "Khanpur",
+   "namePa": null,
+   "lat": 30.21242,
+   "lon": 76.19405,
+   "place": "village"
+  },
+  {
+   "id": "v6044799509",
+   "name": "Khanpur Fakiran",
+   "namePa": null,
+   "lat": 30.15043,
+   "lon": 75.99063,
+   "place": "village"
+  },
+  {
+   "id": "v6697200159",
+   "name": "Khara",
+   "namePa": null,
+   "lat": 29.93336,
+   "lon": 75.44181,
+   "place": "village"
+  },
+  {
+   "id": "v6698488986",
+   "name": "Kharak Singh Wala",
+   "namePa": null,
+   "lat": 30.50912,
+   "lon": 75.31895,
+   "place": "village"
+  },
+  {
+   "id": "v6696401083",
+   "name": "Kharak Singhwala",
+   "namePa": null,
+   "lat": 30.10159,
+   "lon": 75.31043,
+   "place": "village"
+  },
+  {
+   "id": "v5996268568",
+   "name": "Kharial",
+   "namePa": null,
+   "lat": 30.10582,
+   "lon": 75.88467,
+   "place": "village"
+  },
+  {
+   "id": "v6683569432",
+   "name": "Khaspur",
+   "namePa": null,
+   "lat": 29.9426,
+   "lon": 76.07887,
+   "place": "village"
+  },
+  {
+   "id": "v6687924830",
+   "name": "Khatri Wala",
+   "namePa": null,
+   "lat": 29.91082,
+   "lon": 75.66437,
+   "place": "village"
+  },
+  {
+   "id": "v6044799498",
+   "name": "Khatriwala",
+   "namePa": null,
+   "lat": 30.1616,
+   "lon": 76.08968,
+   "place": "village"
+  },
+  {
+   "id": "v6051603601",
+   "name": "Khazan Singhwala",
+   "namePa": null,
+   "lat": 30.26011,
+   "lon": 75.8415,
+   "place": "village"
+  },
+  {
+   "id": "v1422665903",
+   "name": "Kheri",
+   "namePa": null,
+   "lat": 30.19099,
+   "lon": 75.88166,
+   "place": "village"
+  },
+  {
+   "id": "v6045105504",
+   "name": "Kheri Bhima",
+   "namePa": null,
+   "lat": 30.24124,
+   "lon": 76.15688,
+   "place": "village"
+  },
+  {
+   "id": "v6051358132",
+   "name": "Kheri Chahlan",
+   "namePa": null,
+   "lat": 30.43373,
+   "lon": 75.68293,
+   "place": "village"
+  },
+  {
+   "id": "v6051237210",
+   "name": "Kheri Chanduh",
+   "namePa": null,
+   "lat": 30.30958,
+   "lon": 75.9684,
+   "place": "village"
+  },
+  {
+   "id": "v6051358161",
+   "name": "Kheri Jattan",
+   "namePa": null,
+   "lat": 30.42977,
+   "lon": 75.96402,
+   "place": "village"
+  },
+  {
+   "id": "v6051358131",
+   "name": "Kheri Khurd",
+   "namePa": null,
+   "lat": 30.421,
+   "lon": 75.68284,
+   "place": "village"
+  },
+  {
+   "id": "v6027173095",
+   "name": "Kheri Nagahiya",
+   "namePa": null,
+   "lat": 30.07303,
+   "lon": 76.09551,
+   "place": "village"
+  },
+  {
+   "id": "v6044799516",
+   "name": "Kheri Nanga",
+   "namePa": null,
+   "lat": 30.02167,
+   "lon": 75.97625,
+   "place": "village"
+  },
+  {
+   "id": "v6051237217",
+   "name": "Kheri Sodian",
+   "namePa": null,
+   "lat": 30.45385,
+   "lon": 76.06828,
+   "place": "village"
+  },
+  {
+   "id": "v6041850426",
+   "name": "Khetla",
+   "namePa": null,
+   "lat": 30.0292,
+   "lon": 76.00719,
+   "place": "village"
+  },
+  {
+   "id": "v6697012748",
+   "name": "Khiala Khurd",
+   "namePa": null,
+   "lat": 30.02852,
+   "lon": 75.45463,
+   "place": "village"
+  },
+  {
+   "id": "v2812840312",
+   "name": "Khiali",
+   "namePa": null,
+   "lat": 30.51314,
+   "lon": 75.60932,
+   "place": "village"
+  },
+  {
+   "id": "v6694023535",
+   "name": "Khiali Chehlanwali",
+   "namePa": null,
+   "lat": 29.8228,
+   "lon": 75.36705,
+   "place": "village"
+  },
+  {
+   "id": "v6044108403",
+   "name": "Khilan",
+   "namePa": null,
+   "lat": 29.97464,
+   "lon": 75.47359,
+   "place": "village"
+  },
+  {
+   "id": "v6051358144",
+   "name": "Khilarian",
+   "namePa": null,
+   "lat": 30.29316,
+   "lon": 75.8115,
+   "place": "village"
+  },
+  {
+   "id": "v6697057835",
+   "name": "Khiwa Dialuwala",
+   "namePa": null,
+   "lat": 30.13538,
+   "lon": 75.5598,
+   "place": "village"
+  },
+  {
+   "id": "v6697053574",
+   "name": "Khiwa Kalan",
+   "namePa": null,
+   "lat": 30.10671,
+   "lon": 75.57184,
+   "place": "village"
+  },
+  {
+   "id": "v6697077894",
+   "name": "Khiwa Khurd",
+   "namePa": null,
+   "lat": 30.12581,
+   "lon": 75.57459,
+   "place": "village"
+  },
+  {
+   "id": "v6044107093",
+   "name": "Khiwa Mihan Singhwala",
+   "namePa": null,
+   "lat": 30.03436,
+   "lon": 75.61525,
+   "place": "village"
+  },
+  {
+   "id": "v6045933003",
+   "name": "Khokh",
+   "namePa": null,
+   "lat": 30.4466,
+   "lon": 76.17154,
+   "place": "village"
+  },
+  {
+   "id": "v6681008518",
+   "name": "Khokhar",
+   "namePa": null,
+   "lat": 29.98189,
+   "lon": 75.80366,
+   "place": "village"
+  },
+  {
+   "id": "v6715524239",
+   "name": "Khokhar",
+   "namePa": null,
+   "lat": 30.18318,
+   "lon": 75.28432,
+   "place": "village"
+  },
+  {
+   "id": "v6691270619",
+   "name": "Khokhar Kalan",
+   "namePa": null,
+   "lat": 30.0197,
+   "lon": 75.34536,
+   "place": "village"
+  },
+  {
+   "id": "v6691269075",
+   "name": "Khokhar Khurd",
+   "namePa": null,
+   "lat": 30.00448,
+   "lon": 75.34156,
+   "place": "village"
+  },
+  {
+   "id": "v6688009905",
+   "name": "Khudal Kalan",
+   "namePa": null,
+   "lat": 29.85285,
+   "lon": 75.72106,
+   "place": "village"
+  },
+  {
+   "id": "v6016332039",
+   "name": "Khuddi Kalan",
+   "namePa": null,
+   "lat": 30.34664,
+   "lon": 75.49118,
+   "place": "village"
+  },
+  {
+   "id": "v6698896207",
+   "name": "Khudi Khurd",
+   "namePa": null,
+   "lat": 30.32807,
+   "lon": 75.45431,
+   "place": "village"
+  },
+  {
+   "id": "v6044927539",
+   "name": "Khurana",
+   "namePa": null,
+   "lat": 30.24468,
+   "lon": 75.90652,
+   "place": "village"
+  },
+  {
+   "id": "v6044927538",
+   "name": "Khurani",
+   "namePa": null,
+   "lat": 30.23742,
+   "lon": 75.90514,
+   "place": "village"
+  },
+  {
+   "id": "v6703191028",
+   "name": "Khurd",
+   "namePa": null,
+   "lat": 30.55196,
+   "lon": 75.75409,
+   "place": "village"
+  },
+  {
+   "id": "v6016332445",
+   "name": "Kila",
+   "namePa": null,
+   "lat": 30.31925,
+   "lon": 75.72473,
+   "place": "village"
+  },
+  {
+   "id": "v6051603600",
+   "name": "Kila Bharian",
+   "namePa": null,
+   "lat": 30.20975,
+   "lon": 75.73271,
+   "place": "village"
+  },
+  {
+   "id": "v6702849754",
+   "name": "Kirpal Singh Wala",
+   "namePa": null,
+   "lat": 30.56107,
+   "lon": 75.5653,
+   "place": "village"
+  },
+  {
+   "id": "v6028271995",
+   "name": "Kishangarh",
+   "namePa": "ਕਿਸ਼ਨਗੜ੍ਹ ਸੇਧਾ ਸਿੰਘ ਵਾਲਾ",
+   "lat": 29.90926,
+   "lon": 75.73125,
+   "place": "village"
+  },
+  {
+   "id": "v6693961707",
+   "name": "Koerwala",
+   "namePa": null,
+   "lat": 29.82934,
+   "lon": 75.38177,
+   "place": "village"
+  },
+  {
+   "id": "v6025255822",
+   "name": "Kolburchha",
+   "namePa": null,
+   "lat": 30.226,
+   "lon": 76.14332,
+   "place": "village"
+  },
+  {
+   "id": "v6028992921",
+   "name": "Kot Dharmun",
+   "namePa": null,
+   "lat": 29.89222,
+   "lon": 75.37213,
+   "place": "village"
+  },
+  {
+   "id": "v6702772365",
+   "name": "Kothe Rajinderpura",
+   "namePa": null,
+   "lat": 30.30665,
+   "lon": 75.58349,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6041344066",
+   "name": "Kotli",
+   "namePa": null,
+   "lat": 30.13451,
+   "lon": 76.13787,
+   "place": "village"
+  },
+  {
+   "id": "v6045933002",
+   "name": "Kotli",
+   "namePa": null,
+   "lat": 30.43626,
+   "lon": 76.16688,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6696587329",
+   "name": "Kotli Kalan",
+   "namePa": null,
+   "lat": 30.03894,
+   "lon": 75.293,
+   "place": "village"
+  },
+  {
+   "id": "v6717971001",
+   "name": "Kotli Khurd",
+   "namePa": null,
+   "lat": 29.99615,
+   "lon": 75.26725,
+   "place": "village"
+  },
+  {
+   "id": "v6697029322",
+   "name": "Kotra",
+   "namePa": null,
+   "lat": 30.05504,
+   "lon": 75.4906,
+   "place": "village"
+  },
+  {
+   "id": "v6044755041",
+   "name": "Kotra Amru",
+   "namePa": null,
+   "lat": 30.09995,
+   "lon": 75.72876,
+   "place": "village"
+  },
+  {
+   "id": "v6715148568",
+   "name": "Kotra Kaura",
+   "namePa": null,
+   "lat": 30.23834,
+   "lon": 75.2017,
+   "place": "village"
+  },
+  {
+   "id": "v6681453018",
+   "name": "Kotra Lehal",
+   "namePa": null,
+   "lat": 29.9047,
+   "lon": 75.77859,
+   "place": "village"
+  },
+  {
+   "id": "v6045933051",
+   "name": "Kotwali",
+   "namePa": null,
+   "lat": 30.37195,
+   "lon": 76.15911,
+   "place": "village"
+  },
+  {
+   "id": "v6016332551",
+   "name": "Kubba",
+   "namePa": null,
+   "lat": 30.23226,
+   "lon": 75.60632,
+   "place": "village"
+  },
+  {
+   "id": "v6690190239",
+   "name": "Kulana",
+   "namePa": null,
+   "lat": 29.88496,
+   "lon": 75.58096,
+   "place": "village"
+  },
+  {
+   "id": "v5999925418",
+   "name": "Kular Khurd",
+   "namePa": null,
+   "lat": 30.16569,
+   "lon": 75.85534,
+   "place": "village"
+  },
+  {
+   "id": "v6025955265",
+   "name": "Kularan",
+   "namePa": null,
+   "lat": 30.13841,
+   "lon": 76.11435,
+   "place": "village"
+  },
+  {
+   "id": "v6044108404",
+   "name": "Kulehri",
+   "namePa": null,
+   "lat": 29.94861,
+   "lon": 75.49135,
+   "place": "village"
+  },
+  {
+   "id": "v245768904",
+   "name": "Kulrian",
+   "namePa": null,
+   "lat": 29.80035,
+   "lon": 75.68343,
+   "place": "village"
+  },
+  {
+   "id": "v6051358138",
+   "name": "Kumbarwal",
+   "namePa": null,
+   "lat": 30.33177,
+   "lon": 75.68027,
+   "place": "village"
+  },
+  {
+   "id": "v6051469960",
+   "name": "Kunran",
+   "namePa": null,
+   "lat": 30.24628,
+   "lon": 75.71391,
+   "place": "village"
+  },
+  {
+   "id": "v2015982472",
+   "name": "Kutba",
+   "namePa": null,
+   "lat": 30.57851,
+   "lon": 75.62709,
+   "place": "village"
+  },
+  {
+   "id": "v2795763775",
+   "name": "Kuthala",
+   "namePa": null,
+   "lat": 30.5242,
+   "lon": 75.75519,
+   "place": "village"
+  },
+  {
+   "id": "v6715619175",
+   "name": "Kutiwal Kalan",
+   "namePa": null,
+   "lat": 30.13274,
+   "lon": 75.24838,
+   "place": "village"
+  },
+  {
+   "id": "v6715705811",
+   "name": "Kutiwal Khurd",
+   "namePa": null,
+   "lat": 30.11334,
+   "lon": 75.27478,
+   "place": "village"
+  },
+  {
+   "id": "v6051851812",
+   "name": "Lachcha Baddi",
+   "namePa": null,
+   "lat": 30.45532,
+   "lon": 75.86528,
+   "place": "village"
+  },
+  {
+   "id": "v6681425981",
+   "name": "Ladal",
+   "namePa": null,
+   "lat": 29.93348,
+   "lon": 75.75259,
+   "place": "village"
+  },
+  {
+   "id": "v6680928582",
+   "name": "Ladbanjara Kalan",
+   "namePa": null,
+   "lat": 29.9908,
+   "lon": 75.98266,
+   "place": "village"
+  },
+  {
+   "id": "v6027914434",
+   "name": "Ladbanjara Khurd",
+   "namePa": null,
+   "lat": 29.99044,
+   "lon": 75.99966,
+   "place": "village"
+  },
+  {
+   "id": "v1463006945",
+   "name": "Ladda Khothi",
+   "namePa": null,
+   "lat": 30.31621,
+   "lon": 75.82421,
+   "place": "village"
+  },
+  {
+   "id": "v6051469975",
+   "name": "Laddi",
+   "namePa": null,
+   "lat": 30.28994,
+   "lon": 75.93394,
+   "place": "village"
+  },
+  {
+   "id": "v6046182818",
+   "name": "Ladheri",
+   "namePa": null,
+   "lat": 30.3982,
+   "lon": 76.07346,
+   "place": "village"
+  },
+  {
+   "id": "v6045933067",
+   "name": "Lahhauran Khurd",
+   "namePa": null,
+   "lat": 30.39823,
+   "lon": 76.16753,
+   "place": "village"
+  },
+  {
+   "id": "v5999925420",
+   "name": "Lakhmirwala",
+   "namePa": null,
+   "lat": 30.15956,
+   "lon": 75.81081,
+   "place": "village"
+  },
+  {
+   "id": "v6028992919",
+   "name": "Lakhmirwala",
+   "namePa": null,
+   "lat": 29.86004,
+   "lon": 75.39316,
+   "place": "village"
+  },
+  {
+   "id": "v6025255823",
+   "name": "Lalauchi",
+   "namePa": null,
+   "lat": 30.2392,
+   "lon": 76.18671,
+   "place": "village"
+  },
+  {
+   "id": "v6694004304",
+   "name": "Lalian Wali",
+   "namePa": null,
+   "lat": 29.83915,
+   "lon": 75.34494,
+   "place": "village"
+  },
+  {
+   "id": "v6697212180",
+   "name": "Lalluwala",
+   "namePa": null,
+   "lat": 29.9982,
+   "lon": 75.45457,
+   "place": "village"
+  },
+  {
+   "id": "v1446872143",
+   "name": "Langrian",
+   "namePa": null,
+   "lat": 30.47156,
+   "lon": 75.99194,
+   "place": "village"
+  },
+  {
+   "id": "v4943591173",
+   "name": "Lasoi",
+   "namePa": null,
+   "lat": 30.58532,
+   "lon": 76.01037,
+   "place": "village"
+  },
+  {
+   "id": "v6026961520",
+   "name": "Lawala",
+   "namePa": null,
+   "lat": 29.97687,
+   "lon": 76.08762,
+   "place": "village"
+  },
+  {
+   "id": "v6026961498",
+   "name": "Lehal kalan",
+   "namePa": null,
+   "lat": 29.87846,
+   "lon": 75.85442,
+   "place": "village"
+  },
+  {
+   "id": "v6673915585",
+   "name": "Lehal Khurd",
+   "namePa": null,
+   "lat": 29.92305,
+   "lon": 75.83577,
+   "place": "village"
+  },
+  {
+   "id": "v6726865587",
+   "name": "Lehra Dhurkot",
+   "namePa": null,
+   "lat": 30.25887,
+   "lon": 75.20284,
+   "place": "village"
+  },
+  {
+   "id": "v6051358141",
+   "name": "Lidran",
+   "namePa": null,
+   "lat": 30.28775,
+   "lon": 75.77846,
+   "place": "village"
+  },
+  {
+   "id": "v5284831774",
+   "name": "Loha Khera",
+   "namePa": null,
+   "lat": 30.21788,
+   "lon": 75.63035,
+   "place": "village"
+  },
+  {
+   "id": "v6046026953",
+   "name": "Lohar Mazra",
+   "namePa": null,
+   "lat": 30.3401,
+   "lon": 76.0729,
+   "place": "village"
+  },
+  {
+   "id": "v6051358162",
+   "name": "Lohar Mazra",
+   "namePa": null,
+   "lat": 30.42307,
+   "lon": 75.94759,
+   "place": "village"
+  },
+  {
+   "id": "v2694333400",
+   "name": "Lohgarh",
+   "namePa": null,
+   "lat": 30.57847,
+   "lon": 75.6733,
+   "place": "village"
+  },
+  {
+   "id": "v6045932996",
+   "name": "Lope",
+   "namePa": null,
+   "lat": 30.47756,
+   "lon": 76.14542,
+   "place": "village"
+  },
+  {
+   "id": "v6696743869",
+   "name": "Maan Birian",
+   "namePa": null,
+   "lat": 29.98864,
+   "lon": 75.29741,
+   "place": "village"
+  },
+  {
+   "id": "v2653358353",
+   "name": "Machhike",
+   "namePa": null,
+   "lat": 30.55704,
+   "lon": 75.38021,
+   "place": "village"
+  },
+  {
+   "id": "v5997379787",
+   "name": "Machhrai Khurd",
+   "namePa": null,
+   "lat": 30.58986,
+   "lon": 76.18581,
+   "place": "village"
+  },
+  {
+   "id": "v9308025390",
+   "name": "Machrai Kalan",
+   "namePa": null,
+   "lat": 30.57921,
+   "lon": 76.17631,
+   "place": "village"
+  },
+  {
+   "id": "v7189924616",
+   "name": "Madoke",
+   "namePa": "ਮੱਦੋਕੇ",
+   "lat": 30.56075,
+   "lon": 75.27756,
+   "place": "village"
+  },
+  {
+   "id": "v6690814033",
+   "name": "Maghanian",
+   "namePa": null,
+   "lat": 29.80538,
+   "lon": 75.58209,
+   "place": "village"
+  },
+  {
+   "id": "v6045933056",
+   "name": "Mahesh",
+   "namePa": null,
+   "lat": 30.35099,
+   "lon": 76.17903,
+   "place": "village"
+  },
+  {
+   "id": "v6051358121",
+   "name": "Mahmadpur",
+   "namePa": null,
+   "lat": 30.49942,
+   "lon": 75.75159,
+   "place": "village"
+  },
+  {
+   "id": "v6051851804",
+   "name": "Mahorana",
+   "namePa": null,
+   "lat": 30.48694,
+   "lon": 75.95829,
+   "place": "village"
+  },
+  {
+   "id": "v6051237208",
+   "name": "Mahsampur",
+   "namePa": null,
+   "lat": 30.34518,
+   "lon": 75.98179,
+   "place": "village"
+  },
+  {
+   "id": "v6023079224",
+   "name": "Majoke",
+   "namePa": null,
+   "lat": 30.50478,
+   "lon": 75.3608,
+   "place": "village"
+  },
+  {
+   "id": "v6025256004",
+   "name": "Majri",
+   "namePa": null,
+   "lat": 30.21469,
+   "lon": 76.17469,
+   "place": "village"
+  },
+  {
+   "id": "v6044227805",
+   "name": "Makha",
+   "namePa": null,
+   "lat": 29.93709,
+   "lon": 75.29789,
+   "place": "village"
+  },
+  {
+   "id": "v6696497337",
+   "name": "Makha Chehlan",
+   "namePa": null,
+   "lat": 30.13795,
+   "lon": 75.46679,
+   "place": "village"
+  },
+  {
+   "id": "v6028992915",
+   "name": "Mal Singh Wala",
+   "namePa": null,
+   "lat": 29.87161,
+   "lon": 75.49891,
+   "place": "village"
+  },
+  {
+   "id": "v6690650589",
+   "name": "Malakpur Bhimra",
+   "namePa": null,
+   "lat": 29.80507,
+   "lon": 75.48141,
+   "place": "village"
+  },
+  {
+   "id": "v6696834215",
+   "name": "Malakpur Khiala",
+   "namePa": null,
+   "lat": 30.04537,
+   "lon": 75.43299,
+   "place": "village"
+  },
+  {
+   "id": "v6703017802",
+   "name": "Malianwala",
+   "namePa": null,
+   "lat": 30.44496,
+   "lon": 75.4211,
+   "place": "village"
+  },
+  {
+   "id": "v6046182827",
+   "name": "Malkon",
+   "namePa": null,
+   "lat": 30.3374,
+   "lon": 76.05861,
+   "place": "village"
+  },
+  {
+   "id": "v6690553760",
+   "name": "Malkon",
+   "namePa": null,
+   "lat": 29.80892,
+   "lon": 75.44534,
+   "place": "village"
+  },
+  {
+   "id": "v6051358175",
+   "name": "Mallu Mazra",
+   "namePa": null,
+   "lat": 30.41223,
+   "lon": 75.8497,
+   "place": "village"
+  },
+  {
+   "id": "v6051851803",
+   "name": "Manak Mazra",
+   "namePa": null,
+   "lat": 30.485,
+   "lon": 75.91176,
+   "place": "village"
+  },
+  {
+   "id": "v2795763687",
+   "name": "Manal",
+   "namePa": null,
+   "lat": 30.50679,
+   "lon": 75.66554,
+   "place": "village"
+  },
+  {
+   "id": "v6051237206",
+   "name": "Manan",
+   "namePa": null,
+   "lat": 30.40368,
+   "lon": 75.94797,
+   "place": "village"
+  },
+  {
+   "id": "v6690905600",
+   "name": "Mander",
+   "namePa": null,
+   "lat": 29.81804,
+   "lon": 75.68222,
+   "place": "village"
+  },
+  {
+   "id": "v6044799532",
+   "name": "Mander Kalan",
+   "namePa": null,
+   "lat": 30.17926,
+   "lon": 75.63975,
+   "place": "village"
+  },
+  {
+   "id": "v6044799531",
+   "name": "Mander Khurd",
+   "namePa": null,
+   "lat": 30.20078,
+   "lon": 75.58705,
+   "place": "village"
+  },
+  {
+   "id": "v6028992917",
+   "name": "Mandhali",
+   "namePa": null,
+   "lat": 29.88715,
+   "lon": 75.44335,
+   "place": "village"
+  },
+  {
+   "id": "v1960932942",
+   "name": "Mandi Kalan",
+   "namePa": null,
+   "lat": 30.21186,
+   "lon": 75.25949,
+   "place": "village"
+  },
+  {
+   "id": "v6715659288",
+   "name": "Mandi Khurd",
+   "namePa": null,
+   "lat": 30.13589,
+   "lon": 75.21104,
+   "place": "village"
+  },
+  {
+   "id": "v6681161095",
+   "name": "Mandvi",
+   "namePa": null,
+   "lat": 29.80943,
+   "lon": 75.98762,
+   "place": "village"
+  },
+  {
+   "id": "v6703043254",
+   "name": "Mangewal",
+   "namePa": null,
+   "lat": 30.50389,
+   "lon": 75.64587,
+   "place": "village"
+  },
+  {
+   "id": "v6051469971",
+   "name": "Mangwal",
+   "namePa": null,
+   "lat": 30.25462,
+   "lon": 75.87124,
+   "place": "village"
+  },
+  {
+   "id": "v6045762489",
+   "name": "Manja",
+   "namePa": null,
+   "lat": 30.29306,
+   "lon": 76.09529,
+   "place": "village"
+  },
+  {
+   "id": "v6045762492",
+   "name": "Manji",
+   "namePa": null,
+   "lat": 30.28914,
+   "lon": 76.09514,
+   "place": "village"
+  },
+  {
+   "id": "v6696834881",
+   "name": "Mansa Kenchian",
+   "namePa": null,
+   "lat": 30.03528,
+   "lon": 75.40232,
+   "place": "village"
+  },
+  {
+   "id": "v6697002310",
+   "name": "Mansa Khurd",
+   "namePa": null,
+   "lat": 30.01112,
+   "lon": 75.41232,
+   "place": "village"
+  },
+  {
+   "id": "v6051237203",
+   "name": "Manwala",
+   "namePa": null,
+   "lat": 30.34621,
+   "lon": 75.88428,
+   "place": "village"
+  },
+  {
+   "id": "v1491335778",
+   "name": "Maradkheda",
+   "namePa": null,
+   "lat": 30.15269,
+   "lon": 75.86579,
+   "place": "village"
+  },
+  {
+   "id": "v6045762384",
+   "name": "Masani",
+   "namePa": null,
+   "lat": 30.25747,
+   "lon": 76.13637,
+   "place": "village"
+  },
+  {
+   "id": "v6051603604",
+   "name": "Mastuana",
+   "namePa": null,
+   "lat": 30.26574,
+   "lon": 75.77494,
+   "place": "village"
+  },
+  {
+   "id": "v6027289495",
+   "name": "Matauli",
+   "namePa": null,
+   "lat": 29.86975,
+   "lon": 76.14392,
+   "place": "village"
+  },
+  {
+   "id": "v6044799491",
+   "name": "Matran",
+   "namePa": null,
+   "lat": 30.23189,
+   "lon": 76.10354,
+   "place": "village"
+  },
+  {
+   "id": "v6696786720",
+   "name": "Matti",
+   "namePa": null,
+   "lat": 30.11885,
+   "lon": 75.52359,
+   "place": "village"
+  },
+  {
+   "id": "v6044227808",
+   "name": "Maujia",
+   "namePa": null,
+   "lat": 29.92422,
+   "lon": 75.3251,
+   "place": "village"
+  },
+  {
+   "id": "v6696809118",
+   "name": "Maujo Kalan",
+   "namePa": null,
+   "lat": 30.13271,
+   "lon": 75.50681,
+   "place": "village"
+  },
+  {
+   "id": "v6696786719",
+   "name": "Maujo Khurd",
+   "namePa": null,
+   "lat": 30.1285,
+   "lon": 75.5175,
+   "place": "village"
+  },
+  {
+   "id": "v6026961512",
+   "name": "Maulviwala",
+   "namePa": null,
+   "lat": 29.9035,
+   "lon": 76.05994,
+   "place": "village"
+  },
+  {
+   "id": "v6717737573",
+   "name": "Maur Kalan",
+   "namePa": null,
+   "lat": 30.07035,
+   "lon": 75.24211,
+   "place": "village"
+  },
+  {
+   "id": "v6717820952",
+   "name": "Maur Khurd",
+   "namePa": null,
+   "lat": 30.05508,
+   "lon": 75.22521,
+   "place": "village"
+  },
+  {
+   "id": "v971645736",
+   "name": "Mauran",
+   "namePa": null,
+   "lat": 30.12881,
+   "lon": 75.92192,
+   "place": "village"
+  },
+  {
+   "id": "v6698733625",
+   "name": "Mauran Nabha",
+   "namePa": null,
+   "lat": 30.36976,
+   "lon": 75.38271,
+   "place": "village"
+  },
+  {
+   "id": "v6698796394",
+   "name": "Maurh Patiala",
+   "namePa": null,
+   "lat": 30.3663,
+   "lon": 75.33873,
+   "place": "village"
+  },
+  {
+   "id": "v6026791095",
+   "name": "Mavi Kalan",
+   "namePa": null,
+   "lat": 30.10162,
+   "lon": 76.16306,
+   "place": "village"
+  },
+  {
+   "id": "v6044799521",
+   "name": "Meda Bas",
+   "namePa": null,
+   "lat": 30.02206,
+   "lon": 75.77803,
+   "place": "village"
+  },
+  {
+   "id": "v2817443974",
+   "name": "Mehal Kalan",
+   "namePa": null,
+   "lat": 30.52939,
+   "lon": 75.56539,
+   "place": "village"
+  },
+  {
+   "id": "v1940511669",
+   "name": "Mehlal Khurd",
+   "namePa": null,
+   "lat": 30.53625,
+   "lon": 75.59053,
+   "place": "village"
+  },
+  {
+   "id": "v1330372435",
+   "name": "Mehlan",
+   "namePa": null,
+   "lat": 30.15602,
+   "lon": 75.89819,
+   "place": "village"
+  },
+  {
+   "id": "v6698894277",
+   "name": "Mehta",
+   "namePa": null,
+   "lat": 30.28811,
+   "lon": 75.4078,
+   "place": "village"
+  },
+  {
+   "id": "v6693948655",
+   "name": "Mian",
+   "namePa": null,
+   "lat": 29.85422,
+   "lon": 75.23824,
+   "place": "village"
+  },
+  {
+   "id": "v6051237207",
+   "name": "Mimsa",
+   "namePa": null,
+   "lat": 30.39479,
+   "lon": 75.96016,
+   "place": "village"
+  },
+  {
+   "id": "v6051469967",
+   "name": "Mirheri",
+   "namePa": null,
+   "lat": 30.3654,
+   "lon": 75.926,
+   "place": "village"
+  },
+  {
+   "id": "v2505580300",
+   "name": "Mithewal",
+   "namePa": null,
+   "lat": 30.53554,
+   "lon": 75.67148,
+   "place": "village"
+  },
+  {
+   "id": "v6051237222",
+   "name": "Mohala",
+   "namePa": null,
+   "lat": 30.44218,
+   "lon": 76.05159,
+   "place": "village"
+  },
+  {
+   "id": "v6051237221",
+   "name": "Mohali",
+   "namePa": null,
+   "lat": 30.45076,
+   "lon": 76.04841,
+   "place": "village"
+  },
+  {
+   "id": "v6044107217",
+   "name": "Mohar Singh Wala",
+   "namePa": null,
+   "lat": 30.0524,
+   "lon": 75.57959,
+   "place": "village"
+  },
+  {
+   "id": "v6697141981",
+   "name": "Moola Singhwala",
+   "namePa": null,
+   "lat": 30.0287,
+   "lon": 75.49193,
+   "place": "village"
+  },
+  {
+   "id": "v2643480202",
+   "name": "Moom",
+   "namePa": null,
+   "lat": 30.55408,
+   "lon": 75.49265,
+   "place": "village"
+  },
+  {
+   "id": "v6691269076",
+   "name": "Moosa",
+   "namePa": null,
+   "lat": 29.97737,
+   "lon": 75.32013,
+   "place": "village"
+  },
+  {
+   "id": "v6051851810",
+   "name": "Muhammadgarh",
+   "namePa": null,
+   "lat": 30.46225,
+   "lon": 75.87394,
+   "place": "village"
+  },
+  {
+   "id": "v6051851808",
+   "name": "Muhammadnagar",
+   "namePa": null,
+   "lat": 30.484,
+   "lon": 75.89338,
+   "place": "village"
+  },
+  {
+   "id": "v6016332441",
+   "name": "Mulowal",
+   "namePa": null,
+   "lat": 30.36051,
+   "lon": 75.74318,
+   "place": "village"
+  },
+  {
+   "id": "v6041344056",
+   "name": "Munshiwala",
+   "namePa": null,
+   "lat": 30.06527,
+   "lon": 76.04758,
+   "place": "village"
+  },
+  {
+   "id": "v6045762383",
+   "name": "Munshiwala",
+   "namePa": null,
+   "lat": 30.25228,
+   "lon": 76.15199,
+   "place": "village"
+  },
+  {
+   "id": "v1512534055",
+   "name": "Nadampur",
+   "namePa": null,
+   "lat": 30.25367,
+   "lon": 76.11759,
+   "place": "village"
+  },
+  {
+   "id": "v6044799508",
+   "name": "Nagra",
+   "namePa": null,
+   "lat": 30.17199,
+   "lon": 75.95655,
+   "place": "village"
+  },
+  {
+   "id": "v6026790020",
+   "name": "Nagri",
+   "namePa": null,
+   "lat": 30.05008,
+   "lon": 76.14504,
+   "place": "village"
+  },
+  {
+   "id": "v6023079081",
+   "name": "Nainewala",
+   "namePa": null,
+   "lat": 30.42534,
+   "lon": 75.32649,
+   "place": "village"
+  },
+  {
+   "id": "v2643270222",
+   "name": "Naiwala",
+   "namePa": null,
+   "lat": 30.43255,
+   "lon": 75.48698,
+   "place": "village"
+  },
+  {
+   "id": "v6027289480",
+   "name": "Naiwala",
+   "namePa": null,
+   "lat": 29.881,
+   "lon": 76.11189,
+   "place": "village"
+  },
+  {
+   "id": "v6051469978",
+   "name": "Najwala",
+   "namePa": null,
+   "lat": 30.26078,
+   "lon": 75.90042,
+   "place": "hamlet"
+  },
+  {
+   "id": "v9996569594",
+   "name": "Nakta",
+   "namePa": null,
+   "lat": 30.27559,
+   "lon": 76.11005,
+   "place": "village"
+  },
+  {
+   "id": "v1684540407",
+   "name": "Nakte",
+   "namePa": null,
+   "lat": 30.15377,
+   "lon": 75.83193,
+   "place": "village"
+  },
+  {
+   "id": "v1514218702",
+   "name": "Nakte Pind",
+   "namePa": null,
+   "lat": 30.16796,
+   "lon": 75.84359,
+   "place": "village"
+  },
+  {
+   "id": "v6044799494",
+   "name": "Namada",
+   "namePa": null,
+   "lat": 30.21357,
+   "lon": 76.12315,
+   "place": "village"
+  },
+  {
+   "id": "v1492189504",
+   "name": "Namol",
+   "namePa": null,
+   "lat": 30.18262,
+   "lon": 75.75142,
+   "place": "village"
+  },
+  {
+   "id": "v6046182833",
+   "name": "Nanakwali Chhanna",
+   "namePa": null,
+   "lat": 30.29657,
+   "lon": 76.00659,
+   "place": "village"
+  },
+  {
+   "id": "v6045105670",
+   "name": "Nandgarh",
+   "namePa": null,
+   "lat": 30.22863,
+   "lon": 76.08436,
+   "place": "village"
+  },
+  {
+   "id": "v6051237213",
+   "name": "Nandgarh",
+   "namePa": null,
+   "lat": 30.32834,
+   "lon": 75.97741,
+   "place": "village"
+  },
+  {
+   "id": "v6694079499",
+   "name": "Nandgarh",
+   "namePa": null,
+   "lat": 29.80732,
+   "lon": 75.41787,
+   "place": "village"
+  },
+  {
+   "id": "v6026790823",
+   "name": "Nanehra",
+   "namePa": null,
+   "lat": 30.03418,
+   "lon": 76.16993,
+   "place": "village"
+  },
+  {
+   "id": "v6051358135",
+   "name": "Nangal",
+   "namePa": null,
+   "lat": 30.42492,
+   "lon": 75.64653,
+   "place": "village"
+  },
+  {
+   "id": "v6044227811",
+   "name": "Nangal Kalan",
+   "namePa": null,
+   "lat": 29.92251,
+   "lon": 75.39496,
+   "place": "village"
+  },
+  {
+   "id": "v6044227810",
+   "name": "Nangal Khurd",
+   "namePa": null,
+   "lat": 29.93671,
+   "lon": 75.37711,
+   "place": "village"
+  },
+  {
+   "id": "v6681047217",
+   "name": "Nangla",
+   "namePa": null,
+   "lat": 29.99672,
+   "lon": 75.83504,
+   "place": "village"
+  },
+  {
+   "id": "v6044107225",
+   "name": "Naraingarh",
+   "namePa": null,
+   "lat": 30.02987,
+   "lon": 75.737,
+   "place": "village"
+  },
+  {
+   "id": "v6044799511",
+   "name": "Naraingarh",
+   "namePa": null,
+   "lat": 30.17496,
+   "lon": 76.04123,
+   "place": "village"
+  },
+  {
+   "id": "v2655991573",
+   "name": "Narengarh Sohian",
+   "namePa": null,
+   "lat": 30.55775,
+   "lon": 75.42847,
+   "place": "village"
+  },
+  {
+   "id": "v6051604403",
+   "name": "Nat",
+   "namePa": null,
+   "lat": 30.28916,
+   "lon": 75.7255,
+   "place": "village"
+  },
+  {
+   "id": "v6051851798",
+   "name": "Naudharani",
+   "namePa": null,
+   "lat": 30.4884,
+   "lon": 75.85836,
+   "place": "village"
+  },
+  {
+   "id": "v6683940972",
+   "name": "Nawan Kalbanu",
+   "namePa": null,
+   "lat": 29.99011,
+   "lon": 76.16226,
+   "place": "village"
+  },
+  {
+   "id": "v7192601109",
+   "name": "Nawan Machhi ke",
+   "namePa": null,
+   "lat": 30.56845,
+   "lon": 75.39123,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6738071363",
+   "name": "Nawan Pind",
+   "namePa": null,
+   "lat": 30.47703,
+   "lon": 75.21904,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6027600051",
+   "name": "Nawangaon",
+   "namePa": null,
+   "lat": 29.85486,
+   "lon": 76.02951,
+   "place": "village"
+  },
+  {
+   "id": "v6026961516",
+   "name": "Nial",
+   "namePa": null,
+   "lat": 29.96962,
+   "lon": 76.06588,
+   "place": "village"
+  },
+  {
+   "id": "v6051358156",
+   "name": "Niamatpur",
+   "namePa": null,
+   "lat": 30.45798,
+   "lon": 75.97954,
+   "place": "village"
+  },
+  {
+   "id": "v6026961504",
+   "name": "Nihaigarh",
+   "namePa": null,
+   "lat": 29.9739,
+   "lon": 76.00179,
+   "place": "village"
+  },
+  {
+   "id": "v6071569658",
+   "name": "Nihaluwaal",
+   "namePa": null,
+   "lat": 30.56479,
+   "lon": 75.5978,
+   "place": "village"
+  },
+  {
+   "id": "v6044799518",
+   "name": "Nilowali",
+   "namePa": null,
+   "lat": 30.07716,
+   "lon": 75.80403,
+   "place": "village"
+  },
+  {
+   "id": "v6026892278",
+   "name": "Nirmalkot",
+   "namePa": null,
+   "lat": 30.04891,
+   "lon": 76.17538,
+   "place": "village"
+  },
+  {
+   "id": "v6026961510",
+   "name": "Nurpura",
+   "namePa": null,
+   "lat": 29.87935,
+   "lon": 76.07388,
+   "place": "village"
+  },
+  {
+   "id": "v6683794503",
+   "name": "Paharjan",
+   "namePa": null,
+   "lat": 29.95336,
+   "lon": 76.1664,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6046182816",
+   "name": "Paharpur Bara",
+   "namePa": null,
+   "lat": 30.41,
+   "lon": 76.11457,
+   "place": "village"
+  },
+  {
+   "id": "v6046182815",
+   "name": "Paharpur Chhota",
+   "namePa": null,
+   "lat": 30.41489,
+   "lon": 76.11616,
+   "place": "village"
+  },
+  {
+   "id": "v6026961513",
+   "name": "Paind",
+   "namePa": null,
+   "lat": 29.89766,
+   "lon": 76.09131,
+   "place": "village"
+  },
+  {
+   "id": "v6698917507",
+   "name": "Pakho Kalan",
+   "namePa": null,
+   "lat": 30.22063,
+   "lon": 75.41119,
+   "place": "village"
+  },
+  {
+   "id": "v5486035526",
+   "name": "Pakhoke",
+   "namePa": null,
+   "lat": 30.42336,
+   "lon": 75.43166,
+   "place": "village"
+  },
+  {
+   "id": "v6046182828",
+   "name": "Palasaur",
+   "namePa": null,
+   "lat": 30.32893,
+   "lon": 75.93381,
+   "place": "village"
+  },
+  {
+   "id": "v6700139889",
+   "name": "Pandher",
+   "namePa": null,
+   "lat": 30.15569,
+   "lon": 75.51632,
+   "place": "village"
+  },
+  {
+   "id": "v1940508154",
+   "name": "Pandori",
+   "namePa": null,
+   "lat": 30.54824,
+   "lon": 75.61131,
+   "place": "village"
+  },
+  {
+   "id": "v6046182836",
+   "name": "Panuan",
+   "namePa": null,
+   "lat": 30.31273,
+   "lon": 76.03376,
+   "place": "village"
+  },
+  {
+   "id": "v6042016913",
+   "name": "Pashaur Bhaiki",
+   "namePa": null,
+   "lat": 30.00356,
+   "lon": 75.88514,
+   "place": "village"
+  },
+  {
+   "id": "v6698494072",
+   "name": "Patti Bir Singh",
+   "namePa": null,
+   "lat": 30.45757,
+   "lon": 75.33652,
+   "place": "village"
+  },
+  {
+   "id": "v6698611348",
+   "name": "Patti Daraka",
+   "namePa": null,
+   "lat": 30.38314,
+   "lon": 75.38469,
+   "place": "village"
+  },
+  {
+   "id": "v6698495676",
+   "name": "Patti Deep Singh",
+   "namePa": null,
+   "lat": 30.4783,
+   "lon": 75.35274,
+   "place": "village"
+  },
+  {
+   "id": "v6703331237",
+   "name": "Patti Khaleel",
+   "namePa": null,
+   "lat": 30.44923,
+   "lon": 75.70439,
+   "place": "village"
+  },
+  {
+   "id": "v6698480720",
+   "name": "Patti Mohar Singh",
+   "namePa": null,
+   "lat": 30.47349,
+   "lon": 75.31317,
+   "place": "village"
+  },
+  {
+   "id": "v6738722045",
+   "name": "Patti Sandli",
+   "namePa": null,
+   "lat": 30.33841,
+   "lon": 75.20982,
+   "place": "village"
+  },
+  {
+   "id": "v2643279687",
+   "name": "Patti Sekhwan",
+   "namePa": null,
+   "lat": 30.40674,
+   "lon": 75.49749,
+   "place": "village"
+  },
+  {
+   "id": "v6702698772",
+   "name": "Patti Sohian",
+   "namePa": null,
+   "lat": 30.38773,
+   "lon": 75.48966,
+   "place": "village"
+  },
+  {
+   "id": "v7187113272",
+   "name": "Patto Hira Singh",
+   "namePa": "ਪੱਤੋ ਹੀਰਾ ਸਿੰਘ",
+   "lat": 30.59287,
+   "lon": 75.23956,
+   "place": "village"
+  },
+  {
+   "id": "v6051358151",
+   "name": "Pedihni Kalan",
+   "namePa": null,
+   "lat": 30.34807,
+   "lon": 75.80575,
+   "place": "village"
+  },
+  {
+   "id": "v6028992230",
+   "name": "Peron",
+   "namePa": null,
+   "lat": 29.90633,
+   "lon": 75.20262,
+   "place": "village"
+  },
+  {
+   "id": "v6046182830",
+   "name": "Phaguwala",
+   "namePa": null,
+   "lat": 30.25625,
+   "lon": 76.00265,
+   "place": "village"
+  },
+  {
+   "id": "v6697192148",
+   "name": "Phaphre Bhaike",
+   "namePa": null,
+   "lat": 29.9838,
+   "lon": 75.50287,
+   "place": "village"
+  },
+  {
+   "id": "v6016332495",
+   "name": "Pharwai",
+   "namePa": null,
+   "lat": 30.3374,
+   "lon": 75.5771,
+   "place": "village"
+  },
+  {
+   "id": "v6044107088",
+   "name": "Pharwain",
+   "namePa": null,
+   "lat": 30.01768,
+   "lon": 75.51375,
+   "place": "village"
+  },
+  {
+   "id": "v6051358118",
+   "name": "Pharwal",
+   "namePa": null,
+   "lat": 30.47072,
+   "lon": 75.79382,
+   "place": "village"
+  },
+  {
+   "id": "v6683350054",
+   "name": "Phulera",
+   "namePa": null,
+   "lat": 29.99206,
+   "lon": 75.68698,
+   "place": "village"
+  },
+  {
+   "id": "v6738505461",
+   "name": "Phulewala",
+   "namePa": null,
+   "lat": 30.38873,
+   "lon": 75.28306,
+   "place": "village"
+  },
+  {
+   "id": "v6690194078",
+   "name": "Phuluwala Dod",
+   "namePa": null,
+   "lat": 29.88031,
+   "lon": 75.6137,
+   "place": "village"
+  },
+  {
+   "id": "v6690204992",
+   "name": "Phuluwala Dogra",
+   "namePa": null,
+   "lat": 29.90038,
+   "lon": 75.52543,
+   "place": "village"
+  },
+  {
+   "id": "v6045762490",
+   "name": "Phumanwal",
+   "namePa": null,
+   "lat": 30.28333,
+   "lon": 76.12855,
+   "place": "village"
+  },
+  {
+   "id": "v6700106950",
+   "name": "Pindi Jwanda",
+   "namePa": null,
+   "lat": 30.24417,
+   "lon": 75.57795,
+   "place": "village"
+  },
+  {
+   "id": "v6702762704",
+   "name": "Pindi Manna",
+   "namePa": null,
+   "lat": 30.30836,
+   "lon": 75.56878,
+   "place": "village"
+  },
+  {
+   "id": "v6044227814",
+   "name": "Piplian",
+   "namePa": null,
+   "lat": 29.90525,
+   "lon": 75.45427,
+   "place": "village"
+  },
+  {
+   "id": "v6715674339",
+   "name": "Pirkot",
+   "namePa": null,
+   "lat": 30.13832,
+   "lon": 75.32387,
+   "place": "village"
+  },
+  {
+   "id": "v6715124112",
+   "name": "Pitho",
+   "namePa": null,
+   "lat": 30.24861,
+   "lon": 75.28429,
+   "place": "village"
+  },
+  {
+   "id": "v6041344059",
+   "name": "Premgarh",
+   "namePa": null,
+   "lat": 30.09717,
+   "lon": 76.13774,
+   "place": "village"
+  },
+  {
+   "id": "v6051358145",
+   "name": "Puhnawal",
+   "namePa": null,
+   "lat": 30.32732,
+   "lon": 75.79674,
+   "place": "village"
+  },
+  {
+   "id": "v6676160856",
+   "name": "Rai Dharana",
+   "namePa": null,
+   "lat": 29.93577,
+   "lon": 75.96711,
+   "place": "village"
+  },
+  {
+   "id": "v6046182832",
+   "name": "Rai Singhwala",
+   "namePa": null,
+   "lat": 30.28331,
+   "lon": 75.99423,
+   "place": "village"
+  },
+  {
+   "id": "v6045933001",
+   "name": "Raigarh",
+   "namePa": null,
+   "lat": 30.43961,
+   "lon": 76.13646,
+   "place": "village"
+  },
+  {
+   "id": "v6028484709",
+   "name": "Raipur",
+   "namePa": null,
+   "lat": 29.90569,
+   "lon": 75.25493,
+   "place": "village"
+  },
+  {
+   "id": "v2643282455",
+   "name": "Raisar",
+   "namePa": null,
+   "lat": 30.47595,
+   "lon": 75.4939,
+   "place": "village"
+  },
+  {
+   "id": "v6679961982",
+   "name": "Rajal Heri",
+   "namePa": null,
+   "lat": 29.87102,
+   "lon": 75.96035,
+   "place": "village"
+  },
+  {
+   "id": "v6016332494",
+   "name": "Rajgarh",
+   "namePa": null,
+   "lat": 30.33451,
+   "lon": 75.59521,
+   "place": "village"
+  },
+  {
+   "id": "v6738179760",
+   "name": "Rajgarh",
+   "namePa": "ਰਾਜਗੜ੍ਹ",
+   "lat": 30.48882,
+   "lon": 75.26391,
+   "place": "village"
+  },
+  {
+   "id": "v6738160026",
+   "name": "Rajgarh Khurd",
+   "namePa": null,
+   "lat": 30.47965,
+   "lon": 75.25643,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6717968520",
+   "name": "Rajgarh Kube",
+   "namePa": null,
+   "lat": 30.02458,
+   "lon": 75.24119,
+   "place": "village"
+  },
+  {
+   "id": "v6700121712",
+   "name": "Rajia",
+   "namePa": null,
+   "lat": 30.15266,
+   "lon": 75.54692,
+   "place": "village"
+  },
+  {
+   "id": "v6051469056",
+   "name": "Rajo Mazra",
+   "namePa": null,
+   "lat": 30.37258,
+   "lon": 75.79708,
+   "place": "village"
+  },
+  {
+   "id": "v6045762493",
+   "name": "Rajpura",
+   "namePa": "ਰਾਜਪੁਰਾ",
+   "lat": 30.26685,
+   "lon": 76.12942,
+   "place": "village"
+  },
+  {
+   "id": "v6696508594",
+   "name": "Ralla",
+   "namePa": "ਰੱਲਾ",
+   "lat": 30.12013,
+   "lon": 75.43291,
+   "place": "village"
+  },
+  {
+   "id": "v6687661603",
+   "name": "Ralli",
+   "namePa": null,
+   "lat": 29.92964,
+   "lon": 75.60505,
+   "place": "village"
+  },
+  {
+   "id": "v6715771758",
+   "name": "Ram Nagar",
+   "namePa": null,
+   "lat": 30.10536,
+   "lon": 75.22846,
+   "place": "village"
+  },
+  {
+   "id": "v6693819332",
+   "name": "Ramanandi",
+   "namePa": null,
+   "lat": 29.86747,
+   "lon": 75.32041,
+   "place": "village"
+  },
+  {
+   "id": "v6691310567",
+   "name": "Ramdittewala",
+   "namePa": null,
+   "lat": 29.97328,
+   "lon": 75.36007,
+   "place": "village"
+  },
+  {
+   "id": "v6023079225",
+   "name": "Ramgarh",
+   "namePa": null,
+   "lat": 30.51621,
+   "lon": 75.3905,
+   "place": "village"
+  },
+  {
+   "id": "v6044799504",
+   "name": "Ramgarh",
+   "namePa": null,
+   "lat": 30.18112,
+   "lon": 76.03505,
+   "place": "village"
+  },
+  {
+   "id": "v6045933052",
+   "name": "Ramgarh",
+   "namePa": null,
+   "lat": 30.33199,
+   "lon": 76.12659,
+   "place": "village"
+  },
+  {
+   "id": "v6687911320",
+   "name": "Ramgarh",
+   "namePa": null,
+   "lat": 29.90296,
+   "lon": 75.59491,
+   "place": "village"
+  },
+  {
+   "id": "v6044799519",
+   "name": "Ramgarh Jawindah",
+   "namePa": null,
+   "lat": 30.07817,
+   "lon": 75.84502,
+   "place": "village"
+  },
+  {
+   "id": "v6680986832",
+   "name": "Ramgarh Sandhwan",
+   "namePa": null,
+   "lat": 29.95701,
+   "lon": 75.84669,
+   "place": "village"
+  },
+  {
+   "id": "v6690849191",
+   "name": "Ramgarh Shahpurian",
+   "namePa": null,
+   "lat": 29.80581,
+   "lon": 75.60874,
+   "place": "village"
+  },
+  {
+   "id": "v6051237209",
+   "name": "Ramnagar",
+   "namePa": null,
+   "lat": 30.30714,
+   "lon": 75.98495,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6690333083",
+   "name": "Ramnagar Bhathlan",
+   "namePa": null,
+   "lat": 29.87753,
+   "lon": 75.52746,
+   "place": "village"
+  },
+  {
+   "id": "v1375592891",
+   "name": "Ramnagar Chhanna",
+   "namePa": null,
+   "lat": 30.46199,
+   "lon": 75.73006,
+   "place": "village"
+  },
+  {
+   "id": "v2615926535",
+   "name": "Ramnagar Sibian",
+   "namePa": null,
+   "lat": 30.22014,
+   "lon": 75.84802,
+   "place": "village"
+  },
+  {
+   "id": "v1960935688",
+   "name": "Ramniwas",
+   "namePa": null,
+   "lat": 30.16988,
+   "lon": 75.21958,
+   "place": "village"
+  },
+  {
+   "id": "v6051237220",
+   "name": "Rampur Chhanna",
+   "namePa": null,
+   "lat": 30.45787,
+   "lon": 76.05073,
+   "place": "village"
+  },
+  {
+   "id": "v6026961517",
+   "name": "Rampur Dugal",
+   "namePa": null,
+   "lat": 29.98349,
+   "lon": 76.06015,
+   "place": "village"
+  },
+  {
+   "id": "v6041850425",
+   "name": "Rampur Gujran",
+   "namePa": null,
+   "lat": 30.04658,
+   "lon": 76.00299,
+   "place": "village"
+  },
+  {
+   "id": "v6690361879",
+   "name": "Rampur Mander",
+   "namePa": null,
+   "lat": 29.86259,
+   "lon": 75.55031,
+   "place": "village"
+  },
+  {
+   "id": "v5996264086",
+   "name": "Rampura",
+   "namePa": null,
+   "lat": 30.24446,
+   "lon": 76.02591,
+   "place": "village"
+  },
+  {
+   "id": "v6044799520",
+   "name": "Rampura",
+   "namePa": null,
+   "lat": 30.07363,
+   "lon": 75.83141,
+   "place": "village"
+  },
+  {
+   "id": "v6681470431",
+   "name": "Rampura Jawarwala",
+   "namePa": null,
+   "lat": 29.89923,
+   "lon": 75.80275,
+   "place": "village"
+  },
+  {
+   "id": "v1960932520",
+   "name": "Rampura Pind",
+   "namePa": null,
+   "lat": 30.25588,
+   "lon": 75.24155,
+   "place": "village"
+  },
+  {
+   "id": "v6687690937",
+   "name": "Ranghrial",
+   "namePa": null,
+   "lat": 29.92424,
+   "lon": 75.65654,
+   "place": "village"
+  },
+  {
+   "id": "v6016332442",
+   "name": "Rangian",
+   "namePa": null,
+   "lat": 30.36192,
+   "lon": 75.68859,
+   "place": "village"
+  },
+  {
+   "id": "v6051358139",
+   "name": "Ranike",
+   "namePa": null,
+   "lat": 30.35651,
+   "lon": 75.75807,
+   "place": "village"
+  },
+  {
+   "id": "v6694972437",
+   "name": "Rarh",
+   "namePa": null,
+   "lat": 30.16774,
+   "lon": 75.36489,
+   "place": "village"
+  },
+  {
+   "id": "v6027289490",
+   "name": "Rasuli",
+   "namePa": null,
+   "lat": 29.90324,
+   "lon": 76.16911,
+   "place": "village"
+  },
+  {
+   "id": "v6044107094",
+   "name": "Ratangarh",
+   "namePa": null,
+   "lat": 30.03655,
+   "lon": 75.69211,
+   "place": "village"
+  },
+  {
+   "id": "v6044799517",
+   "name": "Rataulan",
+   "namePa": null,
+   "lat": 30.08465,
+   "lon": 75.90248,
+   "place": "village"
+  },
+  {
+   "id": "v6683400356",
+   "name": "Ratta Khera",
+   "namePa": null,
+   "lat": 29.98135,
+   "lon": 75.65839,
+   "place": "village"
+  },
+  {
+   "id": "v6044799527",
+   "name": "Rattoke",
+   "namePa": null,
+   "lat": 30.17815,
+   "lon": 75.59847,
+   "place": "village"
+  },
+  {
+   "id": "v682645909",
+   "name": "Rauni",
+   "namePa": null,
+   "lat": 30.59725,
+   "lon": 76.08898,
+   "place": "village"
+  },
+  {
+   "id": "v6738560620",
+   "name": "Rayia",
+   "namePa": null,
+   "lat": 30.36389,
+   "lon": 75.30545,
+   "place": "village"
+  },
+  {
+   "id": "v6026791092",
+   "name": "Retgarh",
+   "namePa": null,
+   "lat": 30.11922,
+   "lon": 76.17774,
+   "place": "village"
+  },
+  {
+   "id": "v1330405498",
+   "name": "Rogla",
+   "namePa": null,
+   "lat": 30.02237,
+   "lon": 75.95002,
+   "place": "village"
+  },
+  {
+   "id": "v6045933057",
+   "name": "Rohta",
+   "namePa": null,
+   "lat": 30.38098,
+   "lon": 76.18783,
+   "place": "village"
+  },
+  {
+   "id": "v6045933049",
+   "name": "Rohti Basta Singhwali",
+   "namePa": null,
+   "lat": 30.36099,
+   "lon": 76.19628,
+   "place": "village"
+  },
+  {
+   "id": "v6045933050",
+   "name": "Rohti Mauran",
+   "namePa": null,
+   "lat": 30.37123,
+   "lon": 76.1974,
+   "place": "village"
+  },
+  {
+   "id": "v6680971630",
+   "name": "Rorewala",
+   "namePa": null,
+   "lat": 29.96576,
+   "lon": 75.91323,
+   "place": "village"
+  },
+  {
+   "id": "v6046182831",
+   "name": "Roshanwala",
+   "namePa": null,
+   "lat": 30.2577,
+   "lon": 75.98771,
+   "place": "village"
+  },
+  {
+   "id": "v6051469964",
+   "name": "Rupaheri",
+   "namePa": null,
+   "lat": 30.30128,
+   "lon": 75.90411,
+   "place": "village"
+  },
+  {
+   "id": "v6698846174",
+   "name": "Rureke Kalan",
+   "namePa": null,
+   "lat": 30.25961,
+   "lon": 75.43957,
+   "place": "village"
+  },
+  {
+   "id": "v6698910619",
+   "name": "Rureke Khurd",
+   "namePa": null,
+   "lat": 30.20773,
+   "lon": 75.37548,
+   "place": "village"
+  },
+  {
+   "id": "v6051358119",
+   "name": "Rurgarh",
+   "namePa": null,
+   "lat": 30.47338,
+   "lon": 75.77065,
+   "place": "village"
+  },
+  {
+   "id": "v6051851797",
+   "name": "Rurka",
+   "namePa": null,
+   "lat": 30.50023,
+   "lon": 75.82991,
+   "place": "village"
+  },
+  {
+   "id": "v6051358167",
+   "name": "Rustamgarh",
+   "namePa": null,
+   "lat": 30.45689,
+   "lon": 75.90111,
+   "place": "village"
+  },
+  {
+   "id": "v6025255824",
+   "name": "Sadapur",
+   "namePa": null,
+   "lat": 30.2612,
+   "lon": 76.1899,
+   "place": "village"
+  },
+  {
+   "id": "v6696755140",
+   "name": "Sadda Singhwala",
+   "namePa": null,
+   "lat": 30.00943,
+   "lon": 75.31932,
+   "place": "village"
+  },
+  {
+   "id": "v6051851809",
+   "name": "Saddopur",
+   "namePa": null,
+   "lat": 30.46717,
+   "lon": 75.86145,
+   "place": "village"
+  },
+  {
+   "id": "v6738715734",
+   "name": "Sadhana",
+   "namePa": null,
+   "lat": 30.35977,
+   "lon": 75.20935,
+   "place": "village"
+  },
+  {
+   "id": "v6026961525",
+   "name": "Sadharanpur",
+   "namePa": null,
+   "lat": 29.9681,
+   "lon": 76.16718,
+   "place": "village"
+  },
+  {
+   "id": "v6046182817",
+   "name": "Sadhuheri",
+   "namePa": null,
+   "lat": 30.38876,
+   "lon": 76.0777,
+   "place": "village"
+  },
+  {
+   "id": "v2653532404",
+   "name": "Sadowal",
+   "namePa": null,
+   "lat": 30.59309,
+   "lon": 75.46738,
+   "place": "village"
+  },
+  {
+   "id": "v6027289492",
+   "name": "Sagra",
+   "namePa": null,
+   "lat": 29.87758,
+   "lon": 76.17574,
+   "place": "village"
+  },
+  {
+   "id": "v6044227813",
+   "name": "Saharan",
+   "namePa": null,
+   "lat": 29.89565,
+   "lon": 75.42981,
+   "place": "village"
+  },
+  {
+   "id": "v6041344054",
+   "name": "Sahejpura Kalan",
+   "namePa": null,
+   "lat": 30.12802,
+   "lon": 76.15083,
+   "place": "village"
+  },
+  {
+   "id": "v6025955264",
+   "name": "Sahejpura Khurd",
+   "namePa": null,
+   "lat": 30.12813,
+   "lon": 76.1659,
+   "place": "village"
+  },
+  {
+   "id": "v2817460065",
+   "name": "Sahour",
+   "namePa": null,
+   "lat": 30.49334,
+   "lon": 75.58444,
+   "place": "village"
+  },
+  {
+   "id": "v6044799528",
+   "name": "Sahuke",
+   "namePa": null,
+   "lat": 30.18119,
+   "lon": 75.58748,
+   "place": "village"
+  },
+  {
+   "id": "v6690419815",
+   "name": "Saide Wala",
+   "namePa": null,
+   "lat": 29.83287,
+   "lon": 75.59048,
+   "place": "village"
+  },
+  {
+   "id": "v6023079192",
+   "name": "Saidoke",
+   "namePa": null,
+   "lat": 30.52678,
+   "lon": 75.28639,
+   "place": "village"
+  },
+  {
+   "id": "v6044927545",
+   "name": "Sajurna",
+   "namePa": null,
+   "lat": 30.18446,
+   "lon": 75.92493,
+   "place": "village"
+  },
+  {
+   "id": "v6046182835",
+   "name": "Sakraudi",
+   "namePa": null,
+   "lat": 30.31506,
+   "lon": 76.01131,
+   "place": "village"
+  },
+  {
+   "id": "v245770221",
+   "name": "Salabatpura",
+   "namePa": null,
+   "lat": 30.48583,
+   "lon": 75.24426,
+   "place": "village"
+  },
+  {
+   "id": "v6680018802",
+   "name": "Salemgarh",
+   "namePa": null,
+   "lat": 29.83854,
+   "lon": 75.91683,
+   "place": "village"
+  },
+  {
+   "id": "v6051358149",
+   "name": "Salempur",
+   "namePa": null,
+   "lat": 30.39501,
+   "lon": 75.74232,
+   "place": "village"
+  },
+  {
+   "id": "v6051237219",
+   "name": "Salimpur",
+   "namePa": null,
+   "lat": 30.4638,
+   "lon": 76.07599,
+   "place": "village"
+  },
+  {
+   "id": "v6045932999",
+   "name": "Saluwala",
+   "namePa": null,
+   "lat": 30.42862,
+   "lon": 76.13764,
+   "place": "village"
+  },
+  {
+   "id": "v6051237229",
+   "name": "Samandgarh",
+   "namePa": null,
+   "lat": 30.36814,
+   "lon": 75.99887,
+   "place": "village"
+  },
+  {
+   "id": "v6697037751",
+   "name": "Samaon",
+   "namePa": "ਸਮਾਉ",
+   "lat": 30.07736,
+   "lon": 75.53674,
+   "place": "village"
+  },
+  {
+   "id": "v6041344055",
+   "name": "Samuran",
+   "namePa": null,
+   "lat": 30.0822,
+   "lon": 76.04548,
+   "place": "village"
+  },
+  {
+   "id": "v6698587560",
+   "name": "Sandhu Kalan",
+   "namePa": null,
+   "lat": 30.40546,
+   "lon": 75.31919,
+   "place": "village"
+  },
+  {
+   "id": "v6738518990",
+   "name": "Sandhu Khurd",
+   "namePa": null,
+   "lat": 30.40965,
+   "lon": 75.29446,
+   "place": "village"
+  },
+  {
+   "id": "v6051358164",
+   "name": "Sangala",
+   "namePa": null,
+   "lat": 30.46432,
+   "lon": 75.88656,
+   "place": "village"
+  },
+  {
+   "id": "v6051358165",
+   "name": "Sangali",
+   "namePa": null,
+   "lat": 30.46636,
+   "lon": 75.89377,
+   "place": "village"
+  },
+  {
+   "id": "v6683208556",
+   "name": "Sangatpura",
+   "namePa": null,
+   "lat": 29.95705,
+   "lon": 75.75488,
+   "place": "village"
+  },
+  {
+   "id": "v2817465469",
+   "name": "Sanghera",
+   "namePa": null,
+   "lat": 30.39922,
+   "lon": 75.56282,
+   "place": "village"
+  },
+  {
+   "id": "v6690170930",
+   "name": "Sanghreri",
+   "namePa": null,
+   "lat": 29.85373,
+   "lon": 75.65264,
+   "place": "village"
+  },
+  {
+   "id": "v6051469973",
+   "name": "Santokhpura",
+   "namePa": null,
+   "lat": 30.29757,
+   "lon": 75.96754,
+   "place": "village"
+  },
+  {
+   "id": "v6026790805",
+   "name": "Saraj Patti",
+   "namePa": null,
+   "lat": 30.16524,
+   "lon": 76.19452,
+   "place": "village"
+  },
+  {
+   "id": "v6044799507",
+   "name": "Sargheri",
+   "namePa": null,
+   "lat": 30.18898,
+   "lon": 75.97106,
+   "place": "village"
+  },
+  {
+   "id": "v6051469965",
+   "name": "Saron",
+   "namePa": null,
+   "lat": 30.3174,
+   "lon": 75.89343,
+   "place": "village"
+  },
+  {
+   "id": "v6690403528",
+   "name": "Saspali",
+   "namePa": null,
+   "lat": 29.83047,
+   "lon": 75.61291,
+   "place": "village"
+  },
+  {
+   "id": "v6690388526",
+   "name": "Satike",
+   "namePa": null,
+   "lat": 29.85971,
+   "lon": 75.59674,
+   "place": "village"
+  },
+  {
+   "id": "v6044107091",
+   "name": "Satoj",
+   "namePa": null,
+   "lat": 30.05561,
+   "lon": 75.65422,
+   "place": "village"
+  },
+  {
+   "id": "v6051237200",
+   "name": "Seda Singh",
+   "namePa": null,
+   "lat": 30.41404,
+   "lon": 75.9799,
+   "place": "village"
+  },
+  {
+   "id": "v2817272677",
+   "name": "Sehjra",
+   "namePa": null,
+   "lat": 30.49366,
+   "lon": 75.55142,
+   "place": "village"
+  },
+  {
+   "id": "v3633821912",
+   "name": "Sehna",
+   "namePa": null,
+   "lat": 30.4282,
+   "lon": 75.38072,
+   "place": "village"
+  },
+  {
+   "id": "v6016332443",
+   "name": "Sekha",
+   "namePa": null,
+   "lat": 30.35851,
+   "lon": 75.6455,
+   "place": "village"
+  },
+  {
+   "id": "v6013786910",
+   "name": "Selbara",
+   "namePa": null,
+   "lat": 30.38009,
+   "lon": 75.203,
+   "place": "village"
+  },
+  {
+   "id": "v6026961507",
+   "name": "Selwala",
+   "namePa": null,
+   "lat": 29.89728,
+   "lon": 76.03063,
+   "place": "village"
+  },
+  {
+   "id": "v6680115604",
+   "name": "Shadihari",
+   "namePa": null,
+   "lat": 29.95587,
+   "lon": 75.96927,
+   "place": "village"
+  },
+  {
+   "id": "v6683746757",
+   "name": "Shadipur Momian",
+   "namePa": null,
+   "lat": 29.95374,
+   "lon": 76.1509,
+   "place": "village"
+  },
+  {
+   "id": "v6041344061",
+   "name": "Shafipur Kalan",
+   "namePa": null,
+   "lat": 30.09501,
+   "lon": 76.07594,
+   "place": "village"
+  },
+  {
+   "id": "v6041344057",
+   "name": "Shafipur Khurd",
+   "namePa": null,
+   "lat": 30.08993,
+   "lon": 76.05899,
+   "place": "village"
+  },
+  {
+   "id": "v6026790021",
+   "name": "Shahpur",
+   "namePa": null,
+   "lat": 30.0838,
+   "lon": 76.15723,
+   "place": "village"
+  },
+  {
+   "id": "v6045762485",
+   "name": "Shahpur",
+   "namePa": null,
+   "lat": 30.299,
+   "lon": 76.16109,
+   "place": "village"
+  },
+  {
+   "id": "v6044799524",
+   "name": "Shahpur Kalan",
+   "namePa": null,
+   "lat": 30.1377,
+   "lon": 75.67666,
+   "place": "village"
+  },
+  {
+   "id": "v6027288734",
+   "name": "Shahpur Theri",
+   "namePa": null,
+   "lat": 29.81972,
+   "lon": 76.0199,
+   "place": "village"
+  },
+  {
+   "id": "v6026961514",
+   "name": "Shatrana",
+   "namePa": null,
+   "lat": 29.91001,
+   "lon": 76.11955,
+   "place": "village"
+  },
+  {
+   "id": "v6681009435",
+   "name": "Sheikhuwas",
+   "namePa": null,
+   "lat": 29.97643,
+   "lon": 75.86595,
+   "place": "village"
+  },
+  {
+   "id": "v6687989536",
+   "name": "Shekhupur Khudal",
+   "namePa": null,
+   "lat": 29.85868,
+   "lon": 75.73269,
+   "place": "village"
+  },
+  {
+   "id": "v6690472585",
+   "name": "Sher Khan Wala",
+   "namePa": null,
+   "lat": 29.81621,
+   "lon": 75.56721,
+   "place": "village"
+  },
+  {
+   "id": "v6003559730",
+   "name": "Shergarh",
+   "namePa": null,
+   "lat": 29.83089,
+   "lon": 76.14036,
+   "place": "village"
+  },
+  {
+   "id": "v6680004568",
+   "name": "Shergarh",
+   "namePa": null,
+   "lat": 29.87981,
+   "lon": 75.97714,
+   "place": "village"
+  },
+  {
+   "id": "v6000016659",
+   "name": "Sheron",
+   "namePa": null,
+   "lat": 30.15863,
+   "lon": 75.7176,
+   "place": "village"
+  },
+  {
+   "id": "v2817474758",
+   "name": "Sherpur",
+   "namePa": null,
+   "lat": 30.44038,
+   "lon": 75.70556,
+   "place": "village"
+  },
+  {
+   "id": "v6041344058",
+   "name": "Sihal",
+   "namePa": null,
+   "lat": 30.07021,
+   "lon": 76.07178,
+   "place": "village"
+  },
+  {
+   "id": "v6041850427",
+   "name": "Sindranwala",
+   "namePa": null,
+   "lat": 30.03247,
+   "lon": 76.03217,
+   "place": "village"
+  },
+  {
+   "id": "v6690153730",
+   "name": "Sirsi Wala",
+   "namePa": null,
+   "lat": 29.884,
+   "lon": 75.64677,
+   "place": "village"
+  },
+  {
+   "id": "v6026961527",
+   "name": "Slona",
+   "namePa": null,
+   "lat": 29.99263,
+   "lon": 76.17482,
+   "place": "village"
+  },
+  {
+   "id": "v6026961530",
+   "name": "Sodiwala",
+   "namePa": null,
+   "lat": 30.01099,
+   "lon": 76.15783,
+   "place": "village"
+  },
+  {
+   "id": "v6044927540",
+   "name": "Sohian",
+   "namePa": null,
+   "lat": 30.23148,
+   "lon": 75.86918,
+   "place": "village"
+  },
+  {
+   "id": "v6715674975",
+   "name": "Sooch",
+   "namePa": null,
+   "lat": 30.15534,
+   "lon": 75.29812,
+   "place": "village"
+  },
+  {
+   "id": "v6715738662",
+   "name": "Sukha Singh Wala",
+   "namePa": null,
+   "lat": 30.07515,
+   "lon": 75.31209,
+   "place": "village"
+  },
+  {
+   "id": "v6046182821",
+   "name": "Sukhan",
+   "namePa": null,
+   "lat": 30.39723,
+   "lon": 76.05685,
+   "place": "village"
+  },
+  {
+   "id": "v6046182805",
+   "name": "Sukhewal",
+   "namePa": null,
+   "lat": 30.43506,
+   "lon": 76.06135,
+   "place": "village"
+  },
+  {
+   "id": "v1330375649",
+   "name": "Sular",
+   "namePa": null,
+   "lat": 30.0889,
+   "lon": 75.93185,
+   "place": "village"
+  },
+  {
+   "id": "v6684423003",
+   "name": "Sular Gharat",
+   "namePa": null,
+   "lat": 30.10671,
+   "lon": 75.93818,
+   "place": "village"
+  },
+  {
+   "id": "v6016332440",
+   "name": "Sultanpur",
+   "namePa": null,
+   "lat": 30.36501,
+   "lon": 75.71219,
+   "place": "village"
+  },
+  {
+   "id": "v6717820067",
+   "name": "Tahla Sahib",
+   "namePa": "ਟਾਹਲਾ ਸਾਹਿਬ",
+   "lat": 30.03248,
+   "lon": 75.21832,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6698894210",
+   "name": "Tajoke",
+   "namePa": null,
+   "lat": 30.25749,
+   "lon": 75.37712,
+   "place": "village"
+  },
+  {
+   "id": "v7191036376",
+   "name": "Takhtupura",
+   "namePa": "ਤਖਤੂਪੁਰਾ",
+   "lat": 30.58209,
+   "lon": 75.33044,
+   "place": "village"
+  },
+  {
+   "id": "v6044799529",
+   "name": "Takpur",
+   "namePa": null,
+   "lat": 30.17622,
+   "lon": 75.6134,
+   "place": "village"
+  },
+  {
+   "id": "v6028992916",
+   "name": "Talian",
+   "namePa": null,
+   "lat": 29.87198,
+   "lon": 75.45496,
+   "place": "village"
+  },
+  {
+   "id": "v6023079227",
+   "name": "Tallewal",
+   "namePa": null,
+   "lat": 30.4921,
+   "lon": 75.41204,
+   "place": "village"
+  },
+  {
+   "id": "v6027289493",
+   "name": "Talpur",
+   "namePa": null,
+   "lat": 29.86931,
+   "lon": 76.15425,
+   "place": "village"
+  },
+  {
+   "id": "v6023079191",
+   "name": "Talwandi",
+   "namePa": null,
+   "lat": 30.52035,
+   "lon": 75.31922,
+   "place": "village"
+  },
+  {
+   "id": "v6687700968",
+   "name": "Talwandi",
+   "namePa": null,
+   "lat": 29.92875,
+   "lon": 75.58715,
+   "place": "village"
+  },
+  {
+   "id": "v6044227804",
+   "name": "Talwandi Aklia",
+   "namePa": null,
+   "lat": 29.9437,
+   "lon": 75.26828,
+   "place": "village"
+  },
+  {
+   "id": "v6044799497",
+   "name": "Talwandi Malak",
+   "namePa": null,
+   "lat": 30.17199,
+   "lon": 76.06968,
+   "place": "village"
+  },
+  {
+   "id": "v6046182813",
+   "name": "Tambua",
+   "namePa": null,
+   "lat": 30.46062,
+   "lon": 76.13804,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6026961522",
+   "name": "Tambuwala",
+   "namePa": null,
+   "lat": 29.97404,
+   "lon": 76.0992,
+   "place": "village"
+  },
+  {
+   "id": "v6696783590",
+   "name": "Tamkot",
+   "namePa": null,
+   "lat": 30.06531,
+   "lon": 75.40567,
+   "place": "village"
+  },
+  {
+   "id": "v6691317952",
+   "name": "Tandian",
+   "namePa": null,
+   "lat": 29.87227,
+   "lon": 75.23229,
+   "place": "village"
+  },
+  {
+   "id": "v6044799515",
+   "name": "Taranjikhero",
+   "namePa": null,
+   "lat": 30.10638,
+   "lon": 75.9145,
+   "place": "village"
+  },
+  {
+   "id": "v6051469969",
+   "name": "Thales",
+   "namePa": null,
+   "lat": 30.2829,
+   "lon": 75.85038,
+   "place": "village"
+  },
+  {
+   "id": "v7217672705",
+   "name": "Thamangarh",
+   "namePa": null,
+   "lat": 30.13781,
+   "lon": 75.24718,
+   "place": "village"
+  },
+  {
+   "id": "v6027289499",
+   "name": "Tharwa",
+   "namePa": null,
+   "lat": 29.85084,
+   "lon": 76.17371,
+   "place": "village"
+  },
+  {
+   "id": "v2643228491",
+   "name": "Thikriwal",
+   "namePa": null,
+   "lat": 30.43306,
+   "lon": 75.52543,
+   "place": "village"
+  },
+  {
+   "id": "v6026961518",
+   "name": "Thuhar",
+   "namePa": null,
+   "lat": 30.02073,
+   "lon": 76.05689,
+   "place": "village"
+  },
+  {
+   "id": "v6045933054",
+   "name": "Thuhi",
+   "namePa": null,
+   "lat": 30.33644,
+   "lon": 76.15727,
+   "place": "village"
+  },
+  {
+   "id": "v6051358134",
+   "name": "Thullewal",
+   "namePa": null,
+   "lat": 30.42092,
+   "lon": 75.65709,
+   "place": "village"
+  },
+  {
+   "id": "v6051358124",
+   "name": "Thulliwal",
+   "namePa": null,
+   "lat": 30.48566,
+   "lon": 75.6455,
+   "place": "village"
+  },
+  {
+   "id": "v6696861031",
+   "name": "Thuthianwali",
+   "namePa": null,
+   "lat": 30.03961,
+   "lon": 75.38707,
+   "place": "village"
+  },
+  {
+   "id": "v2817487701",
+   "name": "Tibba",
+   "namePa": null,
+   "lat": 30.48694,
+   "lon": 75.69682,
+   "place": "village"
+  },
+  {
+   "id": "v6051237218",
+   "name": "Todarwal",
+   "namePa": null,
+   "lat": 30.4648,
+   "lon": 76.08526,
+   "place": "village"
+  },
+  {
+   "id": "v6690411933",
+   "name": "Toderpur",
+   "namePa": null,
+   "lat": 29.8162,
+   "lon": 75.61729,
+   "place": "village"
+  },
+  {
+   "id": "v6044799526",
+   "name": "Togawal",
+   "namePa": null,
+   "lat": 30.15656,
+   "lon": 75.61143,
+   "place": "village"
+  },
+  {
+   "id": "v6044107095",
+   "name": "Tolawal",
+   "namePa": null,
+   "lat": 30.07229,
+   "lon": 75.67829,
+   "place": "village"
+  },
+  {
+   "id": "v6019067830",
+   "name": "Tolewal",
+   "namePa": null,
+   "lat": 30.48152,
+   "lon": 75.97831,
+   "place": "village"
+  },
+  {
+   "id": "v1330374839",
+   "name": "Toor banjara",
+   "namePa": null,
+   "lat": 30.08907,
+   "lon": 75.97178,
+   "place": "village"
+  },
+  {
+   "id": "v5999925417",
+   "name": "Tung",
+   "namePa": null,
+   "lat": 30.18116,
+   "lon": 75.8427,
+   "place": "village"
+  },
+  {
+   "id": "v6046182823",
+   "name": "Tunga",
+   "namePa": null,
+   "lat": 30.38287,
+   "lon": 76.03432,
+   "place": "village"
+  },
+  {
+   "id": "v9996599054",
+   "name": "Turi",
+   "namePa": null,
+   "lat": 30.27794,
+   "lon": 76.08971,
+   "place": "village"
+  },
+  {
+   "id": "v6680969847",
+   "name": "Ubha",
+   "namePa": null,
+   "lat": 29.98594,
+   "lon": 75.95455,
+   "place": "village"
+  },
+  {
+   "id": "v6696398843",
+   "name": "Ubha",
+   "namePa": null,
+   "lat": 30.10756,
+   "lon": 75.35966,
+   "place": "village"
+  },
+  {
+   "id": "v1667082391",
+   "name": "Ubhawal",
+   "namePa": null,
+   "lat": 30.21204,
+   "lon": 75.77467,
+   "place": "village"
+  },
+  {
+   "id": "v6046182810",
+   "name": "Uda",
+   "namePa": null,
+   "lat": 30.45108,
+   "lon": 76.11077,
+   "place": "village"
+  },
+  {
+   "id": "v6690557703",
+   "name": "Udat Saidewala",
+   "namePa": null,
+   "lat": 29.82213,
+   "lon": 75.48289,
+   "place": "village"
+  },
+  {
+   "id": "v6028992914",
+   "name": "Uddat Bhagatram",
+   "namePa": null,
+   "lat": 29.90208,
+   "lon": 75.33166,
+   "place": "village"
+  },
+  {
+   "id": "v6698737945",
+   "name": "Uggoke",
+   "namePa": null,
+   "lat": 30.38026,
+   "lon": 75.42182,
+   "place": "village"
+  },
+  {
+   "id": "v6026961529",
+   "name": "Ugoke",
+   "namePa": null,
+   "lat": 30.01315,
+   "lon": 76.16864,
+   "place": "hamlet"
+  },
+  {
+   "id": "v6044799522",
+   "name": "Ugrahan",
+   "namePa": null,
+   "lat": 30.05045,
+   "lon": 75.76627,
+   "place": "village"
+  },
+  {
+   "id": "v6693956885",
+   "name": "Ullak",
+   "namePa": "ਉੱਲਕ",
+   "lat": 29.836,
+   "lon": 75.25202,
+   "place": "village"
+  },
+  {
+   "id": "v6046182812",
+   "name": "Uplan",
+   "namePa": null,
+   "lat": 30.46097,
+   "lon": 76.12952,
+   "place": "village"
+  },
+  {
+   "id": "v1667064977",
+   "name": "Upli",
+   "namePa": null,
+   "lat": 30.21165,
+   "lon": 75.82207,
+   "place": "village"
+  },
+  {
+   "id": "v6016332497",
+   "name": "Upli",
+   "namePa": null,
+   "lat": 30.3238,
+   "lon": 75.61279,
+   "place": "village"
+  },
+  {
+   "id": "v6051851802",
+   "name": "Uppoki",
+   "namePa": null,
+   "lat": 30.49535,
+   "lon": 75.92763,
+   "place": "village"
+  },
+  {
+   "id": "v6027289488",
+   "name": "Urlana",
+   "namePa": null,
+   "lat": 29.93813,
+   "lon": 76.19212,
+   "place": "village"
+  },
+  {
+   "id": "v6702901082",
+   "name": "Vidhate",
+   "namePa": null,
+   "lat": 30.4657,
+   "lon": 75.38222,
+   "place": "village"
+  },
+  {
+   "id": "v6045932998",
+   "name": "Wazidpur",
+   "namePa": null,
+   "lat": 30.44529,
+   "lon": 76.13135,
+   "place": "village"
+  },
+  {
+   "id": "v6703255274",
+   "name": "Wazirpur",
+   "namePa": null,
+   "lat": 30.50231,
+   "lon": 75.72939,
+   "place": "village"
+  },
+  {
+   "id": "v6051358158",
+   "name": "Zainpur",
+   "namePa": null,
+   "lat": 30.44619,
+   "lon": 75.95304,
+   "place": "village"
+  },
+  {
+   "id": "v6051469979",
+   "name": "Zulmgarh",
+   "namePa": null,
+   "lat": 30.2809,
+   "lon": 75.87386,
+   "place": "village"
+  }
+ ]
+}

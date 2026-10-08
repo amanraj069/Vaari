@@ -17,7 +17,9 @@
     "contract:sync": "node scripts/sync-contract.mjs",
     "db:create": "tsx --env-file-if-exists=.env scripts/db.ts create",
     "db:status": "tsx --env-file-if-exists=.env scripts/db.ts status",
-    "test:dynamo": "REPO=dynamo TABLE_PREFIX=vaari-test vitest run"
+    "test:dynamo": "REPO=dynamo TABLE_PREFIX=vaari-test vitest run",
+    "data:villages": "tsx scripts/data/villages.ts",
+    "data:prepare": "tsx scripts/data/prepare.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "3.1139.0",

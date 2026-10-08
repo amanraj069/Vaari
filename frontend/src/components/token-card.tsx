@@ -5,7 +5,7 @@
  * thing on the card. Firm dates and windows look different, and a moved date says why, right here.
  */
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, ChevronDown, History, Phone, Sparkles } from "lucide-react";
+import { BellRing, ChevronDown, History, Phone, Sparkles, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -27,6 +27,7 @@ const HISTORY_LABEL = {
 
 export function TokenCard({ field, today, operatorPhone }: { field: FarmerField; today: string; operatorPhone?: string }) {
   const t = useTranslations("farmer");
+  const ts = useTranslations("slot");
   const tc = useTranslations("common");
   const locale = useLocale();
   const dates = useDates();
@@ -37,6 +38,9 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
     enabled: whyOpen,
   });
   const promise = field.promise;
+  // Same rule as the slot page: a promise that runs past the farmer's last day is said out loud.
+  const promiseLastDate = promise ? (promise.kind === "firm" ? promise.date : promise.endDate) : null;
+  const late = field.state !== "done" && promiseLastDate !== null && promiseLastDate > field.burnDeadlineDate;
 
   return (
     <article className="overflow-hidden rounded-card border border-line bg-surface">
@@ -44,6 +48,14 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
         <div className="flex items-start gap-2 border-b border-ember/30 bg-ember-soft/60 px-5 py-3 text-ember-deep">
           <BellRing aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
           <p className="text-base">{t("brokenNotice")}</p>
+        </div>
+      ) : late ? (
+        <div role="alert" className="flex items-start gap-2 border-b border-ember/30 bg-ember-soft/60 px-5 py-3 text-ember-deep">
+          <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
+          <div>
+            <p className="text-base font-medium">{ts("lateTitle", { date: dates.full(field.burnDeadlineDate) })}</p>
+            <p className="text-sm">{ts("lateBody")}</p>
+          </div>
         </div>
       ) : field.notice?.kind === "firmed" ? (
         <div className="flex items-start gap-2 border-b border-field/30 bg-field-soft/60 px-5 py-3 text-field">

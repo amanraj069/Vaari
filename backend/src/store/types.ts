@@ -68,7 +68,8 @@ export type PromiseRecord = {
   reason: PromiseReason;
 };
 
-export type ReplanCause = "breakdown" | "machine_back" | "rain" | "manual_move" | "new_request";
+// farmer_update: a farmer shortened their waiting limit from a slot link.
+export type ReplanCause = "breakdown" | "machine_back" | "rain" | "manual_move" | "new_request" | "farmer_update";
 
 export type ReplanRecord = {
   chcId: string;

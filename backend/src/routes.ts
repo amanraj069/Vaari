@@ -5,8 +5,11 @@
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import {
   dateToDay,
+  facilitatorBookingInputSchema,
+  waitingLimitInputSchema,
   fieldRequestInputSchema,
   localeSchema,
   onboardingInputSchema,
@@ -21,6 +24,7 @@ import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
 import { authorize, type Action, type Resource } from "./authz/cedar";
 import { DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
+import type { FieldRecord } from "./store/types";
 import { buildBoard, buildBookedFields, buildFarmerField, buildFarmerHome, buildQueue } from "./domain/views";
 import { mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { reasonText } from "./explain/templates";
@@ -250,6 +254,34 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // "Why this date?" from the solver's own reasons, phrased by templates. Shared by the signed-in
+  // route and the slot-link route so both say exactly the same thing.
+  const explainField = async (field: FieldRecord, locale: Locale): Promise<Why> => {
+    const { request: solveRequest } = await dependencies.planner.buildSolveRequest(field.chcId);
+    // Unplanned: ask whether any day inside the horizon could work.
+    const currentDay = field.plannedDay ?? dependencies.planner.today() + 1 + (solveRequest.horizonDays ?? 10);
+    const explained = await engine.explain({ ...solveRequest, fieldId: field.id, currentDay });
+    const machines = await dependencies.store.listMachines(field.chcId);
+    const machineName = new Map(machines.map((machine) => [machine.id, machine.name]));
+    return {
+      fieldId: field.id,
+      plannedDate: field.plannedDay === null ? null : dependencies.planner.dayToIso(field.plannedDay),
+      earlierPossible: explained.earlierPossible,
+      reasons: explained.reasons.map((reason) => {
+        const dates = reason.days.map((day) => dependencies.planner.dayToIso(day));
+        const machineNames = reason.machineIds.map((id) => machineName.get(id) ?? id);
+        return {
+          code: reason.code,
+          dates,
+          machineNames,
+          count: reason.count,
+          text: reasonText(reason.code, { dates, machines: machineNames, count: reason.count }, locale),
+        };
+      }),
+      source: "template",
+    };
+  };
+
   router.get(
     "/fields/:fieldId/why",
     authenticate,
@@ -260,30 +292,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
       if (!field) throw new NotFoundError("field not found");
       requireCedar(principal, "AskWhy", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy });
-      const { request: solveRequest } = await dependencies.planner.buildSolveRequest(field.chcId);
-      // Unplanned: ask whether any day inside the horizon could work.
-      const currentDay = field.plannedDay ?? dependencies.planner.today() + 1 + (solveRequest.horizonDays ?? 10);
-      const explained = await engine.explain({ ...solveRequest, fieldId: field.id, currentDay });
-      const machines = await dependencies.store.listMachines(field.chcId);
-      const machineName = new Map(machines.map((machine) => [machine.id, machine.name]));
-      const why: Why = {
-        fieldId: field.id,
-        plannedDate: field.plannedDay === null ? null : dependencies.planner.dayToIso(field.plannedDay),
-        earlierPossible: explained.earlierPossible,
-        reasons: explained.reasons.map((reason) => {
-          const dates = reason.days.map((day) => dependencies.planner.dayToIso(day));
-          const machineNames = reason.machineIds.map((id) => machineName.get(id) ?? id);
-          return {
-            code: reason.code,
-            dates,
-            machineNames,
-            count: reason.count,
-            text: reasonText(reason.code, { dates, machines: machineNames, count: reason.count }, locale),
-          };
-        }),
-        source: "template",
-      };
-      response.json(why);
+      response.json(await explainField(field, locale));
     }),
   );
 
@@ -314,7 +323,65 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // The slot token is the permission: it names exactly one field (chcId + fieldId).
+  const fieldFromSlot = async (token: string): Promise<FieldRecord> => {
+    const { chcId, fieldId } = await verifySlotToken(config, token);
+    const field = await dependencies.store.getField(chcId, fieldId);
+    if (!field) throw new NotFoundError("field not found");
+    return field;
+  };
+
+  router.get(
+    "/slot/:token/why",
+    slotLimiter,
+    asyncHandler(async (request, response) => {
+      const field = await fieldFromSlot(String(request.params.token));
+      response.json(await explainField(field, localeSchema.catch("en").parse(request.query.lang)));
+    }),
+  );
+
+  router.post(
+    "/slot/:token/waiting-limit",
+    slotLimiter,
+    asyncHandler(async (request, response) => {
+      const field = await fieldFromSlot(String(request.params.token));
+      const { waitingLimitDays } = waitingLimitInputSchema.parse(request.body);
+      const updated = await dependencies.planner.shortenWaitingLimit(field.chcId, field.id, waitingLimitDays);
+      const allFields = await dependencies.store.listFields(field.chcId);
+      response.json(await buildFarmerField(dependencies.planner, dependencies.store, updated, allFields));
+    }),
+  );
+
   // --- Facilitator --------------------------------------------------------------------------
+
+  // A facilitator books for a farmer without an account; the answer includes the farmer's slot link.
+  router.post(
+    "/facilitator/fields",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.role !== "facilitator") throw new ForbiddenError(["not a facilitator"]);
+      const chcId = requireChc(principal);
+      requireCedar(principal, "RequestField", { type: "Chc", id: chcId });
+      const input = facilitatorBookingInputSchema.parse(request.body);
+      const today = dependencies.planner.today();
+      const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
+      if (readyDay < today - 7 || readyDay > today + 30) {
+        response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
+        return;
+      }
+      const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
+      await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: "", language: "pa", facilitatorId: principal.userId });
+      const field = await dependencies.planner.requestField(
+        chcId,
+        { farmerId, farmerName: input.farmerName, bookedBy: principal.userId },
+        { villageId: input.villageId, acres: input.acres, readyDate: input.readyDate, waitingLimitDays: input.waitingLimitDays },
+      );
+      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
+      const allFields = await dependencies.store.listFields(chcId);
+      response.status(201).json({ field: await buildFarmerField(dependencies.planner, dependencies.store, field, allFields), slot: { token, path: `/slot/${token}` } });
+    }),
+  );
 
   // Fields this facilitator booked for farmers, via the booked-by-index; Cedar re-checks each one.
   router.get(

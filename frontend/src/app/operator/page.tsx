@@ -16,6 +16,7 @@ import { operatorBoardSchema, type Lane, type OperatorBoard } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
 import { MachineLane } from "@/components/machine-lane";
 import { SimulatedBadge } from "@/components/simulated-badge";
+import { PAGE_TITLE, PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
 import { Button, Card, Pill, Skeleton, StateMessage } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
@@ -108,7 +109,7 @@ export default function OperatorPage() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6">
+      <PageMain>
         {board.isPending ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-1/2" />
@@ -125,10 +126,10 @@ export default function OperatorPage() {
                   <p className="text-sm text-ink-muted">{board.data.chc.name}</p>
                   <SimulatedBadge demoDate={dates.short(board.data.today)} />
                 </div>
-                <h1 className="mt-1 font-display text-4xl">{t("planFor", { date: dates.full(board.data.planDate) })}</h1>
+                <h1 className={`mt-2 ${PAGE_TITLE}`}>{t("planFor", { date: dates.full(board.data.planDate) })}</h1>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <div className="flex items-center gap-3">
+              <div className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:items-end">
+                <div className="flex flex-wrap items-center gap-3">
                   <Pill kind={board.data.plan.status} size="lg">
                     {board.data.plan.status === "approved" ? t("approved") : t("proposed")}
                   </Pill>
@@ -199,7 +200,9 @@ export default function OperatorPage() {
                       ? t("replanTitleBreakdown", { machine: board.data.lastReplan.machineName ?? "" })
                       : board.data.lastReplan.cause === "machine_back"
                         ? t("replanTitleBack", { machine: board.data.lastReplan.machineName ?? "" })
-                        : t("replanTitleOther")}
+                        : board.data.lastReplan.cause === "farmer_update"
+                          ? t("replanTitleFarmer")
+                          : t("replanTitleOther")}
                   </h2>
                   <p className="mt-1 text-sm">
                     {t("replanMoved", { count: board.data.lastReplan.moved.length })} ·{" "}
@@ -285,7 +288,7 @@ export default function OperatorPage() {
             </div>
           </>
         )}
-      </main>
+      </PageMain>
 
       <dialog ref={dialogRef} className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-card border border-line bg-surface p-0 text-ink backdrop:bg-black/50" onClose={() => setDownMachine(null)}>
         {downMachine ? (

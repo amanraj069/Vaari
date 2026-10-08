@@ -17,7 +17,7 @@ export function ThemeToggle() {
         onClick={toggleTheme}
         aria-label={label}
         title={label}
-        className="grid size-10 cursor-pointer place-items-center rounded-full text-ink hover:bg-ink/5"
+        className="grid size-11 cursor-pointer place-items-center rounded-full text-ink hover:bg-ink/5"
         style={{ fontSize: "1.25rem" }}
       />
     </div>
