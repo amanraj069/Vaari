@@ -21,7 +21,8 @@ import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
 import { authorize, type Action, type Resource } from "./authz/cedar";
 import { DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
-import { buildBoard, buildFarmerField, buildFarmerHome, buildQueue } from "./domain/views";
+import { buildBoard, buildBookedFields, buildFarmerField, buildFarmerHome, buildQueue } from "./domain/views";
+import { mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { reasonText } from "./explain/templates";
 
 export class ForbiddenError extends Error {
@@ -204,7 +205,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const chc = await dependencies.store.getChc(requireChc(request.principal));
       if (!chc) throw new NotFoundError("CHC not found");
-      const villages = (await dependencies.store.listVillages()).filter((village) => chc.villageIds.includes(village.id));
+      const villages = dependencies.planner.villages().filter((village) => chc.villageIds.includes(village.id));
       response.json(villages.map(({ id, name, namePa }) => ({ id, name, namePa })));
     }),
   );
@@ -245,8 +246,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         input,
       );
       const allFields = await dependencies.store.listFields(chcId);
-      const notifications = await dependencies.store.listNotifications(principal.farmerId);
-      response.status(201).json(await buildFarmerField(dependencies.planner, dependencies.store, field, allFields, notifications));
+      response.status(201).json(await buildFarmerField(dependencies.planner, dependencies.store, field, allFields));
     }),
   );
 
@@ -256,7 +256,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const { principal } = request;
       const locale: Locale = localeSchema.catch("en").parse(request.query.lang);
-      const field = await dependencies.store.getField(String(request.params.fieldId));
+      // Fields are keyed by (chcId, fieldId): the caller's CHC makes this a direct GetItem.
+      const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
       if (!field) throw new NotFoundError("field not found");
       requireCedar(principal, "AskWhy", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy });
       const { request: solveRequest } = await dependencies.planner.buildSolveRequest(field.chcId);
@@ -283,6 +284,52 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         source: "template",
       };
       response.json(why);
+    }),
+  );
+
+  // A shareable, read-only link to one field's turn (for a farmer without an account).
+  router.get(
+    "/fields/:fieldId/slot-link",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
+      if (!field) throw new NotFoundError("field not found");
+      requireCedar(principal, "ViewField", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy });
+      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
+      response.json({ token, path: `/slot/${token}` });
+    }),
+  );
+
+  const slotLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
+  router.get(
+    "/slot/:token",
+    slotLimiter,
+    asyncHandler(async (request, response) => {
+      const { chcId, fieldId } = await verifySlotToken(config, String(request.params.token));
+      const field = await dependencies.store.getField(chcId, fieldId);
+      if (!field) throw new NotFoundError("field not found");
+      const allFields = await dependencies.store.listFields(chcId);
+      response.json(await buildFarmerField(dependencies.planner, dependencies.store, field, allFields));
+    }),
+  );
+
+  // --- Facilitator --------------------------------------------------------------------------
+
+  // Fields this facilitator booked for farmers, via the booked-by-index; Cedar re-checks each one.
+  router.get(
+    "/facilitator/fields",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.role !== "facilitator") throw new ForbiddenError(["not a facilitator"]);
+      const booked = await dependencies.store.listFieldsBookedBy(principal.userId);
+      const visible = booked.filter(
+        (field) =>
+          authorize(principal, "ViewField", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy })
+            .allowed,
+      );
+      response.json({ today: dependencies.planner.dayToIso(dependencies.planner.today()), items: await buildBookedFields(dependencies.planner, dependencies.store, visible) });
     }),
   );
 

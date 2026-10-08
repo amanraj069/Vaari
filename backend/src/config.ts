@@ -24,7 +24,17 @@ const configSchema = z.object({
   ENGINE_DIR: z.string().default(path.join(backendRoot, "engine")),
   ENGINE_TIME_LIMIT_SECONDS: z.coerce.number().positive().default(2),
   DATA_DIR: z.string().default(path.join(repoRoot, "data")),
-  STORE_MODE: z.enum(["memory", "dynamodb"]).default("memory"),
+  // Data: REPO=memory for tests and quick runs, REPO=dynamo for the real tables.
+  REPO: z.enum(["memory", "dynamo"]).default("memory"),
+  TABLE_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{1,40}$/, "lowercase letters, digits and dashes")
+    .default("vaari-dev"),
+  AWS_REGION: z.string().optional(),
+  // Only for DynamoDB Local in development; production uses the regional endpoint.
+  DYNAMODB_ENDPOINT: z.string().url().optional(),
+  // Signs farmer slot links (separate from the session secret).
+  SLOT_TOKEN_SECRET: z.string().min(32).default("local-dev-only-slot-secret-change-me-00000"),
   // The demo runs on a simulated season clock: day 0 is the season start.
   SEASON_START_DATE: z.string().default("2026-10-01"),
   DEMO_TODAY: z.string().default("2026-10-31"),
@@ -42,6 +52,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Config
   }
   if (parsed.data.NODE_ENV === "production" && parsed.data.DEMO_SESSION_SECRET.startsWith("local-dev-only")) {
     throw new Error("DEMO_SESSION_SECRET must be set in production");
+  }
+  if (parsed.data.NODE_ENV === "production" && parsed.data.SLOT_TOKEN_SECRET.startsWith("local-dev-only")) {
+    throw new Error("SLOT_TOKEN_SECRET must be set in production");
+  }
+  if (parsed.data.REPO === "dynamo" && !parsed.data.AWS_REGION) {
+    throw new Error("REPO=dynamo needs AWS_REGION (credentials come from the AWS default provider chain)");
   }
   return parsed.data;
 }
