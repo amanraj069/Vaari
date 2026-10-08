@@ -21,7 +21,7 @@ export default function FarmerHomePage() {
 
   return (
     <>
-      <TopBar signedIn />
+      <TopBar />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-6 text-lg">
         {home.isPending ? (
           <div className="space-y-4">

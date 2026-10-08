@@ -24,7 +24,7 @@ export default async function WelcomePage() {
 
   return (
     <>
-      <TopBar signedIn />
+      <TopBar />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-10">
         <WelcomeForm
           chcs={chcs}

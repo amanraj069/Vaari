@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowRight, CircleCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { meSchema } from "@/shared";
 import { DemoButton } from "@/components/demo-buttons";
+import { GoogleLogo } from "@/components/google-logo";
 import { TopBar } from "@/components/top-bar";
 import { ButtonLink } from "@/components/ui";
 import { ROLE_HOME, serverConfig } from "@/lib/server-config";
@@ -30,12 +31,12 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   ];
   return (
     <>
-      <TopBar signedIn={Boolean(me) || error === "no_role"} />
+      <TopBar />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-10">
         <h1 className="font-display text-4xl">{t("title")}</h1>
 
         {me?.needsOnboarding ? (
-          <div role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-wheat-deep/30 bg-wheat-soft p-4">
+          <div role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-card border border-wheat-deep/30 bg-wheat-soft p-5">
             <p>{t("finishSetup")}</p>
             <ButtonLink href="/welcome" variant="accent">
               {t("finishSetupAction")}
@@ -43,7 +44,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
             </ButtonLink>
           </div>
         ) : me?.role ? (
-          <div role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-field/30 bg-field-soft/60 p-4">
+          <div role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-card border border-field/30 bg-field-soft/60 p-5">
             <p className="flex items-center gap-2">
               <CircleCheck aria-hidden className="size-5 text-field" strokeWidth={1.75} />
               {t("signedInAs", { name: me.name, role: tr(me.role) })}
@@ -54,7 +55,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
             </ButtonLink>
           </div>
         ) : error ? (
-          <div role="alert" className="mt-6 flex gap-2 rounded-[8px] border border-ember/40 bg-ember-soft/50 p-4 text-ember-deep">
+          <div role="alert" className="mt-6 flex gap-2 rounded-card border border-ember/40 bg-ember-soft/50 p-5 text-ember-deep">
             <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
             <p>{error === "no_role" ? t("errorNoRole") : t("errorGeneric")}</p>
           </div>
@@ -66,12 +67,14 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
             <p className="mt-1 text-ink-muted">{t("demoBody")}</p>
             <ul className="mt-4 space-y-3">
               {personas.map((persona) => (
-                <li key={persona.role} className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-line bg-surface p-4">
-                  <div>
+                // Same layout for every persona: text left and button right on wider screens,
+                // button full width under the text on phones.
+                <li key={persona.role} className="grid gap-4 rounded-card border border-line bg-surface p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="min-w-0">
                     <p className="font-display text-xl">{persona.name}</p>
                     <p className="text-sm text-ink-muted">{persona.detail}</p>
                   </div>
-                  <DemoButton role={persona.role} label={t("useAccount")} variant={persona.variant} />
+                  <DemoButton role={persona.role} label={t("useAccount")} variant={persona.variant} className="w-full sm:w-auto" />
                 </li>
               ))}
             </ul>
@@ -80,7 +83,8 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
 
         <section className="mt-10 border-t border-line pt-6">
           {cognitoOn ? (
-            <a href="/api/auth/login" className="inline-flex min-h-12 w-full items-center justify-center rounded-[8px] border border-line-strong bg-surface font-medium hover:border-ink/50">
+            <a href="/api/auth/login" className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-control border border-line-strong bg-surface font-medium hover:border-ink/50">
+              <GoogleLogo />
               {t("google")}
             </a>
           ) : (

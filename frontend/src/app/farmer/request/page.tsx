@@ -60,7 +60,7 @@ export default function FarmerRequestPage() {
   if (created && today) {
     return (
       <>
-        <TopBar signedIn />
+        <TopBar />
         <main className="mx-auto max-w-xl px-4 pb-16 pt-6 text-lg">
           <div className="mb-4 flex items-center gap-2 text-field">
             <Check aria-hidden className="size-6" strokeWidth={2} />
@@ -78,7 +78,7 @@ export default function FarmerRequestPage() {
 
   return (
     <>
-      <TopBar signedIn />
+      <TopBar />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-6 text-lg">
         <h1 className="font-display text-3xl">{t("title")}</h1>
         <ol className="mt-4 grid grid-cols-5 gap-1.5" aria-label={t("title")}>
@@ -101,7 +101,7 @@ export default function FarmerRequestPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={t("villageSearch")}
-                  className="min-h-12 w-full rounded-[8px] border border-line-strong bg-surface pl-10 pr-3"
+                  className="min-h-12 w-full rounded-control border border-line-strong bg-surface pl-10 pr-3"
                 />
               </label>
               {villages.isPending ? (
@@ -116,7 +116,7 @@ export default function FarmerRequestPage() {
                       type="button"
                       aria-pressed={villageId === item.id}
                       onClick={() => setVillageId(item.id)}
-                      className={`min-h-12 rounded-[8px] border px-3 text-left ${
+                      className={`min-h-12 rounded-control border px-3 text-left ${
                         villageId === item.id ? "border-ink bg-ink text-paper" : "border-line bg-surface hover:border-ink/50"
                       }`}
                     >
@@ -151,7 +151,7 @@ export default function FarmerRequestPage() {
                     type="button"
                     aria-pressed={readyDate === iso}
                     onClick={() => setReadyDate(iso)}
-                    className={`min-h-14 rounded-[8px] border px-3 text-left ${readyDate === iso ? "border-ink bg-ink text-paper" : "border-line bg-surface hover:border-ink/50"}`}
+                    className={`min-h-14 rounded-control border px-3 text-left ${readyDate === iso ? "border-ink bg-ink text-paper" : "border-line bg-surface hover:border-ink/50"}`}
                   >
                     <span className="block text-sm opacity-80">{index === 0 ? t("today") : index === 1 ? t("tomorrow") : dates.weekday(iso)}</span>
                     <span className="block tabular">{dates.dayMonth(iso)}</span>
@@ -181,7 +181,7 @@ export default function FarmerRequestPage() {
           ) : (
             <div>
               <h2 className="font-display text-2xl">{t("reviewTitle")}</h2>
-              <dl className="mt-4 divide-y divide-line rounded-[8px] border border-line bg-surface">
+              <dl className="mt-4 divide-y divide-line rounded-card border border-line bg-surface">
                 {[
                   [t("stepVillage"), village?.name ?? ""],
                   [t("stepAcres"), tc("acres", { acres })],

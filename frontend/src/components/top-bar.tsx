@@ -1,60 +1,75 @@
 "use client";
 
+/**
+ * One top bar for every page. Left: the mark and the links for whoever is signed in (operator:
+ * Plan, Queue; farmer: My fields, Ask for a date; visitors: See the proof). Right: three
+ * same-size controls, language, theme and the account menu (or Sign in). On phones the links
+ * drop to a second row so nothing is squeezed.
+ */
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { LogOut, UserRound } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { meSchema } from "@/shared";
-import { LanguageSwitcher } from "./language-switcher";
+import { useSession } from "@/lib/use-session";
+import { AccountMenu } from "./account-menu";
+import { BrandMark } from "./brand-mark";
+import { LanguageMenu } from "./language-menu";
+import { ThemeToggle } from "./theme-toggle";
 
-export function Wordmark() {
-  return (
-    <Link href="/" className="group inline-flex items-baseline gap-2" aria-label="Vaari home">
-      <span className="font-display text-2xl font-semibold tracking-tight">Vaari</span>
-      <span lang="pa" className="text-lg text-wheat-deep">ਵਾਰੀ</span>
-    </Link>
-  );
-}
+type NavLink = { href: string; label: string };
 
-export function TopBar({ children, signedIn = false }: { children?: React.ReactNode; signedIn?: boolean }) {
-  const t = useTranslations("common");
-  const tr = useTranslations("roles");
-  // Who is signed in, shown on every signed-in page.
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const response = await fetch("/api/auth/session", { cache: "no-store" });
-      const body = (await response.json()) as { signedIn: boolean; me?: unknown };
-      const parsed = meSchema.safeParse(body.me);
-      return body.signedIn && parsed.success ? parsed.data : null;
-    },
-    enabled: signedIn,
-    staleTime: 60_000,
-  });
-  async function signOut() {
-    const response = await fetch("/api/auth/logout", { method: "POST" });
-    const { redirect } = (await response.json()) as { redirect: string };
-    window.location.href = redirect;
+export function TopBar() {
+  const t = useTranslations("nav");
+  const pathname = usePathname();
+  const session = useSession();
+  const me = session.data ?? null;
+
+  let links: NavLink[] = [];
+  if (me?.role === "operator" && !me.needsOnboarding) {
+    links = [
+      { href: "/operator", label: t("plan") },
+      { href: "/operator/queue", label: t("queue") },
+    ];
+  } else if ((me?.role === "farmer" || me?.role === "facilitator") && !me.needsOnboarding) {
+    links = [
+      { href: "/farmer", label: t("myFields") },
+      { href: "/farmer/request", label: t("askDate") },
+    ];
+  } else if (!me && !session.isPending) {
+    links = [{ href: "/proof", label: t("proof") }];
   }
+
   return (
     <header className="border-b border-line bg-paper/95">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-        <Wordmark />
-        <nav className="flex flex-1 items-center gap-1">{children}</nav>
-        <LanguageSwitcher />
-        {session.data ? (
-          <span className="inline-flex items-center gap-1.5 text-sm" title={session.data.demo ? t("simulated") : undefined}>
-            <UserRound aria-hidden className="size-4 text-ink-muted" strokeWidth={1.75} />
-            <span className="font-medium">{session.data.name}</span>
-            {session.data.role ? <span className="text-ink-muted">· {tr(session.data.role)}</span> : null}
-          </span>
-        ) : null}
-        {signedIn ? (
-          <button type="button" onClick={signOut} className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-2 text-sm text-ink-muted hover:text-ink">
-            <LogOut aria-hidden className="size-4" strokeWidth={1.75} />
-            {t("signOut")}
-          </button>
-        ) : null}
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 sm:gap-x-10 sm:px-6 sm:py-4">
+        <BrandMark />
+        <nav aria-label={t("mainNav")} className="order-last -mx-1 flex w-full items-center gap-1.5 sm:order-none sm:mx-0 sm:w-auto sm:flex-1">
+          {links.map((link) => {
+            const active = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex min-h-10 items-center rounded-control px-3.5 text-sm ${active ? "bg-ink/5 font-medium text-ink" : "text-ink-muted hover:text-ink"}`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <LanguageMenu />
+          <ThemeToggle />
+          {session.isPending ? (
+            <span aria-hidden className="size-10 animate-pulse rounded-full bg-line/70" />
+          ) : me ? (
+            <AccountMenu me={me} />
+          ) : pathname !== "/signin" ? (
+            <Link href="/signin" className="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-5 text-sm font-medium hover:border-ink/50">
+              {t("signIn")}
+            </Link>
+          ) : null}
+        </div>
       </div>
     </header>
   );

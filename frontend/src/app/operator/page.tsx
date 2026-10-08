@@ -15,7 +15,6 @@ import { z } from "zod";
 import { operatorBoardSchema, type Lane, type OperatorBoard } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
 import { MachineLane } from "@/components/machine-lane";
-import { OperatorNav } from "@/components/operator-nav";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { TopBar } from "@/components/top-bar";
 import { Button, Card, Pill, Skeleton, StateMessage } from "@/components/ui";
@@ -45,12 +44,12 @@ function OneLineAnswer({ board }: { board: OperatorBoard }) {
 function Kpi({ icon, label, value, hint, tone = "neutral" }: { icon: React.ReactNode; label: string; value: string; hint?: string; tone?: "neutral" | "risk" | "good" }) {
   const toneClass = tone === "risk" ? "text-ember-deep" : tone === "good" ? "text-field" : "text-ink";
   return (
-    <div className="rounded-[8px] border border-line bg-surface p-3" title={hint}>
+    <div className="flex h-full flex-col justify-between gap-3 rounded-card border border-line bg-surface p-5" title={hint}>
       <p className="flex items-center gap-1.5 text-xs text-ink-muted">
         {icon}
         {label}
       </p>
-      <p className={`mt-1 font-display text-3xl tabular ${toneClass}`}>{value}</p>
+      <p className={`font-display text-3xl leading-none tabular ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -108,9 +107,7 @@ export default function OperatorPage() {
 
   return (
     <>
-      <TopBar signedIn>
-        <OperatorNav />
-      </TopBar>
+      <TopBar />
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6">
         {board.isPending ? (
           <div className="space-y-4">
@@ -150,16 +147,16 @@ export default function OperatorPage() {
               </div>
             </div>
             {notice ? (
-              <p role="alert" className="mt-3 rounded-[8px] border border-wheat-deep/30 bg-wheat-soft px-3 py-2 text-sm">
+              <p role="alert" className="mt-4 rounded-control border border-wheat-deep/30 bg-wheat-soft px-4 py-3 text-sm">
                 {notice}
               </p>
             ) : null}
 
-            <Card className="mt-5 p-5">
+            <Card className="mt-6 p-6">
               <OneLineAnswer board={board.data} />
             </Card>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-5">
               <Kpi
                 icon={<ShieldCheck aria-hidden className="size-3.5" strokeWidth={1.75} />}
                 label={t("kpiPromises")}
@@ -194,7 +191,7 @@ export default function OperatorPage() {
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="mt-4 rounded-[8px] border border-sky/30 bg-sky-soft/60 p-4"
+                  className="mt-5 rounded-card border border-sky/30 bg-sky-soft/60 p-5"
                   aria-live="polite"
                 >
                   <h2 className="font-medium">
@@ -236,7 +233,7 @@ export default function OperatorPage() {
                   <p className="text-xs text-ink-muted">{t("lanesHint")}</p>
                 </div>
                 <LayoutGroup>
-                  <ul className="mt-3 space-y-3">
+                  <ul className="mt-4 space-y-4">
                     {board.data.lanes.map((lane, index) => (
                       <MachineLane
                         key={lane.machine.id}
@@ -263,9 +260,9 @@ export default function OperatorPage() {
                 {board.data.atRisk.length === 0 ? (
                   <p className="mt-3 text-sm text-ink-muted">{t("atRiskEmpty")}</p>
                 ) : (
-                  <ul className="mt-3 space-y-2">
+                  <ul className="mt-4 space-y-3">
                     {board.data.atRisk.slice(0, 8).map((item) => (
-                      <li key={item.fieldId} className="rounded-[8px] border border-line bg-surface p-3">
+                      <li key={item.fieldId} className="rounded-card border border-line bg-surface p-4">
                         <div className="flex items-center justify-between gap-2 text-sm">
                           <span>
                             <span className="font-medium tabular">#{String(item.token).padStart(3, "0")}</span> {item.farmerName}
@@ -290,7 +287,7 @@ export default function OperatorPage() {
         )}
       </main>
 
-      <dialog ref={dialogRef} className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-[8px] border border-line bg-surface p-0 text-ink backdrop:bg-ink/30" onClose={() => setDownMachine(null)}>
+      <dialog ref={dialogRef} className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-card border border-line bg-surface p-0 text-ink backdrop:bg-black/50" onClose={() => setDownMachine(null)}>
         {downMachine ? (
           <form
             method="dialog"
@@ -312,7 +309,7 @@ export default function OperatorPage() {
                     type="button"
                     aria-pressed={downDays === days}
                     onClick={() => setDownDays(days)}
-                    className={`min-h-11 flex-1 rounded-[8px] border ${downDays === days ? "border-ink bg-ink text-paper" : "border-line-strong bg-surface"}`}
+                    className={`min-h-11 flex-1 rounded-control border ${downDays === days ? "border-ink bg-ink text-paper" : "border-line-strong bg-surface"}`}
                   >
                     {tc("days", { count: days })}
                   </button>
