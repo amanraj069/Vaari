@@ -1,8 +1,10 @@
-"""Solve end to end: assignment, routes, promises, metrics.
+"""Solve end to end: assignment, routes, promises, metrics, objective.
 
-Why it exists: this is the one function the API, the CLI and the simulator call. It turns the
-solver's assignment into what people see: each machine's ordered day, and each farmer's promise
-(a firm date within the next two days, otherwise a window that narrows as the day approaches).
+Why it exists: this is the one function the API, the CLI and the simulator call. It runs the chosen
+planner (CP-SAT or the search) and turns its assignment into what people see: each machine's
+ordered day, and each farmer's promise (a firm date within the next two days, otherwise a window
+that narrows as the day approaches). Both planners are scored on the same lexicographic objective.
+OR-Tools is imported only when CP-SAT runs, so the search path starts in a fraction of a second.
 """
 
 from __future__ import annotations
@@ -17,9 +19,10 @@ from .contract import (
     SolverInfo,
     WindowPromise,
 )
-from .model import assign, wheat_loss_kg
-from .problem import Problem
+from .objective import evaluate, to_contract
+from .problem import Assignment, Problem, wheat_loss_kg
 from .route import build_routes
+from .search import plan_by_search
 
 
 def shape_new_promise(problem: Problem, field_day: int, ready_day: int, burn_deadline: int) -> FirmPromise | WindowPromise:
@@ -36,9 +39,18 @@ def shape_new_promise(problem: Problem, field_day: int, ready_day: int, burn_dea
     return WindowPromise(kind="window", start_day=window_start, end_day=window_end)
 
 
-def solve(request: SolveRequest) -> SolveResponse:
-    problem = Problem(request)
-    assignment = assign(problem)
+def assign_with_chosen_method(problem: Problem) -> Assignment:
+    if problem.settings.method == "search":
+        return plan_by_search(problem, seed=problem.settings.search_seed).assignment
+    from .model import assign  # imports OR-Tools (about 0.4 s), so only when CP-SAT is asked for
+
+    return assign(problem)
+
+
+def solve(request: SolveRequest, problem: Problem | None = None, assignment: Assignment | None = None) -> SolveResponse:
+    """Plan a request. A caller that already ran a planner may pass its problem and assignment."""
+    problem = problem or Problem(request)
+    assignment = assignment or assign_with_chosen_method(problem)
 
     field_days: dict[str, int] = {}
     unserved_field_ids: list[str] = []
@@ -143,9 +155,13 @@ def solve(request: SolveRequest) -> SolveResponse:
         promises=promises,
         queue_days=problem.queue_day_by_field,
         metrics=metrics,
+        objective=to_contract(evaluate(problem, assignment)),
         solver=SolverInfo(
             status=assignment.status,  # type: ignore[arg-type]
             mode=assignment.mode,  # type: ignore[arg-type]
+            method=assignment.method,  # type: ignore[arg-type]
+            travel_source=problem.travel.source,
+            breaks_proven_minimal=assignment.breaks_proven_minimal,
             wall_seconds=assignment.wall_seconds,
             burn_pass_objective=assignment.burn_pass_objective,
             cost_pass_objective=assignment.cost_pass_objective,

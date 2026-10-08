@@ -1,8 +1,11 @@
-"""The engine correctness checks from CLAUDE.md section 10. These must always pass."""
+"""The engine correctness checks from CLAUDE.md section 10. These must always pass, for both planners
+(CP-SAT and the search); each test runs once per planner."""
 
 from __future__ import annotations
 
 import copy
+
+import pytest
 
 from conftest import make_request, machine
 from vaari_engine.contract import FirmPromise, SolveRequest, WindowPromise
@@ -68,8 +71,17 @@ def assert_capacity_and_readiness(request: dict, response) -> None:
         assert assignment.day >= fields_by_id[assignment.field_id]["readyDay"]
 
 
-def test_first_plan_respects_readiness_and_capacity(small_request):
-    response = solve(SolveRequest.model_validate(small_request))
+PLANNERS = pytest.mark.parametrize("method", ["cpsat", "search"])
+
+
+def with_method(request: dict, method: str) -> dict:
+    request["settings"]["method"] = method
+    return request
+
+
+@PLANNERS
+def test_first_plan_respects_readiness_and_capacity(small_request, method):
+    response = solve(SolveRequest.model_validate(with_method(small_request, method)))
     assert response.solver.status in ("optimal", "feasible")
     assert response.solver.mode == "normal"
     assert_capacity_and_readiness(small_request, response)
@@ -83,9 +95,10 @@ def test_first_plan_respects_readiness_and_capacity(small_request):
             assert isinstance(item.promise, WindowPromise) and item.promise.start_day <= day <= item.promise.end_day
 
 
-def test_replan_keeps_every_promise_across_seeds():
+@PLANNERS
+def test_replan_keeps_every_promise_across_seeds(method):
     for seed in range(1, 6):
-        request = make_request(field_count=14, machine_count=3, seed=seed)
+        request = with_method(make_request(field_count=14, machine_count=3, seed=seed), method)
         first = solve(SolveRequest.model_validate(request))
         promised_request = adopt_promises(request, first)
         second = solve(SolveRequest.model_validate(promised_request))
@@ -95,8 +108,9 @@ def test_replan_keeps_every_promise_across_seeds():
         assert_capacity_and_readiness(promised_request, second)
 
 
-def test_breakdown_replans_without_breaking_when_feasible():
-    request = make_request(field_count=4, machine_count=3, seed=3)
+@PLANNERS
+def test_breakdown_replans_without_breaking_when_feasible(method):
+    request = with_method(make_request(field_count=4, machine_count=3, seed=3), method)
     for field in request["fields"]:
         field.update({"readyDay": request["today"], "acres": 1.5, "villageId": "balian"})
     first = solve(SolveRequest.model_validate(request))
@@ -110,8 +124,9 @@ def test_breakdown_replans_without_breaking_when_feasible():
     assert all(route.machine_id != "m1" or route.day != request["today"] + 1 for route in second.routes)
 
 
-def test_minimal_break_breaks_fewest_and_reports_them():
-    request = make_request(field_count=4, machine_count=1, seed=2)
+@PLANNERS
+def test_minimal_break_breaks_fewest_and_reports_them(method):
+    request = with_method(make_request(field_count=4, machine_count=1, seed=2), method)
     for field in request["fields"]:
         field["readyDay"] = request["today"]
         field["acres"] = 3.0
@@ -131,8 +146,9 @@ def test_minimal_break_breaks_fewest_and_reports_them():
     assert_promises_kept(request, response)
 
 
-def test_minimal_break_prefers_promises_with_most_slack():
-    request = make_request(field_count=3, machine_count=1, seed=4)
+@PLANNERS
+def test_minimal_break_prefers_promises_with_most_slack(method):
+    request = with_method(make_request(field_count=3, machine_count=1, seed=4), method)
     tomorrow = request["today"] + 1
     for index, field in enumerate(request["fields"]):
         field.update({"readyDay": request["today"], "acres": 3.0, "villageId": "balian"})
@@ -143,8 +159,9 @@ def test_minimal_break_prefers_promises_with_most_slack():
     assert broken_ids == {"f01"}, "the farmer who can wait longest should be moved"
 
 
-def test_fairness_guard_reports_delay_vs_queue(small_request):
-    response = solve(SolveRequest.model_validate(small_request))
+@PLANNERS
+def test_fairness_guard_reports_delay_vs_queue(small_request, method):
+    response = solve(SolveRequest.model_validate(with_method(small_request, method)))
     beyond = 0
     for field_id, day in response.field_days.items():
         queue_day = response.queue_days.get(field_id)
@@ -153,15 +170,17 @@ def test_fairness_guard_reports_delay_vs_queue(small_request):
     assert response.metrics.fields_beyond_fairness_k == beyond
 
 
-def test_rain_day_has_no_sowing():
-    request = make_request(field_count=8, machine_count=2, seed=5, rain_days=[32])
+@PLANNERS
+def test_rain_day_has_no_sowing(method):
+    request = with_method(make_request(field_count=8, machine_count=2, seed=5, rain_days=[32]), method)
     response = solve(SolveRequest.model_validate(request))
     assert all(route.day != 32 for route in response.routes)
     assert_capacity_and_readiness(request, response)
 
 
-def test_large_field_is_split_into_parts():
-    request = make_request(field_count=1, machine_count=2, seed=6)
+@PLANNERS
+def test_large_field_is_split_into_parts(method):
+    request = with_method(make_request(field_count=1, machine_count=2, seed=6), method)
     request["fields"][0]["acres"] = 12.0
     response = solve(SolveRequest.model_validate(request))
     parts = [assignment for assignment in response.assignments if assignment.field_id == "f00"]
@@ -169,8 +188,9 @@ def test_large_field_is_split_into_parts():
     assert response.field_days["f00"] == max(part.day for part in parts)
 
 
-def test_new_window_never_passes_burn_deadline():
-    request = make_request(field_count=30, machine_count=2, seed=12)
+@PLANNERS
+def test_new_window_never_passes_burn_deadline(method):
+    request = with_method(make_request(field_count=30, machine_count=2, seed=12), method)
     response = solve(SolveRequest.model_validate(request))
     fields_by_id = {field["id"]: field for field in request["fields"]}
     for item in response.promises:
@@ -181,8 +201,9 @@ def test_new_window_never_passes_burn_deadline():
             assert item.promise.end_day <= max(planned, burn_deadline)
 
 
-def test_broken_promise_gets_earliest_feasible_new_date():
-    request = make_request(field_count=3, machine_count=1, seed=4)
+@PLANNERS
+def test_broken_promise_gets_earliest_feasible_new_date(method):
+    request = with_method(make_request(field_count=3, machine_count=1, seed=4), method)
     tomorrow = request["today"] + 1
     for index, field in enumerate(request["fields"]):
         field.update({"readyDay": request["today"], "acres": 3.0, "villageId": "balian", "waitingLimitDays": 9})

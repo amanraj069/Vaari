@@ -23,6 +23,10 @@ const configSchema = z.object({
   ENGINE_PYTHON: z.string().default(path.join(backendRoot, "engine/.venv/bin/python")),
   ENGINE_DIR: z.string().default(path.join(backendRoot, "engine")),
   ENGINE_TIME_LIMIT_SECONDS: z.coerce.number().positive().default(2),
+  // cpsat: the reference planner (proves what it can in the time limit). search: the fast planner
+  // (earliest burn deadline + seeded local search, a fraction of a second), seeded by ENGINE_SEARCH_SEED.
+  ENGINE_METHOD: z.enum(["cpsat", "search"]).default("cpsat"),
+  ENGINE_SEARCH_SEED: z.coerce.number().int().default(1),
   DATA_DIR: z.string().default(path.join(repoRoot, "data")),
   // Data: REPO=memory for tests and quick runs, REPO=dynamo for the real tables.
   REPO: z.enum(["memory", "dynamo"]).default("memory"),

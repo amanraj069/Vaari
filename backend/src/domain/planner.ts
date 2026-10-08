@@ -160,7 +160,12 @@ export class Planner {
       })),
       rainDays: chc.rainDays,
       pins,
-      settings: { fairnessKDays: chc.settings.fairnessKDays, timeLimitSeconds: this.config.ENGINE_TIME_LIMIT_SECONDS },
+      settings: {
+        fairnessKDays: chc.settings.fairnessKDays,
+        timeLimitSeconds: this.config.ENGINE_TIME_LIMIT_SECONDS,
+        method: this.config.ENGINE_METHOD,
+        searchSeed: this.config.ENGINE_SEARCH_SEED,
+      },
     };
     return { request, activeFields, promiseByField, historyByField };
   }

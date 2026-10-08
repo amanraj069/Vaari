@@ -61,6 +61,21 @@ export const engineSettingsSchema = z.object({
   dayStartMinute: z.number().int().optional(),
   timeLimitSeconds: z.number().optional(),
   wheatLossKgPerAcrePerWeek: z.number().optional(),
+  // "cpsat" is the reference planner; "search" is the fast one (earliest burn deadline + local search).
+  method: z.enum(["cpsat", "search"]).optional(),
+  searchSeed: z.number().int().optional(),
+});
+
+/**
+ * Road travel computed outside the engine (the Amazon Location route matrix, fetched by the API).
+ * Row and column i belong to pointIds[i]; "base" is the CHC. Without it the engine uses straight-line
+ * distance times the assumed road factor.
+ */
+export const travelMatrixSchema = z.object({
+  source: z.string(),
+  pointIds: z.array(z.string()),
+  km: z.array(z.array(z.number().nonnegative())),
+  minutes: z.array(z.array(z.number().int().nonnegative())),
 });
 
 export const solveRequestSchema = z.object({
@@ -75,6 +90,7 @@ export const solveRequestSchema = z.object({
   rainDays: z.array(z.number().int()).default([]),
   pins: z.array(pinSchema).default([]),
   settings: engineSettingsSchema.default({}),
+  travelMatrix: travelMatrixSchema.nullable().optional(),
 });
 
 export const explainRequestSchema = solveRequestSchema.extend({
@@ -133,6 +149,17 @@ export const metricsSchema = z.object({
   fieldsBeyondFairnessK: z.number().int(),
 });
 
+/** The plan's lexicographic objective, most important first; the same measure for both planners. */
+export const objectiveSchema = z.object({
+  brokenPromises: z.number().int(),
+  lateFields: z.number().int(),
+  unservedFields: z.number().int(),
+  wheatLossKg: z.number(),
+  travelKm: z.number(),
+  fairnessSlackDays: z.number().int(),
+  waitingAcreDays: z.number(),
+});
+
 export const solveResponseSchema = z.object({
   planStartDay: z.number().int(),
   fieldDays: z.record(z.string(), z.number().int()),
@@ -142,9 +169,15 @@ export const solveResponseSchema = z.object({
   promises: z.array(promiseOutSchema),
   queueDays: z.record(z.string(), z.number().int().nullable()),
   metrics: metricsSchema,
+  // Optional: plans stored before the search planner existed do not carry these.
+  objective: objectiveSchema.optional(),
   solver: z.object({
     status: z.enum(["optimal", "feasible", "fallback"]),
     mode: z.enum(["normal", "minimal_break"]),
+    method: z.enum(["cpsat", "search"]).optional(),
+    travelSource: z.string().optional(),
+    // When promises break: true if CP-SAT proved that no plan could break fewer.
+    breaksProvenMinimal: z.boolean().nullable().optional(),
     wallSeconds: z.number(),
     burnPassObjective: z.number().int().nullable(),
     costPassObjective: z.number().int().nullable(),
@@ -182,6 +215,8 @@ export type EngineMachine = z.infer<typeof engineMachineSchema>;
 export type FieldPromise = z.infer<typeof promiseSchema>;
 export type EngineField = z.infer<typeof engineFieldSchema>;
 export type Pin = z.infer<typeof pinSchema>;
+export type TravelMatrix = z.infer<typeof travelMatrixSchema>;
+export type Objective = z.infer<typeof objectiveSchema>;
 export type SolveRequest = z.input<typeof solveRequestSchema>;
 export type ExplainRequest = z.input<typeof explainRequestSchema>;
 export type Stop = z.infer<typeof stopSchema>;

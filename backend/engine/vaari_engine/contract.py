@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -89,6 +89,33 @@ class Settings(ContractModel):
     day_start_minute: int = 8 * 60  # assumed: 08:00
     time_limit_seconds: float = 10.0
     wheat_loss_kg_per_acre_per_week: float = 150.0  # PAU Package of Practices, Rabi 2025-26
+    # "cpsat" is the reference planner (model.py). "search" is the fast planner (search.py):
+    # earliest-burn-deadline construction improved by local search, reproducible from search_seed.
+    method: Literal["cpsat", "search"] = "cpsat"
+    search_seed: int = 1
+
+
+class TravelMatrixInput(ContractModel):
+    """Road travel between points, computed outside the engine (for example Amazon Location).
+
+    Row and column i belong to point_ids[i]; "base" is the CHC. Without one, the engine falls back
+    to straight-line distance times the assumed road factor.
+    """
+
+    source: str
+    point_ids: list[str]
+    km: list[list[Annotated[float, Field(ge=0)]]]
+    minutes: list[list[Annotated[int, Field(ge=0)]]]
+
+    @model_validator(mode="after")
+    def check_square(self) -> "TravelMatrixInput":
+        size = len(self.point_ids)
+        if len(set(self.point_ids)) != size:
+            raise ValueError("travelMatrix pointIds must be unique")
+        for name, rows in (("km", self.km), ("minutes", self.minutes)):
+            if len(rows) != size or any(len(row) != size for row in rows):
+                raise ValueError(f"travelMatrix {name} must be {size} x {size}, one row and column per point id")
+        return self
 
 
 class SolveRequest(ContractModel):
@@ -104,6 +131,7 @@ class SolveRequest(ContractModel):
     rain_days: list[int] = []
     pins: list[Pin] = []
     settings: Settings = Settings()
+    travel_matrix: TravelMatrixInput | None = None
 
 
 class ExplainRequest(SolveRequest):
@@ -166,9 +194,29 @@ class Metrics(ContractModel):
     fields_beyond_fairness_k: int
 
 
+class Objective(ContractModel):
+    """The plan's lexicographic objective, most important first (see objective.py).
+
+    Measured on the plan as decided (cautious promise rate, before stretch stops), the same way for
+    both planners, so CP-SAT and the search can be compared directly.
+    """
+
+    broken_promises: int
+    late_fields: int
+    unserved_fields: int
+    wheat_loss_kg: float
+    travel_km: float
+    fairness_slack_days: int
+    waiting_acre_days: float
+
+
 class SolverInfo(ContractModel):
     status: Literal["optimal", "feasible", "fallback"]
     mode: Literal["normal", "minimal_break"]
+    method: Literal["cpsat", "search"]
+    travel_source: str
+    # When promises break: true if CP-SAT proved that no plan could break fewer.
+    breaks_proven_minimal: bool | None = None
     wall_seconds: float
     burn_pass_objective: int | None
     cost_pass_objective: int | None
@@ -183,6 +231,7 @@ class SolveResponse(ContractModel):
     promises: list[PromiseOut]
     queue_days: dict[str, int | None]
     metrics: Metrics
+    objective: Objective
     solver: SolverInfo
 
 
