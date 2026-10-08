@@ -56,7 +56,7 @@ export function authorize(principal: Principal, action: Action, resource: Resour
       {
         uid: { type: "User", id: principal.userId },
         attrs: {
-          role: principal.role,
+          role: principal.role ?? "",
           userId: principal.userId,
           chcId: principal.chcId ?? "",
           farmerId: principal.farmerId ?? "",

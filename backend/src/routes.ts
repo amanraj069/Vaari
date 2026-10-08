@@ -5,7 +5,17 @@
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
-import { dateToDay, fieldRequestInputSchema, localeSchema, roleSchema, type Locale, type Me, type Why } from "./shared";
+import {
+  dateToDay,
+  fieldRequestInputSchema,
+  localeSchema,
+  onboardingInputSchema,
+  roleSchema,
+  type ChcOption,
+  type Locale,
+  type Me,
+  type Why,
+} from "./shared";
 import type { AppDependencies } from "./app";
 import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
 import { authorize, type Action, type Resource } from "./authz/cedar";
@@ -88,7 +98,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     "/auth/demo",
     demoLimiter,
     asyncHandler(async (request, response) => {
-      if (!config.DEMO_MODE || config.AUTH_MODE !== "demo") {
+      if (!config.DEMO_MODE) {
         response.status(404).json({ error: "NOT_FOUND" });
         return;
       }
@@ -103,21 +113,75 @@ export function buildRoutes(dependencies: AppDependencies): Router {
 
   // --- Session ------------------------------------------------------------------------------
 
+  // Onboarding is needed until the user has a role and the records that role works with.
+  const needsOnboarding = (principal: Principal) =>
+    !principal.role || (principal.role !== "officer" && !principal.chcId) || (principal.role === "farmer" && !principal.farmerId);
+
+  const meFor = async (principal: Principal): Promise<Me> => {
+    const user = await dependencies.store.getUser(principal.userId);
+    return {
+      userId: principal.userId,
+      name: principal.name,
+      role: principal.role,
+      chcId: principal.chcId,
+      farmerId: principal.farmerId,
+      language: user?.language ?? "en",
+      demo: principal.demo,
+      needsOnboarding: needsOnboarding(principal),
+    };
+  };
+
   router.get(
     "/me",
     authenticate,
     asyncHandler(async (request, response) => {
-      const user = await dependencies.store.getUser(request.principal.userId);
-      const me: Me = {
-        userId: request.principal.userId,
-        name: request.principal.name,
-        role: request.principal.role,
-        chcId: request.principal.chcId,
-        farmerId: request.principal.farmerId,
-        language: user?.language ?? "en",
-        demo: request.principal.demo,
-      };
-      response.json(me);
+      response.json(await meFor(request.principal));
+    }),
+  );
+
+  router.get(
+    "/chcs",
+    authenticate,
+    asyncHandler(async (_request, response) => {
+      const options: ChcOption[] = [];
+      for (const chc of await dependencies.store.listChcs()) {
+        const machines = await dependencies.store.listMachines(chc.id);
+        options.push({ id: chc.id, name: chc.name, villageCount: chc.villageIds.length, machineCount: machines.length });
+      }
+      response.json(options);
+    }),
+  );
+
+  // A new Google user picks a role and CHC on /welcome. Demo personas are seeded and never change.
+  // Operator access can be self-picked only in demo mode; otherwise it must come from the
+  // Cognito "operator" group, or any Google account could approve plans.
+  router.post(
+    "/me/profile",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.demo) throw new ForbiddenError(["demo personas cannot change their profile"]);
+      const input = onboardingInputSchema.parse(request.body);
+      if (input.role === "operator" && !config.DEMO_MODE && principal.role !== "operator") {
+        throw new ForbiddenError(["operator access needs the Cognito operator group"]);
+      }
+      const chc = await dependencies.store.getChc(input.chcId);
+      if (!chc) throw new NotFoundError("CHC not found");
+      const existing = await dependencies.store.getUser(principal.userId);
+      const farmerId = input.role === "farmer" ? (existing?.farmerId ?? `farmer-${principal.userId}`) : null;
+      if (farmerId) {
+        await dependencies.store.putFarmer({ id: farmerId, name: input.name, phone: "", language: input.language, facilitatorId: null });
+      }
+      await dependencies.store.putUser({
+        userId: principal.userId,
+        name: input.name,
+        role: input.role,
+        chcId: chc.id,
+        farmerId,
+        language: input.language,
+      });
+      const updated = await dependencies.verifier.verify(String(request.headers.authorization).slice("Bearer ".length));
+      response.json(await meFor(updated));
     }),
   );
 

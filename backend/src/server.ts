@@ -6,7 +6,7 @@ import { createApp, logger } from "./app";
 import { loadConfig } from "./config";
 import { createTokenVerifier } from "./auth/tokens";
 import { createEngineClient } from "./engine/client";
-import { DEMO_CHC_ID, seedDemo } from "./demo/seed";
+import { DEMO_CHC_ID, DEMO_USERS, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
 import { MemoryStore } from "./store/memory";
 import type { VaariStore } from "./store/types";
@@ -32,6 +32,14 @@ export async function buildRuntime() {
     async resetDemo() {
       const fresh = new MemoryStore();
       await seedDemo(fresh, config);
+      // Real (Google) users keep their profile across a demo reset; only the season is re-seeded.
+      const seededUserIds = new Set(Object.values(DEMO_USERS) as string[]);
+      for (const user of await store.listUsers()) {
+        if (seededUserIds.has(user.userId)) continue;
+        await fresh.putUser(user);
+        const farmer = user.farmerId ? await store.getFarmer(user.farmerId) : null;
+        if (farmer) await fresh.putFarmer(farmer);
+      }
       const freshPlanner = new Planner(fresh, engine, config);
       await freshPlanner.replan(DEMO_CHC_ID, "new_request");
       store = fresh;

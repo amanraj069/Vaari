@@ -101,6 +101,9 @@ export class MemoryStore implements VaariStore {
   async getUser(userId: string) {
     return copy(this.users.get(userId) ?? null);
   }
+  async listUsers() {
+    return copy([...this.users.values()]);
+  }
   async putUser(user: UserRecord) {
     this.users.set(user.userId, copy(user));
   }

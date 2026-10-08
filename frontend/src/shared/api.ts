@@ -15,13 +15,29 @@ export type Locale = z.infer<typeof localeSchema>;
 export const meSchema = z.object({
   userId: z.string(),
   name: z.string(),
-  role: roleSchema,
+  // null until a new Google user picks a role on /welcome.
+  role: roleSchema.nullable(),
   chcId: z.string().nullable(),
   farmerId: z.string().nullable(),
   language: localeSchema,
   demo: z.boolean(),
+  needsOnboarding: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
+
+// Roles a new user can pick for themselves on /welcome (the ones that have pages today).
+export const selfServiceRoleSchema = z.enum(["farmer", "operator"]);
+
+export const onboardingInputSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  role: selfServiceRoleSchema,
+  chcId: z.string().min(1),
+  language: localeSchema,
+});
+export type OnboardingInput = z.infer<typeof onboardingInputSchema>;
+
+export const chcOptionSchema = z.object({ id: z.string(), name: z.string(), villageCount: z.number().int(), machineCount: z.number().int() });
+export type ChcOption = z.infer<typeof chcOptionSchema>;
 
 export const promiseViewSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("firm"), date: z.string() }),

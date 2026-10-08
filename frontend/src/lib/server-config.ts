@@ -20,6 +20,8 @@ export const COOKIE = {
   // Role is only a routing hint for middleware; the API verifies the token on every call.
   role: "vaari_role",
   oauthState: "vaari_oauth",
+  // Name from Google's ID token, only to pre-fill the /welcome form.
+  displayName: "vaari_name",
   locale: "NEXT_LOCALE",
 } as const;
 

@@ -127,5 +127,6 @@ export interface VaariStore {
   getFarmer(farmerId: string): Promise<FarmerRecord | null>;
   putFarmer(farmer: FarmerRecord): Promise<void>;
   getUser(userId: string): Promise<UserRecord | null>;
+  listUsers(): Promise<UserRecord[]>;
   putUser(user: UserRecord): Promise<void>;
 }

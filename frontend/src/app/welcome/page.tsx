@@ -1,22 +1,38 @@
-import { useTranslations } from "next-intl";
-import { LanguageSwitcher } from "@/components/language-switcher";
+/**
+ * First stop after a new Google sign-in: pick a role and a CHC (and language), so the API knows
+ * which records this person works with. Already set-up users are sent straight to their page.
+ */
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { z } from "zod";
+import { chcOptionSchema, localeSchema, meSchema } from "@/shared";
 import { TopBar } from "@/components/top-bar";
-import { ButtonLink } from "@/components/ui";
+import { WelcomeForm } from "@/components/welcome-form";
+import { COOKIE, ROLE_HOME, serverConfig } from "@/lib/server-config";
+import { apiFetch } from "@/lib/session";
 
-export default function WelcomePage() {
-  const t = useTranslations("welcome");
+export default async function WelcomePage() {
+  const meResponse = await apiFetch("/me").catch(() => null);
+  const me = meResponse?.ok ? meSchema.safeParse(await meResponse.json()) : null;
+  if (!me?.success) redirect("/signin");
+  if (!me.data.needsOnboarding && me.data.role) redirect(ROLE_HOME[me.data.role] ?? "/");
+
+  const chcResponse = await apiFetch("/chcs").catch(() => null);
+  const chcs = chcResponse?.ok ? z.array(chcOptionSchema).parse(await chcResponse.json()) : [];
+  const suggestedName = (await cookies()).get(COOKIE.displayName)?.value ?? (me.data.name.includes("@") ? "" : me.data.name);
+
   return (
     <>
       <TopBar signedIn />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-10">
-        <h1 className="font-display text-4xl">{t("title")}</h1>
-        <p className="mt-3 text-lg text-ink-muted">{t("body")}</p>
-        <div className="mt-6">
-          <LanguageSwitcher />
-        </div>
-        <ButtonLink href="/farmer" className="mt-8 min-h-12 w-full text-lg">
-          {t("continue")}
-        </ButtonLink>
+        <WelcomeForm
+          chcs={chcs}
+          suggestedName={suggestedName}
+          currentRole={me.data.role}
+          locale={localeSchema.catch("en").parse(await getLocale())}
+          operatorSelfService={serverConfig.demoMode}
+        />
       </main>
     </>
   );

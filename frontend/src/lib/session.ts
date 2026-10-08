@@ -13,10 +13,17 @@ export async function setSession(accessToken: string, expiresInSeconds: number, 
   }
 }
 
+/** "pending" means signed in but not onboarded: middleware keeps the user on /welcome. */
+export async function setRoleCookie(role: string) {
+  const jar = await cookies();
+  jar.set(COOKIE.role, role, { httpOnly: true, secure: serverConfig.secureCookies, sameSite: "lax", path: "/", maxAge: 14 * 24 * 3600 });
+}
+
 export async function clearSession() {
   const jar = await cookies();
   jar.delete(COOKIE.accessToken);
   jar.delete(COOKIE.role);
+  jar.delete(COOKIE.displayName);
   jar.delete({ name: COOKIE.refreshToken, path: "/api" });
 }
 

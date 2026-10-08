@@ -18,6 +18,10 @@ export function middleware(request: NextRequest) {
     signin.searchParams.set("next", pathname);
     return NextResponse.redirect(signin);
   }
+  // Signed in but not onboarded yet: finish /welcome first.
+  if (role === "pending") {
+    return pathname === "/welcome" ? NextResponse.next() : NextResponse.redirect(new URL("/welcome", request.url));
+  }
   const allowed = ROLE_PREFIX[role] ?? [];
   if (pathname !== "/welcome" && !allowed.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.redirect(new URL(HOME[role] ?? "/", request.url));

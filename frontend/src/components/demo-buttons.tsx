@@ -4,19 +4,28 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { signInAsDemo } from "@/lib/api";
+import { ApiError, signInAsDemo } from "@/lib/api";
 
 /** One-click "Try as …" for judges and visitors: a real session for a seeded demo user. */
-export function DemoButton({ role, label, variant = "primary" }: { role: "farmer" | "operator"; label: string; variant?: "primary" | "accent" }) {
+export function DemoButton({
+  role,
+  label,
+  variant = "primary",
+}: {
+  role: "farmer" | "operator";
+  label: string;
+  variant?: "primary" | "accent";
+}) {
   const router = useRouter();
   const t = useTranslations("signin");
-  const [state, setState] = useState<"idle" | "working" | "failed">("idle");
+  const [state, setState] = useState<"idle" | "working" | "failed" | "off">("idle");
   async function go() {
     setState("working");
     try {
       router.push(await signInAsDemo(role));
-    } catch {
-      setState("failed");
+    } catch (error) {
+      // 404 means the API is up but demo sign-in is switched off; anything else means it is unreachable.
+      setState(error instanceof ApiError && error.status === 404 ? "off" : "failed");
     }
   }
   const style = variant === "accent" ? "bg-wheat text-ink border-wheat-deep/30 hover:bg-wheat/90" : "bg-ink text-paper border-ink hover:bg-ink/90";
@@ -27,7 +36,11 @@ export function DemoButton({ role, label, variant = "primary" }: { role: "farmer
         {state === "working" ? t("working") : label}
         {state !== "working" ? <ArrowRight aria-hidden className="size-5" strokeWidth={1.75} /> : null}
       </button>
-      {state === "failed" ? <span role="alert" className="text-sm text-ember-deep">{t("failed")}</span> : null}
+      {state === "failed" || state === "off" ? (
+        <span role="alert" className="text-sm text-ember-deep">
+          {state === "off" ? t("demoOff") : t("failed")}
+        </span>
+      ) : null}
     </span>
   );
 }
