@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/*
+ * Vaari design tokens (CLAUDE.md section 9). Quiet, warm, flat: paper not white, borders not
+ * shadows, 8px corners. Ember means burn risk and nothing else. Wheat is a fill, never body text
+ * (too little contrast on paper); text that needs the accent uses wheat-deep.
+ * Contrast on paper: ink 16:1, ink-muted 5.4:1, field 5.6:1, ember-deep 5.7:1, wheat-deep 4.9:1.
+ */
+@theme {
+  --color-paper: #f5f0e4;
+  --color-surface: #fffdf8;
+  --color-line: #e3d9c3;
+  --color-line-strong: #cbbd9f;
+  --color-ink: #1b1a17;
+  --color-ink-muted: #6e6050;
+  --color-wheat: #d9a22b;
+  --color-wheat-soft: #f3e2b8;
+  --color-wheat-deep: #8a5f12;
+  --color-field: #2f6b3f;
+  --color-field-soft: #dcebdc;
+  --color-ember: #c8452b;
+  --color-ember-deep: #a8361f;
+  --color-ember-soft: #f6ddd5;
+  --color-sky: #3c6e8f;
+  --color-sky-soft: #dde8ef;
+
+  /* Machine lanes: five muted hues, distinguishable without relying on colour alone (lanes are named). */
+  --color-lane-1: #6b8f71;
+  --color-lane-2: #8a7aa8;
+  --color-lane-3: #b98b52;
+  --color-lane-4: #5f8aa6;
+  --color-lane-5: #a86f6f;
+
+  --font-display: var(--font-fraunces), "Georgia", serif;
+  --font-sans: var(--font-inter), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
+
+  --radius-card: 8px;
+  --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-sky);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: var(--color-wheat-soft);
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Hatched fill for a machine in the workshop: pattern plus a label, never colour alone. */
+  .hatched {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent 0 8px,
+      color-mix(in srgb, var(--color-ink-muted) 14%, transparent) 8px 10px
+    );
+  }
+  .ticket-notch {
+    mask: radial-gradient(circle 10px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle 10px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

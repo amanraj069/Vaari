@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# Internal: planning notes and AI instructions. Not for the public repo.
+# ---------------------------------------------------------------------------
+docs/
+CLAUDE.md
+PROJECT_BRIEF.md
+.claude/
+CLAUDE.local.md
+notes/
+scratch/
+
+# ---------------------------------------------------------------------------
+# Secrets: the repo is public. Only the *.example templates are committed.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---------------------------------------------------------------------------
+# Data: raw downloads (FIRMS CSVs, OSM responses) stay local.
+# Small derived JSON in data/derived IS committed.
+# ---------------------------------------------------------------------------
+data/raw/
+
+# ---------------------------------------------------------------------------
+# Dependencies and build output
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Python (engine)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Infra and local AWS
+cdk.out/
+.aws-sam/
+.localstack/
+
+# ---------------------------------------------------------------------------
+# Logs, OS and editor files
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

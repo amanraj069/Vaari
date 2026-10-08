@@ -1,0 +1,564 @@
+{
+ "source": "OpenStreetMap via Overpass API, place=village",
+ "license": "ODbL, (c) OpenStreetMap contributors",
+ "bbox": [
+  75.7,
+  30.15,
+  75.95,
+  30.35
+ ],
+ "villages": [
+  {
+   "id": "v6051469970",
+   "name": "Akoi",
+   "namePa": null,
+   "lat": 30.2849,
+   "lon": 75.84309,
+   "osmNodeId": 6051469970
+  },
+  {
+   "id": "v6051603603",
+   "name": "Andheri",
+   "namePa": null,
+   "lat": 30.26993,
+   "lon": 75.813,
+   "osmNodeId": 6051603603
+  },
+  {
+   "id": "v6051603605",
+   "name": "Badru Khan",
+   "namePa": null,
+   "lat": 30.25202,
+   "lon": 75.79064,
+   "osmNodeId": 6051603605
+  },
+  {
+   "id": "v6051603602",
+   "name": "Baguana",
+   "namePa": null,
+   "lat": 30.245,
+   "lon": 75.82056,
+   "osmNodeId": 6051603602
+  },
+  {
+   "id": "v6051469963",
+   "name": "Bahadurpur",
+   "namePa": null,
+   "lat": 30.25736,
+   "lon": 75.74494,
+   "osmNodeId": 6051469963
+  },
+  {
+   "id": "v6051469980",
+   "name": "Balian",
+   "namePa": null,
+   "lat": 30.27982,
+   "lon": 75.89956,
+   "osmNodeId": 6051469980
+  },
+  {
+   "id": "v6051358143",
+   "name": "Banganwali",
+   "namePa": null,
+   "lat": 30.29109,
+   "lon": 75.8224,
+   "osmNodeId": 6051358143
+  },
+  {
+   "id": "v6051469982",
+   "name": "Baragraon",
+   "namePa": null,
+   "lat": 30.29987,
+   "lon": 75.86377,
+   "osmNodeId": 6051469982
+  },
+  {
+   "id": "v6051358146",
+   "name": "Batuha",
+   "namePa": null,
+   "lat": 30.31377,
+   "lon": 75.72164,
+   "osmNodeId": 6051358146
+  },
+  {
+   "id": "v6044927537",
+   "name": "Batwahar Kalan",
+   "namePa": null,
+   "lat": 30.22752,
+   "lon": 75.91952,
+   "osmNodeId": 6044927537
+  },
+  {
+   "id": "v1463003674",
+   "name": "Benra",
+   "namePa": null,
+   "lat": 30.33413,
+   "lon": 75.84968,
+   "osmNodeId": 1463003674
+  },
+  {
+   "id": "v6046182829",
+   "name": "Bhalwan",
+   "namePa": null,
+   "lat": 30.32292,
+   "lon": 75.94419,
+   "osmNodeId": 6046182829
+  },
+  {
+   "id": "v6051469962",
+   "name": "Bhamandaddi",
+   "namePa": null,
+   "lat": 30.24279,
+   "lon": 75.75524,
+   "osmNodeId": 6051469962
+  },
+  {
+   "id": "v5999925419",
+   "name": "Bharur",
+   "namePa": null,
+   "lat": 30.17926,
+   "lon": 75.82047,
+   "osmNodeId": 5999925419
+  },
+  {
+   "id": "v6051469977",
+   "name": "Bhindran",
+   "namePa": null,
+   "lat": 30.26652,
+   "lon": 75.91433,
+   "osmNodeId": 6051469977
+  },
+  {
+   "id": "v6051469966",
+   "name": "Bhojowali",
+   "namePa": null,
+   "lat": 30.34458,
+   "lon": 75.92379,
+   "osmNodeId": 6051469966
+  },
+  {
+   "id": "v6051358142",
+   "name": "Changal",
+   "namePa": null,
+   "lat": 30.28553,
+   "lon": 75.7927,
+   "osmNodeId": 6051358142
+  },
+  {
+   "id": "v1667064874",
+   "name": "Chatha",
+   "namePa": null,
+   "lat": 30.19841,
+   "lon": 75.79924,
+   "osmNodeId": 1667064874
+  },
+  {
+   "id": "v6051469981",
+   "name": "Chhannan Bahadur Singh",
+   "namePa": null,
+   "lat": 30.3081,
+   "lon": 75.87145,
+   "osmNodeId": 6051469981
+  },
+  {
+   "id": "v1514218714",
+   "name": "Chhathe",
+   "namePa": null,
+   "lat": 30.15635,
+   "lon": 75.83392,
+   "osmNodeId": 1514218714
+  },
+  {
+   "id": "v6051358148",
+   "name": "Dhandiwal",
+   "namePa": null,
+   "lat": 30.3434,
+   "lon": 75.71889,
+   "osmNodeId": 6051358148
+  },
+  {
+   "id": "v6051469961",
+   "name": "Duggan",
+   "namePa": null,
+   "lat": 30.24646,
+   "lon": 75.73387,
+   "osmNodeId": 6051469961
+  },
+  {
+   "id": "v6044927544",
+   "name": "Gaggarpur",
+   "namePa": null,
+   "lat": 30.19503,
+   "lon": 75.91003,
+   "osmNodeId": 6044927544
+  },
+  {
+   "id": "v6051469876",
+   "name": "Ghabdan",
+   "namePa": null,
+   "lat": 30.26812,
+   "lon": 75.93719,
+   "osmNodeId": 6051469876
+  },
+  {
+   "id": "v6044799490",
+   "name": "Gobindpura",
+   "namePa": null,
+   "lat": 30.15485,
+   "lon": 75.93596,
+   "osmNodeId": 6044799490
+  },
+  {
+   "id": "v6051469976",
+   "name": "Gurdaspura",
+   "namePa": null,
+   "lat": 30.25091,
+   "lon": 75.94248,
+   "osmNodeId": 6051469976
+  },
+  {
+   "id": "v6051358140",
+   "name": "Hasanpur",
+   "namePa": null,
+   "lat": 30.34007,
+   "lon": 75.75721,
+   "osmNodeId": 6051358140
+  },
+  {
+   "id": "v6044927543",
+   "name": "Ilwal",
+   "namePa": null,
+   "lat": 30.20527,
+   "lon": 75.89394,
+   "osmNodeId": 6044927543
+  },
+  {
+   "id": "v1485704210",
+   "name": "Kaloudi",
+   "namePa": null,
+   "lat": 30.2376,
+   "lon": 75.93381,
+   "osmNodeId": 1485704210
+  },
+  {
+   "id": "v6044927542",
+   "name": "Kamboh Majra",
+   "namePa": null,
+   "lat": 30.20949,
+   "lon": 75.87596,
+   "osmNodeId": 6044927542
+  },
+  {
+   "id": "v6044927541",
+   "name": "Kanai",
+   "namePa": null,
+   "lat": 30.19269,
+   "lon": 75.85467,
+   "osmNodeId": 6044927541
+  },
+  {
+   "id": "v6051358147",
+   "name": "Kanjali",
+   "namePa": null,
+   "lat": 30.30361,
+   "lon": 75.74232,
+   "osmNodeId": 6051358147
+  },
+  {
+   "id": "v6016332444",
+   "name": "Kanjhla",
+   "namePa": null,
+   "lat": 30.30858,
+   "lon": 75.77262,
+   "osmNodeId": 6016332444
+  },
+  {
+   "id": "v6051603601",
+   "name": "Khazan Singhwala",
+   "namePa": null,
+   "lat": 30.26011,
+   "lon": 75.8415,
+   "osmNodeId": 6051603601
+  },
+  {
+   "id": "v1422665903",
+   "name": "Kheri",
+   "namePa": null,
+   "lat": 30.19099,
+   "lon": 75.88166,
+   "osmNodeId": 1422665903
+  },
+  {
+   "id": "v6051358144",
+   "name": "Khilarian",
+   "namePa": null,
+   "lat": 30.29316,
+   "lon": 75.8115,
+   "osmNodeId": 6051358144
+  },
+  {
+   "id": "v6044927539",
+   "name": "Khurana",
+   "namePa": null,
+   "lat": 30.24468,
+   "lon": 75.90651,
+   "osmNodeId": 6044927539
+  },
+  {
+   "id": "v6044927538",
+   "name": "Khurani",
+   "namePa": null,
+   "lat": 30.23742,
+   "lon": 75.90514,
+   "osmNodeId": 6044927538
+  },
+  {
+   "id": "v6016332445",
+   "name": "Kila",
+   "namePa": null,
+   "lat": 30.31925,
+   "lon": 75.72473,
+   "osmNodeId": 6016332445
+  },
+  {
+   "id": "v6051603600",
+   "name": "Kila Bharian",
+   "namePa": null,
+   "lat": 30.20975,
+   "lon": 75.73271,
+   "osmNodeId": 6051603600
+  },
+  {
+   "id": "v5999925418",
+   "name": "Kular Khurd",
+   "namePa": null,
+   "lat": 30.16569,
+   "lon": 75.85534,
+   "osmNodeId": 5999925418
+  },
+  {
+   "id": "v6051469960",
+   "name": "Kunran",
+   "namePa": null,
+   "lat": 30.24628,
+   "lon": 75.71391,
+   "osmNodeId": 6051469960
+  },
+  {
+   "id": "v1463006945",
+   "name": "Ladda Khothi",
+   "namePa": null,
+   "lat": 30.31621,
+   "lon": 75.82421,
+   "osmNodeId": 1463006945
+  },
+  {
+   "id": "v6051469975",
+   "name": "Laddi",
+   "namePa": null,
+   "lat": 30.28994,
+   "lon": 75.93394,
+   "osmNodeId": 6051469975
+  },
+  {
+   "id": "v5999925420",
+   "name": "Lakhmirwala",
+   "namePa": null,
+   "lat": 30.15956,
+   "lon": 75.81081,
+   "osmNodeId": 5999925420
+  },
+  {
+   "id": "v6051358141",
+   "name": "Lidran",
+   "namePa": null,
+   "lat": 30.28775,
+   "lon": 75.77846,
+   "osmNodeId": 6051358141
+  },
+  {
+   "id": "v6051469971",
+   "name": "Mangwal",
+   "namePa": null,
+   "lat": 30.25462,
+   "lon": 75.87124,
+   "osmNodeId": 6051469971
+  },
+  {
+   "id": "v6051237203",
+   "name": "Manwala",
+   "namePa": null,
+   "lat": 30.34621,
+   "lon": 75.88428,
+   "osmNodeId": 6051237203
+  },
+  {
+   "id": "v1491335778",
+   "name": "Maradkheda",
+   "namePa": null,
+   "lat": 30.15269,
+   "lon": 75.86579,
+   "osmNodeId": 1491335778
+  },
+  {
+   "id": "v6051603604",
+   "name": "Mastuana",
+   "namePa": null,
+   "lat": 30.26574,
+   "lon": 75.77494,
+   "osmNodeId": 6051603604
+  },
+  {
+   "id": "v1330372435",
+   "name": "Mehlan",
+   "namePa": null,
+   "lat": 30.15602,
+   "lon": 75.89819,
+   "osmNodeId": 1330372435
+  },
+  {
+   "id": "v1684540407",
+   "name": "Nakte",
+   "namePa": null,
+   "lat": 30.15377,
+   "lon": 75.83193,
+   "osmNodeId": 1684540407
+  },
+  {
+   "id": "v1514218702",
+   "name": "Nakte Pind",
+   "namePa": null,
+   "lat": 30.16796,
+   "lon": 75.84359,
+   "osmNodeId": 1514218702
+  },
+  {
+   "id": "v1492189504",
+   "name": "Namol",
+   "namePa": null,
+   "lat": 30.18262,
+   "lon": 75.75142,
+   "osmNodeId": 1492189504
+  },
+  {
+   "id": "v6051604403",
+   "name": "Nat",
+   "namePa": null,
+   "lat": 30.28916,
+   "lon": 75.7255,
+   "osmNodeId": 6051604403
+  },
+  {
+   "id": "v6046182828",
+   "name": "Palasaur",
+   "namePa": null,
+   "lat": 30.32893,
+   "lon": 75.93381,
+   "osmNodeId": 6046182828
+  },
+  {
+   "id": "v6051358151",
+   "name": "Pedihni Kalan",
+   "namePa": null,
+   "lat": 30.34807,
+   "lon": 75.80575,
+   "osmNodeId": 6051358151
+  },
+  {
+   "id": "v6051358145",
+   "name": "Puhnawal",
+   "namePa": null,
+   "lat": 30.32732,
+   "lon": 75.79674,
+   "osmNodeId": 6051358145
+  },
+  {
+   "id": "v2615926535",
+   "name": "Ramnagar Sibian",
+   "namePa": null,
+   "lat": 30.22014,
+   "lon": 75.84802,
+   "osmNodeId": 2615926535
+  },
+  {
+   "id": "v6051469964",
+   "name": "Rupaheri",
+   "namePa": null,
+   "lat": 30.30128,
+   "lon": 75.90411,
+   "osmNodeId": 6051469964
+  },
+  {
+   "id": "v6044927545",
+   "name": "Sajurna",
+   "namePa": null,
+   "lat": 30.18446,
+   "lon": 75.92493,
+   "osmNodeId": 6044927545
+  },
+  {
+   "id": "v6051469965",
+   "name": "Saron",
+   "namePa": null,
+   "lat": 30.3174,
+   "lon": 75.89343,
+   "osmNodeId": 6051469965
+  },
+  {
+   "id": "v6000016659",
+   "name": "Sheron",
+   "namePa": null,
+   "lat": 30.15863,
+   "lon": 75.7176,
+   "osmNodeId": 6000016659
+  },
+  {
+   "id": "v6044927540",
+   "name": "Sohian",
+   "namePa": null,
+   "lat": 30.23148,
+   "lon": 75.86918,
+   "osmNodeId": 6044927540
+  },
+  {
+   "id": "v6051469969",
+   "name": "Thales",
+   "namePa": null,
+   "lat": 30.2829,
+   "lon": 75.85038,
+   "osmNodeId": 6051469969
+  },
+  {
+   "id": "v5999925417",
+   "name": "Tung",
+   "namePa": null,
+   "lat": 30.18116,
+   "lon": 75.8427,
+   "osmNodeId": 5999925417
+  },
+  {
+   "id": "v1667082391",
+   "name": "Ubhawal",
+   "namePa": null,
+   "lat": 30.21204,
+   "lon": 75.77467,
+   "osmNodeId": 1667082391
+  },
+  {
+   "id": "v1667064977",
+   "name": "Upli",
+   "namePa": null,
+   "lat": 30.21165,
+   "lon": 75.82207,
+   "osmNodeId": 1667064977
+  },
+  {
+   "id": "v6051469979",
+   "name": "Zulmgarh",
+   "namePa": null,
+   "lat": 30.2809,
+   "lon": 75.87386,
+   "osmNodeId": 6051469979
+  }
+ ]
+}
