@@ -1,16 +1,29 @@
 /**
- * The planner turns stored records into an engine request, and the engine's answer back into
- * records people see. It exists so that every path that changes the plan (a new request, a
- * breakdown, an approval) goes through one place that enforces the promise rules:
- * - a new field gets its first promise as soon as the engine places it;
- * - a window narrows to a firm date only when the operator approves the plan;
- * - a promise breaks only when the engine ran in minimal-break mode, and the farmer sees it at once
- *   (the farmer page derives that notice from the promise history).
+ * The planner turns stored records into an engine request, and a plan into promises people see.
+ * It exists so that every path that changes a farmer's date goes through one place with one rule:
+ *
+ *   Every engine run makes a DRAFT plan. Only the operator's approval publishes it, and publishing
+ *   is the only thing that writes promises.
+ *
+ * - A booking is a request: it is stored at once (no engine run) and waits for the next plan.
+ * - Generate, move a field, a breakdown, a machine back, or a farmer's "I cannot wait longer" each
+ *   make a new draft, with the list of what approving it would change (domain/promises.ts).
+ * - Approving publishes: requested fields get their first promise (firm if the day is within two
+ *   days, else a window), windows inside two days become firm, and a promise breaks only when the
+ *   engine ran in minimal-break mode. Every change passes the promise state machine.
  * Work on one CHC is serialised in-process; across processes, plan versions are create-only and
- * approval is a conditional write, so two writers cannot both win.
+ * approval is a conditional write on (draft, version), so two writers cannot both win.
  */
 import { randomUUID } from "node:crypto";
-import { dateToDay, dayToDate, learnRate, type FieldPromise, type FieldRequestInput, type Pin, type SolveRequest, type SolveResponse } from "../shared";
+import {
+  dateToDay,
+  dayToDate,
+  learnRate,
+  type BookingInput,
+  type FieldPromise,
+  type Pin,
+  type SolveRequest,
+} from "../shared";
 import type { Config } from "../config";
 import type { EngineClient } from "../engine/client";
 import { loadVillages } from "../demo/seed";
@@ -19,36 +32,37 @@ import {
   type ChcRecord,
   type FieldRecord,
   type MachineRecord,
+  type PlanCause,
+  type PlanChanges,
   type PlanRecord,
+  type FieldPlanUpdate,
   type PromiseReason,
   type PromiseRecord,
-  type ReplanCause,
-  type ReplanRecord,
+  type PublishWrites,
   type VaariStore,
   type VillageRecord,
   type WorkLogRecord,
 } from "../store/types";
+import { currentPromise, lastDay, nextStatus, planChanges, promiseStatus } from "./promises";
+
+export { currentPromise } from "./promises";
 
 export class NotFoundError extends Error {}
 export class ConflictError extends Error {}
+/** The operator asked for a move the rules cannot allow (machine down, rain, field not ready yet). */
+export class ImpossibleMoveError extends Error {}
 
-const PROMISE_REASON_BY_CAUSE: Record<ReplanCause, PromiseReason> = {
+const HORIZON_DAYS = 10;
+
+// Why a promise changed, as the farmer's history shows it.
+const PROMISE_REASON_BY_CAUSE: Record<PlanCause, PromiseReason> = {
+  generate: "replan",
   breakdown: "breakdown",
   machine_back: "replan",
   rain: "rain",
   manual_move: "manual_move",
-  new_request: "replan",
   farmer_update: "replan",
 };
-
-export function currentPromise(history: PromiseRecord[]): PromiseRecord | null {
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    const record = history[index]!;
-    if (record.state === "held") return record;
-    if (record.state === "broken" || record.state === "kept") return null;
-  }
-  return null;
-}
 
 /** Promise records of a CHC grouped by field, each history oldest version first. */
 export function groupPromises(records: PromiseRecord[]): Map<string, PromiseRecord[]> {
@@ -92,6 +106,16 @@ export class Planner {
     return dayToDate(this.config.SEASON_START_DATE, day);
   }
 
+  isoToDay(isoDate: string): number {
+    return dateToDay(this.config.SEASON_START_DATE, isoDate);
+  }
+
+  /** The days a plan covers: tomorrow and the nine after it. */
+  planDays(): number[] {
+    const tomorrow = this.today() + 1;
+    return Array.from({ length: HORIZON_DAYS }, (_, offset) => tomorrow + offset);
+  }
+
   /** Village points are static reference data (OpenStreetMap, data/villages.json), not a table. */
   villages(): VillageRecord[] {
     this.villageCache ??= loadVillages(this.config);
@@ -114,27 +138,28 @@ export class Planner {
     return { chc, machines, fields };
   }
 
-  async buildSolveRequest(chcId: string, pins: Pin[] = []): Promise<{
-    request: SolveRequest;
-    activeFields: FieldRecord[];
-    promiseByField: Map<string, PromiseRecord>;
-    historyByField: Map<string, PromiseRecord[]>;
-  }> {
+  /**
+   * The engine request for this CHC. Held promises are hard constraints, except for a farmer who
+   * asked for sooner: their promise is left out so the engine can find an earlier day, unless
+   * `keepPromiseOf` names them (the earlier day could not be found; see generateLocked).
+   */
+  async buildSolveRequest(
+    chcId: string,
+    pins: Pin[] = [],
+    keepPromiseOf: ReadonlySet<string> = new Set(),
+  ): Promise<{ request: SolveRequest; activeFields: FieldRecord[]; heldByField: Map<string, PromiseRecord | null> }> {
     const { chc, machines, fields } = await this.loadChc(chcId);
     const [promiseRecords, workLogs] = await Promise.all([this.store.listPromises(chcId), this.store.listWorkLogs(chcId)]);
     const historyByField = groupPromises(promiseRecords);
     const machineLogs = logsByMachine(workLogs);
     const chcVillages = this.villages().filter((village) => chc.villageIds.includes(village.id));
     const activeFields = fields.filter((field) => field.state !== "done");
-    const promiseByField = new Map<string, PromiseRecord>();
-    for (const field of activeFields) {
-      const held = currentPromise(historyByField.get(field.id) ?? []);
-      if (held) promiseByField.set(field.id, held);
-    }
+    const heldByField = new Map<string, PromiseRecord | null>();
+    for (const field of activeFields) heldByField.set(field.id, currentPromise(historyByField.get(field.id) ?? []));
     const request: SolveRequest = {
       seasonStartDate: this.config.SEASON_START_DATE,
       today: this.today(),
-      horizonDays: 10,
+      horizonDays: HORIZON_DAYS,
       optimumLastDay: dateToDay(this.config.SEASON_START_DATE, this.config.OPTIMUM_LAST_DATE),
       base: chc.base,
       villages: chcVillages.map(({ id, name, lat, lon }) => ({ id, name, lat, lon })),
@@ -148,127 +173,252 @@ export class Planner {
           downDays: machine.downDays,
         };
       }),
-      fields: activeFields.map((field) => ({
-        id: field.id,
-        villageId: field.villageId,
-        acres: field.acres,
-        readyDay: field.readyDay,
-        waitingLimitDays: field.waitingLimitDays,
-        requestOrder: field.requestOrder,
-        promise: promiseByField.get(field.id)?.promise ?? null,
-        previousDay: field.plannedDay,
-      })),
+      fields: activeFields.map((field) => {
+        const held = heldByField.get(field.id)?.promise ?? null;
+        const released = field.soonerRequestedAt !== null && !keepPromiseOf.has(field.id);
+        return {
+          id: field.id,
+          villageId: field.villageId,
+          acres: field.acres,
+          readyDay: field.readyDay,
+          waitingLimitDays: field.waitingLimitDays,
+          requestOrder: field.requestOrder,
+          promise: released ? null : held,
+          previousDay: field.plannedDay,
+        };
+      }),
       rainDays: chc.rainDays,
       pins,
-      settings: { fairnessKDays: chc.settings.fairnessKDays, timeLimitSeconds: this.config.ENGINE_TIME_LIMIT_SECONDS },
+      settings: {
+        fairnessKDays: chc.settings.fairnessKDays,
+        timeLimitSeconds: this.config.ENGINE_TIME_LIMIT_SECONDS,
+        method: this.config.ENGINE_METHOD,
+        searchSeed: this.config.ENGINE_SEARCH_SEED,
+      },
     };
-    return { request, activeFields, promiseByField, historyByField };
+    return { request, activeFields, heldByField };
   }
 
-  /** Re-solve and apply. Callers must hold the CHC lock. */
-  private async replanLocked(chcId: string, cause: ReplanCause, machineId: string | null): Promise<ReplanRecord> {
-    const { request, activeFields, promiseByField, historyByField } = await this.buildSolveRequest(chcId);
-    const solved = await this.engine.solve(request);
-    const now = new Date().toISOString();
-    const promiseOutByField = new Map(solved.promises.map((item) => [item.fieldId, item]));
-    const lastMachineByField = new Map<string, string>();
-    for (const assignment of solved.assignments) {
-      if (assignment.part === assignment.parts) lastMachineByField.set(assignment.fieldId, assignment.machineId);
+  /** Solve and store a new draft. Callers must hold the CHC lock. */
+  private async generateLocked(chcId: string, cause: PlanCause, causeMachineId: string | null, pins: Pin[]): Promise<PlanRecord> {
+    let { request, activeFields, heldByField } = await this.buildSolveRequest(chcId, pins);
+    let solve = await this.engine.solve(request);
+
+    // A farmer who asked for sooner must never end up later. If the engine could not place them
+    // inside their old promise, solve again with that promise kept as a hard constraint.
+    const promiseOut = new Map(solve.promises.map((item) => [item.fieldId, item.promise]));
+    const keepPromiseOf = new Set(
+      activeFields
+        .filter((field) => {
+          const held = heldByField.get(field.id)?.promise;
+          if (!field.soonerRequestedAt || !held) return false;
+          const offered = promiseOut.get(field.id) ?? null;
+          return offered === null || lastDay(offered) > lastDay(held);
+        })
+        .map((field) => field.id),
+    );
+    if (keepPromiseOf.size > 0) {
+      ({ request, activeFields, heldByField } = await this.buildSolveRequest(chcId, pins, keepPromiseOf));
+      solve = await this.engine.solve(request);
     }
 
-    const moved: ReplanRecord["moved"] = [];
-    const broken: ReplanRecord["broken"] = [];
-    for (const field of activeFields) {
-      const newDay = solved.fieldDays[field.id] ?? null;
-      if (field.plannedDay !== null && field.plannedDay !== newDay) {
-        moved.push({ fieldId: field.id, fromDay: field.plannedDay, toDay: newDay });
-      }
-      const promiseOut = promiseOutByField.get(field.id);
-      const held = promiseByField.get(field.id) ?? null;
-      let holdsPromise = held !== null;
-
-      if (promiseOut?.broken && held) {
-        await this.store.putPromise({ ...held, state: "broken", at: now });
-        holdsPromise = false;
-        if (promiseOut.promise) {
-          await this.store.putPromise({
-            chcId,
-            fieldId: field.id,
-            version: held.version + 1,
-            promise: promiseOut.promise,
-            state: "held",
-            at: now,
-            reason: PROMISE_REASON_BY_CAUSE[cause],
-          });
-          holdsPromise = true;
-        }
-        broken.push({ fieldId: field.id, previous: held.promise, next: promiseOut.promise });
-      } else if (!held && promiseOut?.promise) {
-        const history = historyByField.get(field.id) ?? [];
-        await this.store.putPromise({
-          chcId,
-          fieldId: field.id,
-          version: (history.at(-1)?.version ?? 0) + 1,
-          promise: promiseOut.promise,
-          state: "held",
-          at: now,
-          // A field that held a promise before (released by "I cannot wait longer") gets a re-plan, not a first promise.
-          reason: history.length > 0 ? PROMISE_REASON_BY_CAUSE[cause] : "first_promise",
-        });
-        holdsPromise = true;
-      }
-
-      await this.store.putField({
-        ...field,
-        plannedDay: newDay,
-        plannedMachineId: lastMachineByField.get(field.id) ?? null,
-        state: holdsPromise ? "promised" : "waiting",
-      });
-    }
-
-    // Windows that the engine would now narrow to a firm date wait for the operator's approval.
-    const firmingFieldIds = solved.promises
-      .filter((item) => item.changed && !item.broken && item.previous?.kind === "window" && item.promise?.kind === "firm")
-      .map((item) => item.fieldId);
-    const previousPlan = await this.store.latestPlan(chcId);
-    const replan: ReplanRecord = { chcId, at: now, cause, machineId, moved, broken };
+    const latest = await this.store.latestPlan(chcId);
     const plan: PlanRecord = {
       chcId,
-      planDay: solved.planStartDay,
-      planDate: this.dayToIso(solved.planStartDay),
-      version: (previousPlan?.version ?? 0) + 1,
-      status: "proposed",
-      createdAt: now,
+      planDay: solve.planStartDay,
+      planDate: this.dayToIso(solve.planStartDay),
+      version: (latest?.version ?? 0) + 1,
+      status: "draft",
+      createdAt: new Date().toISOString(),
       approvedAt: null,
       approvedBy: null,
-      solve: solved,
-      firmingFieldIds,
+      solve,
+      cause,
+      causeMachineId,
+      pins,
+      changes: planChanges(activeFields, heldByField, solve),
+      publish: null,
       executionArn: null,
-      // A new booking is not news on the board; keep showing the last breakdown or rain re-plan.
-      lastReplan: cause === "new_request" ? (previousPlan?.lastReplan ?? null) : replan,
     };
     try {
       await this.store.createPlan(plan);
     } catch (error) {
-      if (error instanceof StoreConflictError) throw new ConflictError("another re-plan finished first; reload the plan");
+      if (error instanceof StoreConflictError) throw new ConflictError("another plan was made at the same moment; reload the plan");
       throw error;
     }
-    return replan;
+    return plan;
   }
 
-  replan(chcId: string, cause: ReplanCause, machineId: string | null = null): Promise<ReplanRecord> {
-    return this.withChcLock(chcId, () => this.replanLocked(chcId, cause, machineId));
+  /** The operator asks for tomorrow's plan: a fresh draft with no manual moves. */
+  generatePlan(chcId: string, cause: PlanCause = "generate", causeMachineId: string | null = null): Promise<PlanRecord> {
+    return this.withChcWork(chcId, () => this.generateLocked(chcId, cause, causeMachineId, []));
   }
 
-  async requestField(
-    chcId: string,
-    farmer: { farmerId: string; farmerName: string; bookedBy: string | null },
-    input: FieldRequestInput,
-  ): Promise<FieldRecord> {
+  /**
+   * The operator moves one field to a machine and day. The move is a hard constraint (a pin) and
+   * the engine re-plans everyone else around it; earlier moves in the same draft stay.
+   */
+  async moveField(chcId: string, fieldId: string, machineId: string, day: number): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
+      const { machines, fields } = await this.loadChc(chcId);
+      const field = fields.find((item) => item.id === fieldId);
+      if (!field || field.state === "done") throw new NotFoundError("field not found or already sown");
+      const machine = machines.find((item) => item.id === machineId);
+      if (!machine) throw new NotFoundError(`machine ${machineId} not found`);
+      if (!this.planDays().includes(day)) throw new ImpossibleMoveError("that day is outside the plan");
+      if (day < field.readyDay) throw new ImpossibleMoveError("the field is not ready by that day");
+      if (machine.downDays.includes(day)) throw new ImpossibleMoveError("the machine is in the workshop that day");
+      const chc = await this.store.getChc(chcId);
+      if (chc?.rainDays.includes(day)) throw new ImpossibleMoveError("no sowing that day because of rain");
+      const latest = await this.store.latestPlan(chcId);
+      const earlierPins = latest?.status === "draft" ? latest.pins.filter((pin) => pin.fieldId !== fieldId) : [];
+      return this.generateLocked(chcId, "manual_move", null, [...earlierPins, { fieldId, machineId, day }]);
+    });
+  }
+
+  /**
+   * Publishes exactly the draft the operator was looking at, crash-safely:
+   *   1. decide every write (promise records with their versions and timestamps, field updates)
+   *      and check each promise change against the state machine; nothing is written yet;
+   *   2. draft -> publishing, saving that list (a conditional write: one approval ever starts);
+   *   3. apply the list (every write is safe to repeat);
+   *   4. publishing -> approved.
+   * If the process dies after step 2, the next request for this CHC repeats step 3 and 4
+   * (finishPublishingLocked), so a publish always completes and never writes anything twice.
+   */
+  async approvePlan(chcId: string, version: number, approvedBy: string): Promise<{ plan: PlanRecord; changes: PlanChanges }> {
+    return this.withChcWork(chcId, async () => {
+      const plan = await this.store.latestPlan(chcId);
+      if (!plan) throw new NotFoundError("no plan to approve");
+      if (plan.version !== version) throw new ConflictError("the plan changed since you opened it; review the new plan");
+      if (plan.status !== "draft") throw new ConflictError("this plan is already published");
+      const { changes, publish } = await this.decidePublishWrites(plan);
+      let publishing: PlanRecord;
+      try {
+        publishing = await this.store.beginPublish(chcId, plan.planDate, version, { approvedBy, approvedAt: new Date().toISOString(), changes, publish });
+      } catch (error) {
+        if (error instanceof StoreConflictError) throw new ConflictError("this plan was already published or replaced");
+        throw error;
+      }
+      return { plan: await this.applyPublish(publishing), changes };
+    });
+  }
+
+  /** Steps 3 and 4 of approval. Every write is safe to repeat, so this may run more than once. */
+  private async applyPublish(plan: PlanRecord): Promise<PlanRecord> {
+    if (!plan.publish) throw new Error(`plan ${plan.version} is publishing without its writes`);
+    for (const record of plan.publish.promises) await this.store.putPromise(record);
+    for (const update of plan.publish.fields) await this.store.setFieldPlan(plan.chcId, update);
+    return this.store.completePublish(plan.chcId, plan.planDate, plan.version);
+  }
+
+  /** Finishes a publish that a crash interrupted. Callers hold the CHC lock. */
+  private async finishPublishingLocked(chcId: string): Promise<void> {
+    const latest = await this.store.latestPlan(chcId);
+    if (latest?.status === "publishing") await this.applyPublish(latest);
+  }
+
+  /** For reads: make sure no half-finished publish is showing before answering. */
+  finishPendingPublish(chcId: string): Promise<void> {
+    return this.withChcLock(chcId, () => this.finishPublishingLocked(chcId));
+  }
+
+  /** Every change to a CHC runs under its lock, after finishing any interrupted publish. */
+  private withChcWork<Result>(chcId: string, work: () => Promise<Result>): Promise<Result> {
     return this.withChcLock(chcId, async () => {
+      await this.finishPublishingLocked(chcId);
+      return work();
+    });
+  }
+
+  /**
+   * Step 1 of approval: the promise changes of a plan, recomputed against the promises held now
+   * (a field may have been sown since the draft was made), turned into the exact records to write.
+   * Every change passes the state machine here, before anything is written, so a refused change
+   * leaves the store untouched. New records come before the old ones are marked replaced or
+   * broken, so a reader in the middle of a publish sees the old date or the new one, never none.
+   */
+  private async decidePublishWrites(plan: PlanRecord): Promise<{ changes: PlanChanges; publish: PublishWrites }> {
+    const chcId = plan.chcId;
+    const now = new Date().toISOString();
+    const fields = (await this.store.listFields(chcId)).filter((field) => field.state !== "done");
+    const historyByField = groupPromises(await this.store.listPromises(chcId));
+    const heldByField = new Map(fields.map((field) => [field.id, currentPromise(historyByField.get(field.id) ?? [])]));
+    const changes = planChanges(fields, heldByField, plan.solve);
+    const nextVersion = (fieldId: string) => (historyByField.get(fieldId)?.at(-1)?.version ?? 0) + 1;
+    const causeReason = PROMISE_REASON_BY_CAUSE[plan.cause];
+    const promises: PromiseRecord[] = [];
+
+    for (const item of changes.promised) {
+      const history = historyByField.get(item.fieldId) ?? [];
+      const status = promiseStatus(history);
+      // A field whose earlier promise broke without a new date is re-promised; otherwise it is new.
+      nextStatus(status, status === "broken" ? "re_promise" : "publish", item.promise);
+      promises.push({
+        chcId,
+        fieldId: item.fieldId,
+        version: nextVersion(item.fieldId),
+        promise: item.promise,
+        state: "held",
+        at: now,
+        reason: history.length === 0 ? "first_promise" : causeReason,
+      });
+    }
+    for (const item of changes.firmed) {
+      const held = heldByField.get(item.fieldId)!;
+      nextStatus(promiseStatus(historyByField.get(item.fieldId) ?? []), "narrow");
+      promises.push({ chcId, fieldId: item.fieldId, version: held.version + 1, promise: { kind: "firm", day: item.day }, state: "held", at: now, reason: "narrowed" });
+      promises.push({ ...held, state: "replaced", at: now });
+    }
+    for (const item of changes.broken) {
+      const held = heldByField.get(item.fieldId)!;
+      nextStatus(promiseStatus(historyByField.get(item.fieldId) ?? []), "break");
+      if (item.next) {
+        nextStatus("broken", "re_promise", item.next);
+        promises.push({ chcId, fieldId: item.fieldId, version: held.version + 1, promise: item.next, state: "held", at: now, reason: causeReason });
+      }
+      promises.push({ ...held, state: "broken", at: now });
+    }
+    for (const item of changes.rePromised) {
+      const held = heldByField.get(item.fieldId)!;
+      nextStatus(promiseStatus(historyByField.get(item.fieldId) ?? []), "sooner", item.next);
+      promises.push({ chcId, fieldId: item.fieldId, version: held.version + 1, promise: item.next, state: "held", at: now, reason: "replan" });
+      promises.push({ ...held, state: "replaced", at: now });
+    }
+
+    // Fields the plan covers move to their planned day and machine; their "sooner" request is answered.
+    const lastMachineByField = new Map<string, string>();
+    for (const assignment of plan.solve.assignments) {
+      if (assignment.part === assignment.parts) lastMachineByField.set(assignment.fieldId, assignment.machineId);
+    }
+    const unserved = new Set(plan.solve.unservedFieldIds);
+    const promisedNow = new Set([
+      ...changes.promised.map((item) => item.fieldId),
+      ...changes.broken.filter((item) => item.next).map((item) => item.fieldId),
+    ]);
+    const lostPromise = new Set(changes.broken.filter((item) => !item.next).map((item) => item.fieldId));
+    const fieldUpdates: FieldPlanUpdate[] = fields
+      .filter((field) => field.id in plan.solve.fieldDays || unserved.has(field.id))
+      .map((field) => ({
+        fieldId: field.id,
+        plannedDay: plan.solve.fieldDays[field.id] ?? null,
+        plannedMachineId: lastMachineByField.get(field.id) ?? null,
+        state: promisedNow.has(field.id) || (heldByField.get(field.id) !== null && !lostPromise.has(field.id)) ? "promised" : "waiting",
+      }));
+    return { changes, publish: { promises, fields: fieldUpdates } };
+  }
+
+  /** The demo season starts as if the operator published a plan last evening. */
+  async publishInitialPlan(chcId: string, approvedBy: string): Promise<void> {
+    const draft = await this.generatePlan(chcId);
+    await this.approvePlan(chcId, draft.version, approvedBy);
+  }
+
+  /** A booking is stored at once as a request; it gets a date when the operator publishes a plan. */
+  async requestField(chcId: string, farmer: { farmerId: string; farmerName: string; bookedBy: string | null }, input: BookingInput): Promise<FieldRecord> {
+    return this.withChcWork(chcId, async () => {
       const { chc, fields } = await this.loadChc(chcId);
       if (!chc.villageIds.includes(input.villageId)) throw new NotFoundError("village is not served by this CHC");
-      const nextOrder = fields.reduce((highest, field) => Math.max(highest, field.requestOrder), -1) + 1;
       const field: FieldRecord = {
         chcId,
         id: `f-${randomUUID().slice(0, 8)}`,
@@ -277,122 +427,95 @@ export class Planner {
         farmerName: farmer.farmerName,
         villageId: input.villageId,
         acres: input.acres,
-        readyDay: dateToDay(this.config.SEASON_START_DATE, input.readyDate),
+        readyDay: this.isoToDay(input.readyDate),
         waitingLimitDays: input.waitingLimitDays,
-        requestOrder: nextOrder,
+        requestOrder: fields.reduce((highest, item) => Math.max(highest, item.requestOrder), -1) + 1,
         createdAt: new Date().toISOString(),
         state: "waiting",
         plannedDay: null,
         plannedMachineId: null,
         bookedBy: farmer.bookedBy,
+        soonerRequestedAt: null,
       };
       await this.store.putField(field);
-      await this.replanLocked(chcId, "new_request", null);
-      const saved = await this.store.getField(chcId, field.id);
-      if (!saved) throw new NotFoundError("field vanished during planning");
-      return saved;
+      return field;
     });
   }
 
   /**
-   * Approves exactly the plan version the operator was looking at. The store's conditional write
-   * makes this happen once: a second approval of the same version (another tab, a retry, a second
-   * API task) fails with a conflict instead of firming promises twice.
-   */
-  async approvePlan(chcId: string, version: number, approvedBy: string): Promise<PlanRecord> {
-    return this.withChcLock(chcId, async () => {
-      const plan = await this.store.latestPlan(chcId);
-      if (!plan) throw new NotFoundError("no plan to approve");
-      if (plan.version !== version) throw new ConflictError("the plan changed since you opened it; review the new plan");
-      if (plan.status === "approved") throw new ConflictError("this plan is already approved");
-      const now = new Date().toISOString();
-      let approved: PlanRecord;
-      try {
-        approved = await this.store.approvePlan(chcId, plan.planDate, version, approvedBy, now);
-      } catch (error) {
-        if (error instanceof StoreConflictError) throw new ConflictError("this plan was already approved or replaced");
-        throw error;
-      }
-      // Only the winner of the conditional write firms the windows.
-      const historyByField = groupPromises(await this.store.listPromises(chcId));
-      for (const fieldId of plan.firmingFieldIds) {
-        const held = currentPromise(historyByField.get(fieldId) ?? []);
-        const day = plan.solve.fieldDays[fieldId];
-        if (!held || day === undefined) continue;
-        const firm: FieldPromise = { kind: "firm", day };
-        await this.store.putPromise({ ...held, state: "replaced", at: now });
-        await this.store.putPromise({ chcId, fieldId, version: held.version + 1, promise: firm, state: "held", at: now, reason: "narrowed" });
-      }
-      return approved;
-    });
-  }
-
-  /**
-   * "I cannot wait longer": the farmer's last waiting day moves earlier and the plan is redone.
-   * Every other farmer's promise stays a hard constraint, but this farmer's own promise is released
-   * for the solve: kept as a hard constraint, it pinned the field inside the old dates and the new
-   * last day was silently ignored (the old window still "held"). If the solver cannot do at least as
-   * well as the old promise, the old promise is restored, so asking for sooner never makes it later.
-   * Only shortening is allowed from a slot link; a longer wait would quietly lower the field's
-   * priority without anyone deciding that.
+   * "I cannot wait longer": the farmer's last waiting day moves earlier and a new draft is made in
+   * which their promise is released, so the engine can look for an earlier day. The farmer keeps
+   * the current promise until the operator publishes; publishing gives them the new date only if
+   * it is no later. Only shortening is allowed from a slot link; a longer wait would quietly lower
+   * the field's priority without anyone deciding that.
    */
   async shortenWaitingLimit(chcId: string, fieldId: string, waitingLimitDays: number): Promise<FieldRecord> {
-    return this.withChcLock(chcId, async () => {
+    return this.withChcWork(chcId, async () => {
       const field = await this.store.getField(chcId, fieldId);
       if (!field) throw new NotFoundError("field not found");
       if (field.state === "done") throw new ConflictError("this field has already been sown");
       if (waitingLimitDays >= field.waitingLimitDays) throw new ConflictError("the new waiting limit must be shorter than the current one");
-      const heldBefore = currentPromise(groupPromises(await this.store.listPromises(chcId)).get(fieldId) ?? []);
-      await this.store.putField({ ...field, waitingLimitDays });
-      if (heldBefore) await this.store.putPromise({ ...heldBefore, state: "replaced", at: new Date().toISOString() });
-      await this.replanLocked(chcId, "farmer_update", null);
-
-      if (heldBefore) {
-        const heldAfter = currentPromise(groupPromises(await this.store.listPromises(chcId)).get(fieldId) ?? []);
-        // No promise at all counts as worse than any date.
-        const latestDay = (promise: FieldPromise | null) => (promise === null ? Number.POSITIVE_INFINITY : promise.kind === "firm" ? promise.day : promise.endDay);
-        if (!heldAfter || latestDay(heldAfter.promise) > latestDay(heldBefore.promise)) {
-          const now = new Date().toISOString();
-          if (heldAfter) await this.store.putPromise({ ...heldAfter, state: "replaced", at: now });
-          await this.store.putPromise({ ...heldBefore, version: (heldAfter?.version ?? heldBefore.version) + 1, state: "held", at: now });
-          await this.replanLocked(chcId, "farmer_update", null);
-        }
-      }
-      const saved = await this.store.getField(chcId, fieldId);
-      if (!saved) throw new NotFoundError("field vanished during planning");
-      return saved;
+      const updated: FieldRecord = { ...field, waitingLimitDays, soonerRequestedAt: new Date().toISOString() };
+      await this.store.putField(updated);
+      await this.generateLocked(chcId, "farmer_update", null, []);
+      return updated;
     });
   }
 
-  async setMachineDown(chcId: string, machineId: string, downDayCount: number): Promise<ReplanRecord> {
-    return this.withChcLock(chcId, async () => {
+  async setMachineDown(chcId: string, machineId: string, downDayCount: number): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
       const machine = (await this.store.listMachines(chcId)).find((item) => item.id === machineId);
       if (!machine) throw new NotFoundError(`machine ${machineId} not found`);
       const tomorrow = this.today() + 1;
       const downDays = new Set(machine.downDays);
       for (let offset = 0; offset < downDayCount; offset += 1) downDays.add(tomorrow + offset);
       await this.store.putMachine({ ...machine, downDays: [...downDays].sort((left, right) => left - right) });
-      return this.replanLocked(chcId, "breakdown", machineId);
+      // Manual moves were for the old situation; the new draft starts clean.
+      return this.generateLocked(chcId, "breakdown", machineId, []);
     });
   }
 
-  async setMachineBack(chcId: string, machineId: string): Promise<ReplanRecord> {
-    return this.withChcLock(chcId, async () => {
+  async setMachineBack(chcId: string, machineId: string): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
       const machine = (await this.store.listMachines(chcId)).find((item) => item.id === machineId);
       if (!machine) throw new NotFoundError(`machine ${machineId} not found`);
       const today = this.today();
       await this.store.putMachine({ ...machine, downDays: machine.downDays.filter((day) => day <= today) });
-      return this.replanLocked(chcId, "machine_back", machineId);
+      return this.generateLocked(chcId, "machine_back", machineId, []);
     });
   }
 
-  async latestSolve(chcId: string): Promise<{ plan: PlanRecord; solve: SolveResponse }> {
-    let plan = await this.store.latestPlan(chcId);
-    if (!plan) {
-      await this.replan(chcId, "new_request");
-      plan = await this.store.latestPlan(chcId);
-    }
-    if (!plan) throw new NotFoundError("no plan");
-    return { plan, solve: plan.solve };
+  /**
+   * The machine has sown a field (on the demo clock's today). Sown by the promised day keeps the
+   * promise; later breaks it. A field without a promise cannot be marked sown here.
+   */
+  async markSown(chcId: string, fieldId: string): Promise<FieldRecord> {
+    return this.withChcWork(chcId, async () => {
+      const field = await this.store.getField(chcId, fieldId);
+      if (!field) throw new NotFoundError("field not found");
+      const history = await this.store.promiseHistory(chcId, fieldId);
+      const held = currentPromise(history);
+      const sownDay = this.today();
+      const onTime = held?.promise ? sownDay <= lastDay(held.promise) : false;
+      const status = nextStatus(promiseStatus(history), onTime ? "sow_on_time" : "sow_late");
+      if (held) await this.store.putPromise({ ...held, state: status === "kept" ? "kept" : "broken", at: new Date().toISOString() });
+      const sown: FieldRecord = { ...field, state: "done", plannedDay: sownDay, soonerRequestedAt: null };
+      await this.store.putField(sown);
+      return sown;
+    });
   }
+
+  latestPlan(chcId: string): Promise<PlanRecord | null> {
+    return this.store.latestPlan(chcId);
+  }
+
+  publishedPlan(chcId: string): Promise<PlanRecord | null> {
+    return this.store.latestApprovedPlan(chcId);
+  }
+}
+
+/** True when the promise is met by the planned day (on or before a firm day, inside a window). */
+export function onTrack(promise: FieldPromise, plannedDay: number | null): boolean {
+  if (plannedDay === null) return false;
+  return promise.kind === "firm" ? plannedDay <= promise.day : plannedDay >= promise.startDay && plannedDay <= promise.endDay;
 }

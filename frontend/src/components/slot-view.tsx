@@ -2,9 +2,10 @@
 
 /**
  * SlotView: what a farmer sees from their slot link, with no sign-in. One huge date, how many
- * fields are ahead, the four-step timeline, and the backend's reason in plain words.
+ * fields are ahead, the four-step timeline, and the backend's one-sentence reason in plain words.
+ * Until the operator publishes a plan the field is "Requested": no date, no guess.
  * Rule: only the PROMISE is ever shown as a date. The planned day (field.plannedDate) is never
- * shown, because the backend has not promised it.
+ * shown, because the backend has not promised it. A window is called a window until it is firm.
  */
 import { BellRing, CalendarCheck2, Hourglass, LinkIcon, RefreshCw, ShieldAlert, Sparkles, TriangleAlert, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -19,7 +20,7 @@ import { Slider } from "./slider";
 import { Timeline, type TimelineStep } from "./timeline";
 import { Button, Pill, Skeleton, Spinner } from "./ui";
 
-export type WhyState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; reasons: string[] };
+export type WhyState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; reasons: string[] } | { kind: "none" };
 
 export type SlotState =
   | { kind: "loading" }
@@ -166,12 +167,15 @@ export function SlotView({ state }: { state: SlotState }) {
   // farmer to compare two dates themselves.
   const promiseLastDate = promise ? (promise.kind === "firm" ? promise.date : promise.endDate) : null;
   const late = !done && promiseLastDate !== null && promiseLastDate > field.burnDeadlineDate;
+  const requested = !done && field.status === "requested" && field.reason.code === "requested";
   const pill = done ? (
     <Pill kind="done" size="lg">{t("doneTitle")}</Pill>
   ) : promise?.kind === "firm" ? (
     <Pill kind="firm" size="lg">{tf("firm")}</Pill>
   ) : promise?.kind === "window" ? (
     <Pill kind="window" size="lg">{tf("window")}</Pill>
+  ) : requested ? (
+    <Pill kind="requested" size="lg">{t("requestedPill")}</Pill>
   ) : (
     <Pill kind="unplanned" size="lg">{t("noDateTitle")}</Pill>
   );
@@ -187,7 +191,17 @@ export function SlotView({ state }: { state: SlotState }) {
             {tf("brokenNotice")}
           </p>
         ) : null}
-        {late ? (
+        {/* A pending "I cannot wait longer" comes first: until the operator plans it, "no machine can
+            reach you" would not be true yet. */}
+        {field.soonerRequested && !done ? (
+          <div className="mb-4 flex items-start gap-3 rounded-card border border-wheat-deep/30 bg-wheat-soft/60 p-4">
+            <Hourglass aria-hidden className="mt-0.5 size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
+            <div>
+              <p className="font-medium">{t("soonerTitle")}</p>
+              <p className="mt-1 text-base">{t("soonerBody", { date: dates.full(field.burnDeadlineDate) })}</p>
+            </div>
+          </div>
+        ) : late ? (
           <div role="alert" className="mb-4 flex items-start gap-3 rounded-card border border-ember/40 bg-ember-soft/60 p-4 text-ember-deep">
             <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
             <div>
@@ -244,13 +258,12 @@ export function SlotView({ state }: { state: SlotState }) {
                     <p className="mt-2 text-base text-ink-muted">{tf("windowBody")}</p>
                   </>
                 ) : (
-                  <>
-                    <p className="font-display text-4xl">{t("noDateTitle")}</p>
-                    <p className="mt-1 text-base text-ink-muted">{t("noDateBody")}</p>
-                  </>
+                  <p className="font-display text-4xl">{requested ? t("requestedTitle") : t("noDateTitle")}</p>
                 )}
               </motion.div>
             </AnimatePresence>
+            {/* Where this turn stands, in one plain sentence from the backend (stored facts only). */}
+            <p className="mt-3 text-base">{field.reason.text}</p>
           </div>
 
           {promise && !done && field.fieldsAhead !== null ? (
@@ -272,7 +285,7 @@ export function SlotView({ state }: { state: SlotState }) {
           {t("canWaitUntil", { date: dates.full(field.burnDeadlineDate) })}
         </p>
 
-        {!done ? (
+        {!done && why.kind !== "none" ? (
           <section aria-labelledby="slot-why" className="rounded-card border border-line bg-surface p-5">
             <h2 id="slot-why" className="flex items-center gap-2 font-medium">
               <Sparkles aria-hidden className="size-5 text-wheat-deep" strokeWidth={1.75} />
@@ -284,7 +297,7 @@ export function SlotView({ state }: { state: SlotState }) {
               </div>
             ) : why.kind === "error" ? (
               <p className="mt-3 text-base text-ink-muted">{t("reasonUnavailable")}</p>
-            ) : (
+            ) : why.kind === "ready" ? (
               <ul className="mt-3 space-y-2">
                 {why.reasons.map((reason, index) => (
                   <li key={index} className="flex gap-2 text-base">
@@ -293,7 +306,7 @@ export function SlotView({ state }: { state: SlotState }) {
                   </li>
                 ))}
               </ul>
-            )}
+            ) : null}
           </section>
         ) : null}
 

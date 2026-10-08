@@ -7,10 +7,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, Minus, Plus, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { farmerFieldSchema, farmerHomeSchema, villageOptionSchema, type FarmerField } from "@/shared";
+import { bookingSchema, farmerHomeSchema, villageOptionSchema, type FarmerField } from "@/shared";
 import { TokenCard } from "@/components/token-card";
 import { DateGuide } from "@/components/farmer-aside";
 import { PAGE_TITLE, PageColumns, PageMain } from "@/components/page-shell";
@@ -28,6 +28,7 @@ function addDays(iso: string, days: number): string {
 export default function FarmerRequestPage() {
   const t = useTranslations("request");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const dates = useDates();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
@@ -39,18 +40,18 @@ export default function FarmerRequestPage() {
   const [created, setCreated] = useState<FarmerField | null>(null);
 
   const villages = useQuery({ queryKey: ["villages"], queryFn: () => api("villages", z.array(villageOptionSchema)) });
-  const home = useQuery({ queryKey: ["farmer-home"], queryFn: () => api("farmer/home", farmerHomeSchema) });
+  const home = useQuery({ queryKey: ["farmer-home", locale], queryFn: () => api(`farmer/home?lang=${locale}`, farmerHomeSchema) });
   const today = home.data?.today ?? null;
   const readyOptions = useMemo(() => (today ? Array.from({ length: 8 }, (_, index) => addDays(today, index)) : []), [today]);
 
   const submit = useMutation({
     mutationFn: () =>
-      api("farmer/requests", farmerFieldSchema, {
+      api(`fields?lang=${locale}`, bookingSchema, {
         method: "POST",
         body: JSON.stringify({ villageId, acres, readyDate, waitingLimitDays: waitDays }),
       }),
-    onSuccess: (field) => {
-      setCreated(field);
+    onSuccess: (booking) => {
+      setCreated(booking.field);
       queryClient.invalidateQueries({ queryKey: ["farmer-home"] });
     },
   });

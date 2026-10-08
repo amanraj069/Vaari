@@ -23,6 +23,7 @@ export const DEMO_USERS = {
   officer: "demo-officer-sangrur",
 } as const;
 const JASWINDER_FARMER_ID = "farmer-jaswinder";
+export const DEMO_OPERATOR_NAME = "Harpal Singh";
 const CLUSTER_RADIUS_KM = 6;
 const FIELD_COUNT = 34;
 const SEED = 20261008;
@@ -139,6 +140,7 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
       plannedDay: null,
       plannedMachineId: null,
       bookedBy: null,
+      soonerRequestedAt: null,
     };
     await store.putField(field);
     await store.putFarmer({ id: farmerId, name: farmerName, phone: "simulated", language: "pa", facilitatorId: null });
@@ -147,7 +149,7 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   const users: UserRecord[] = [
     { userId: DEMO_USERS.farmer, name: "Jaswinder Singh", role: "farmer", chcId: DEMO_CHC_ID, farmerId: JASWINDER_FARMER_ID, language: "en" },
     { userId: DEMO_USERS.facilitator, name: "Gurpreet Kaur", role: "facilitator", chcId: DEMO_CHC_ID, farmerId: null, language: "en" },
-    { userId: DEMO_USERS.operator, name: "Harpal Singh", role: "operator", chcId: DEMO_CHC_ID, farmerId: null, language: "en" },
+    { userId: DEMO_USERS.operator, name: DEMO_OPERATOR_NAME, role: "operator", chcId: DEMO_CHC_ID, farmerId: null, language: "en" },
     { userId: DEMO_USERS.officer, name: "District officer (demo)", role: "officer", chcId: null, farmerId: null, language: "en" },
   ];
   for (const user of users) await store.putUser(user);

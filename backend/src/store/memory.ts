@@ -8,11 +8,14 @@ import {
   StoreConflictError,
   type ChcRecord,
   type FarmerRecord,
+  type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
   type MachineRecord,
+  type PlanChanges,
   type PlanRecord,
   type PromiseRecord,
+  type PublishWrites,
   type UserRecord,
   type VaariStore,
   type WorkLogRecord,
@@ -58,6 +61,12 @@ export class MemoryStore implements VaariStore {
   async putField(field: FieldRecord) {
     this.fields.set(`${field.chcId}/${field.id}`, copy(field));
   }
+  async setFieldPlan(chcId: string, update: FieldPlanUpdate) {
+    const field = this.fields.get(`${chcId}/${update.fieldId}`);
+    if (!field || field.state === "done") return;
+    const { fieldId: _fieldId, ...planned } = update;
+    this.fields.set(`${chcId}/${update.fieldId}`, copy({ ...field, ...planned, soonerRequestedAt: null }));
+  }
   async listFieldsByFarmer(chcId: string, farmerId: string) {
     return (await this.listFields(chcId)).filter((field) => field.farmerId === farmerId);
   }
@@ -83,22 +92,40 @@ export class MemoryStore implements VaariStore {
     this.promises.set(`${record.chcId}/${record.fieldId}/${record.version}`, copy(record));
   }
 
-  async latestPlan(chcId: string) {
-    const plans = [...this.plans.values()]
+  private plansOf(chcId: string) {
+    return [...this.plans.values()]
       .filter((plan) => plan.chcId === chcId)
       .sort((left, right) => byString(left.planDate, right.planDate) || left.version - right.version);
-    return copy(plans.at(-1) ?? null);
+  }
+  async latestPlan(chcId: string) {
+    return copy(this.plansOf(chcId).at(-1) ?? null);
+  }
+  async latestApprovedPlan(chcId: string) {
+    return copy(this.plansOf(chcId).filter((plan) => plan.status === "approved").at(-1) ?? null);
   }
   async createPlan(plan: PlanRecord) {
     const key = `${plan.chcId}/${plan.planDate}/${plan.version}`;
     if (this.plans.has(key)) throw new StoreConflictError(`plan ${plan.planDate} v${plan.version} already exists`);
     this.plans.set(key, copy(plan));
   }
-  async approvePlan(chcId: string, planDate: string, version: number, approvedBy: string, approvedAt: string) {
+  async beginPublish(
+    chcId: string,
+    planDate: string,
+    version: number,
+    approval: { approvedBy: string; approvedAt: string; changes: PlanChanges; publish: PublishWrites },
+  ) {
     const key = `${chcId}/${planDate}/${version}`;
     const plan = this.plans.get(key);
-    if (!plan || plan.status !== "proposed") throw new StoreConflictError("plan is not a proposed plan at that version");
-    const approved: PlanRecord = { ...plan, status: "approved", approvedAt, approvedBy, firmingFieldIds: [] };
+    if (!plan || plan.status !== "draft") throw new StoreConflictError("plan is not a draft at that version");
+    const publishing: PlanRecord = { ...plan, status: "publishing", ...approval };
+    this.plans.set(key, copy(publishing));
+    return copy(publishing);
+  }
+  async completePublish(chcId: string, planDate: string, version: number) {
+    const key = `${chcId}/${planDate}/${version}`;
+    const plan = this.plans.get(key);
+    if (!plan || plan.status === "draft") throw new StoreConflictError("plan is not being published");
+    const approved: PlanRecord = { ...plan, status: "approved" };
     this.plans.set(key, copy(approved));
     return copy(approved);
   }

@@ -28,7 +28,7 @@ const LOCALES = [
   { code: "pa", label: "ਪੰਜਾਬੀ", messages: pa },
   { code: "hi", label: "हिन्दी", messages: hi },
 ] as const;
-const PILLS: PillKind[] = ["firm", "window", "safe", "tight", "at_risk", "unplanned", "proposed", "approved", "done"];
+const PILLS: PillKind[] = ["firm", "window", "requested", "safe", "tight", "at_risk", "unplanned", "draft", "approved", "done"];
 const noop = async () => {
   await new Promise((resolve) => setTimeout(resolve, 400));
 };
@@ -52,7 +52,8 @@ function Specimen() {
   const pillLabel = (kind: PillKind): string =>
     kind === "firm" ? tf("firm")
     : kind === "window" ? tf("window")
-    : kind === "proposed" ? to("proposed")
+    : kind === "requested" ? ts("requestedPill")
+    : kind === "draft" ? to("draft")
     : kind === "approved" ? to("approved")
     : kind === "done" ? ts("doneTitle")
     : tr(kind);

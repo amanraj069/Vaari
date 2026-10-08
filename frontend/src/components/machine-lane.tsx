@@ -4,12 +4,15 @@
  * MachineLane: one machine's day as ordered stops on a 08:00 -> end-of-day track. Block width is
  * proportional to time on the field, the gaps are travel. Each stop has a stable layoutId, so in a
  * re-plan the same field glides from its old lane to its new one instead of blinking.
+ * A stop after the farmer's last waiting day is ember with a warning icon (tight ones are wheat with
+ * a clock), and says so to screen readers: risk is never colour alone. With `onSelectStop` each
+ * stop is a button (the plan page uses it to move a field).
  */
-import { Tractor, Wrench } from "lucide-react";
+import { AlertTriangle, Clock3, Tractor, Wrench } from "lucide-react";
 import { LockPin } from "./lock-pin";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
-import type { Lane } from "@/shared";
+import type { Lane, LaneStop } from "@/shared";
 import { useDates } from "@/lib/dates";
 
 // Literal class names so Tailwind can see them (no string-built classes).
@@ -25,12 +28,23 @@ type Props = {
   lane: Lane;
   index: number;
   dayStart: string;
-  onMarkDown: () => void;
-  onMarkBack: () => void;
   busy: boolean;
+  /** Workshop controls; leave out to show the lane read-only. */
+  onMarkDown?: () => void;
+  onMarkBack?: () => void;
+  /** Makes each stop a button (for example, to move it). */
+  onSelectStop?: (stop: LaneStop) => void;
+  selectLabel?: (stop: LaneStop) => string;
 };
 
-export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, busy }: Props) {
+const RISK_BLOCK: Record<LaneStop["risk"], string> = {
+  at_risk: "border-2 border-ember bg-ember-soft",
+  tight: "border-wheat-deep/60",
+  safe: "border-ink/10",
+  unplanned: "border-ink/10",
+};
+
+export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBack, onSelectStop, selectLabel }: Props) {
   const t = useTranslations("operator");
   const dates = useDates();
   const startMinute = minutesOf(dayStart);
@@ -51,21 +65,21 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
             {t("rate", { promise: lane.machine.promiseAcresPerDay, plan: lane.machine.planAcresPerDay })}
           </p>
         </div>
-        {lane.down ? (
-          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-control border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
+        {lane.down && onMarkBack ? (
+          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
             <Tractor aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markBack")}
           </button>
-        ) : (
-          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line-strong px-2.5 text-sm text-ink-muted hover:border-ink/50 hover:text-ink disabled:opacity-50">
+        ) : !lane.down && onMarkDown ? (
+          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line-strong px-2.5 text-sm text-ink-muted hover:border-ink/50 hover:text-ink disabled:opacity-50">
             <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markDown")}
           </button>
-        )}
+        ) : null}
       </div>
 
       <div className="overflow-x-auto rounded-chip" tabIndex={0} role="region" aria-label={t("laneTimeline", { machine: lane.machine.name })}>
-        <div className="min-w-[36rem]">
+        <div className="min-w-[32rem]">
           {lane.down ? (
             <div className="hatched flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-line-strong text-ink-muted">
               <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
@@ -91,13 +105,22 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
                         <span className="h-px w-full border-t border-dashed border-ink-muted/60" />
                       </span>
                     ) : null}
-                    <span
+                    <StopBlock
+                      as={onSelectStop && !stop.stretch ? "button" : "span"}
+                      onClick={onSelectStop && !stop.stretch ? () => onSelectStop(stop) : undefined}
+                      disabled={busy}
+                      ariaLabel={onSelectStop && !stop.stretch ? selectLabel?.(stop) : undefined}
                       title={`#${stop.token} ${stop.farmerName} · ${stop.villageName} · ${stop.acres} ac · ${stop.start}–${stop.end}`}
-                      className={`relative flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-chip border px-2 text-xs leading-tight ${
-                        stop.stretch ? "border-dashed border-ink-muted/60 bg-paper" : `border-ink/10 ${tint}`
-                      }`}
+                      className={`relative flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-chip border px-2 text-left text-xs leading-tight ${
+                        stop.stretch ? "border-dashed border-ink-muted/60 bg-paper" : `${RISK_BLOCK[stop.risk]} ${stop.risk === "at_risk" ? "" : tint}`
+                      } ${onSelectStop && !stop.stretch ? "cursor-pointer hover:ring-2 hover:ring-ink/30 focus-visible:ring-2 focus-visible:ring-ink disabled:cursor-wait" : ""}`}
                     >
                       <span className="flex items-center gap-1 font-semibold tabular">
+                        {stop.risk === "at_risk" && !stop.stretch ? (
+                          <AlertTriangle aria-label={t("stopAtRisk")} role="img" className="size-3.5 shrink-0 text-ember-deep" strokeWidth={2} />
+                        ) : stop.risk === "tight" && !stop.stretch ? (
+                          <Clock3 aria-label={t("stopTight")} role="img" className="size-3.5 shrink-0 text-wheat-deep" strokeWidth={2} />
+                        ) : null}
                         {firm ? <LockPin compact label={t("firmLock")} /> : null}#{String(stop.token).padStart(3, "0")}
                         {stop.parts > 1 ? <span className="font-normal text-ink-muted">{stop.part}/{stop.parts}</span> : null}
                       </span>
@@ -105,7 +128,7 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
                       <span className="truncate text-ink-muted tabular">
                         {stop.stretch ? t("ifTime") : `${stop.start}–${stop.end}`}
                       </span>
-                    </span>
+                    </StopBlock>
                   </motion.li>
                 );
               })}
@@ -124,5 +147,37 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
         </div>
       </div>
     </motion.li>
+  );
+}
+
+/** A stop is a plain block on the board and a button where it can be acted on. */
+function StopBlock({
+  as,
+  onClick,
+  disabled,
+  ariaLabel,
+  title,
+  className,
+  children,
+}: {
+  as: "button" | "span";
+  onClick?: () => void;
+  disabled: boolean;
+  ariaLabel?: string;
+  title: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (as === "button") {
+    return (
+      <button type="button" onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={title} className={className}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <span title={title} className={className}>
+      {children}
+    </span>
   );
 }

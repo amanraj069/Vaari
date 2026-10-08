@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/providers";
 import { THEME_BOOT_SCRIPT, ThemeProvider } from "@/contexts/theme-context";
+import { GlobalFooter } from "@/components/footer";
 import "./globals.css";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", axes: ["opsz"], display: "swap" });
@@ -48,10 +49,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
-      <body className="min-h-dvh">
+      <body className="antialiased text-ink bg-paper">
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <Providers>{children}</Providers>
+            <Providers key={locale}>
+              <div className="flex min-h-dvh flex-col">
+                {children}
+                <GlobalFooter />
+              </div>
+            </Providers>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

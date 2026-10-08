@@ -1,8 +1,9 @@
-"""Turns a SolveRequest into the facts the solver works with.
+"""Turns a SolveRequest into the facts the planners work with.
 
-Why it exists: the CP-SAT model, the greedy fallback, the route builder and the explainer all need
-the same derived facts (plan days, jobs, work minutes, travel bounds, the phone-queue baseline).
-Computing them once here keeps those four in agreement.
+Why it exists: the CP-SAT model, the search planner, the route builder and the explainer all need
+the same derived facts (plan days, jobs, work minutes, travel, the phone-queue baseline). Computing
+them once here keeps those four in agreement. Nothing here imports OR-Tools, so the search planner
+starts fast.
 
 A field larger than one machine-day of work is split into equal parts ("jobs"); a field counts as
 sown on the day its last part is sown.
@@ -11,10 +12,10 @@ sown on the day its last part is sown.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .contract import FirmPromise, Machine, SolveRequest, WindowPromise
-from .geo import TravelMatrix
+from .geo import GivenTravelMatrix, StraightLineTravel, TravelSource
 
 BASE_ID = "base"
 
@@ -45,6 +46,41 @@ def promise_latest_day(promise: FirmPromise | WindowPromise) -> int:
     return promise.day if isinstance(promise, FirmPromise) else promise.end_day
 
 
+class ImpossiblePinError(ValueError):
+    """A manual move to a day the machine cannot work (rain, down), before the field is ready, or
+    onto a machine-day that the pinned fields alone already overfill."""
+
+    def __init__(self, field_id: str, machine_id: str, day: int) -> None:
+        super().__init__(f"field {field_id} cannot be pinned to {machine_id} on day {day}")
+        self.field_id, self.machine_id, self.day = field_id, machine_id, day
+
+
+@dataclass
+class Assignment:
+    """What a planner decides: each job's (machine, day), or that it stays unserved."""
+
+    day_machine_by_job: dict[str, tuple[str, int]] = field(default_factory=dict)
+    unserved_job_ids: set[str] = field(default_factory=set)
+    broken_field_ids: set[str] = field(default_factory=set)
+    status: str = "optimal"  # optimal | feasible | fallback
+    mode: str = "normal"  # normal | minimal_break
+    method: str = "cpsat"  # cpsat | search
+    # Set when promises break: True if CP-SAT proved no plan could break fewer.
+    breaks_proven_minimal: bool | None = None
+    burn_pass_objective: int | None = None
+    cost_pass_objective: int | None = None
+    wall_seconds: float = 0.0
+
+
+def wheat_loss_kg(problem: "Problem", acres: float, day: int) -> float:
+    """PAU: about 150 kg per acre per week of sowing past the optimum, spread evenly per day."""
+    optimum_last_day = problem.request.optimum_last_day
+    if optimum_last_day is None or day <= optimum_last_day:
+        return 0.0
+    kg_per_acre_per_day = problem.settings.wheat_loss_kg_per_acre_per_week / 7
+    return acres * kg_per_acre_per_day * (day - optimum_last_day)
+
+
 class Problem:
     def __init__(self, request: SolveRequest) -> None:
         self.request = request
@@ -61,7 +97,12 @@ class Problem:
 
         points = {BASE_ID: (request.base.lat, request.base.lon)}
         points.update({village.id: (village.lat, village.lon) for village in request.villages})
-        self.travel = TravelMatrix(points, self.settings.road_factor, self.settings.road_speed_kmh)
+        # A supplied road matrix (Amazon Location, fetched by the API) wins over the straight-line fallback.
+        self.travel: TravelSource
+        if request.travel_matrix is not None:
+            self.travel = GivenTravelMatrix(request.travel_matrix, list(points))
+        else:
+            self.travel = StraightLineTravel(points, self.settings.road_factor, self.settings.road_speed_kmh)
 
         # Upper bound on travel for any day that visits a village: base -> village -> base.
         # By the triangle inequality, a real route through several villages is never longer

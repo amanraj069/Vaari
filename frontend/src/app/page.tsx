@@ -353,7 +353,7 @@ function LandingFooter() {
     { icon: Satellite, title: t("fireMapTitle"), body: t("fireMapPending") },
   ];
   return (
-    <footer className="border-t border-line">
+    <footer className="border-t border-line bg-surface/30">
       <Stagger gap={0.1} className={`grid gap-10 py-14 md:grid-cols-3 md:gap-12 ${CONTAINER}`}>
         {notes.map((note) => (
           <StaggerItem key={note.title}>
@@ -366,12 +366,6 @@ function LandingFooter() {
           </StaggerItem>
         ))}
       </Stagger>
-      <div className="border-t border-line">
-        <div className={`flex flex-col gap-1.5 py-6 text-sm text-ink-muted ${CONTAINER}`}>
-          <p>{t("footerPhotos")}</p>
-          <p>{t("footerCredits")}</p>
-        </div>
-      </div>
     </footer>
   );
 }

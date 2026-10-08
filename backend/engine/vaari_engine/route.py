@@ -137,6 +137,21 @@ def build_route(problem: Problem, machine: Machine, day: int, route_jobs: list[R
     )
 
 
+def core_fits_at_promise_rate(problem: Problem, machine: Machine, route: Route) -> bool:
+    """On a slow day the operator skips the stretch stops and drives the rest in the printed order.
+    That must still fit the day at the cautious (promise) rate, or a promise could slip."""
+    core_stops = [stop for stop in route.stops if not stop.stretch]
+    minutes = sum(problem.work_minutes(stop.acres, machine, use_plan_rate=False) for stop in core_stops)
+    location = BASE_ID
+    for stop in core_stops:
+        if stop.village_id != location:
+            minutes += problem.travel.minutes(location, stop.village_id)
+            location = stop.village_id
+    if core_stops:
+        minutes += problem.travel.minutes(location, BASE_ID)
+    return minutes <= problem.capacity_minutes(machine)
+
+
 def _promise_allows(job: Job, day: int) -> bool:
     # A window is met inside it, so a field cannot be sown before its window opens.
     if isinstance(job.promise, WindowPromise):
@@ -176,7 +191,9 @@ def build_routes(problem: Problem, day_machine_by_job: dict[str, tuple[str, int]
             for candidate in list(stretch_candidates):
                 trial = current + [RouteJob(candidate, True)]
                 trial_route = build_route(problem, machine, tomorrow, trial)
-                if trial_route.end_minute <= trial_route.capacity_minute:
+                if trial_route.end_minute <= trial_route.capacity_minute and core_fits_at_promise_rate(
+                    problem, machine, trial_route
+                ):
                     current = trial
                     stretch_candidates.remove(candidate)
             if current:

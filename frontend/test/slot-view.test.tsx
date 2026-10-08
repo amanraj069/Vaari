@@ -87,6 +87,28 @@ describe("SlotView states", () => {
     expect(currentStep()).toHaveTextContent("Booked");
   });
 
+  it("requested: no date and no 'why' until the operator publishes, with the plain reason", () => {
+    const { container } = renderWithIntl(<SlotView state={ready(SAMPLE_FIELDS.requested, { why: { kind: "none" } })} />);
+    expect(screen.getAllByText("Requested").length).toBeGreaterThan(0);
+    expect(screen.getByText("Your request is in")).toBeInTheDocument();
+    expect(screen.getByText(/your date appears here as soon as they publish a plan/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Why this date" })).not.toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Firm date|The machine comes/);
+    expect(currentStep()).toHaveTextContent("Booked");
+  });
+
+  it("a firm date says which machine comes and which stop the field is", () => {
+    renderWithIntl(<SlotView state={ready(SAMPLE_FIELDS.firm)} />);
+    expect(screen.getByText("Super Seeder 2 comes to Balian on Sunday, 1 November. Your field is stop 2 of 3 that day.")).toBeInTheDocument();
+  });
+
+  it("after 'I cannot wait longer' the current date stands and the farmer is told it will never move later", () => {
+    renderWithIntl(<SlotView state={ready(SAMPLE_FIELDS.sooner)} />);
+    expect(screen.getByText("You asked for an earlier date")).toBeInTheDocument();
+    expect(screen.getByText(/it will never move later/)).toBeInTheDocument();
+    expect(screen.getByText("The machine comes between")).toBeInTheDocument();
+  });
+
   it("on the way: firm date is today", () => {
     renderWithIntl(<SlotView state={ready(SAMPLE_FIELDS.onTheWay)} />);
     expect(currentStep()).toHaveTextContent("On the way");
@@ -141,6 +163,7 @@ describe("SlotView states", () => {
 
   it("timeline step follows the promise, never the plan", () => {
     expect(timelineStep(SAMPLE_FIELDS.noPromise, SAMPLE_TODAY)).toBe("booked");
+    expect(timelineStep(SAMPLE_FIELDS.requested, SAMPLE_TODAY)).toBe("booked");
     expect(timelineStep(SAMPLE_FIELDS.window, SAMPLE_TODAY)).toBe("planned");
     expect(timelineStep(SAMPLE_FIELDS.onTheWay, SAMPLE_TODAY)).toBe("onTheWay");
     expect(timelineStep(SAMPLE_FIELDS.onTheWay, null)).toBe("planned");

@@ -3,7 +3,7 @@
 /** Farmer home: one idea per screen, answer first. Each field is a TokenCard with its date. */
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { TokenCard } from "@/components/token-card";
@@ -17,9 +17,10 @@ import { useDates } from "@/lib/dates";
 export default function FarmerHomePage() {
   const t = useTranslations("farmer");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const dates = useDates();
   // Polling keeps the date fresh when the operator re-plans (no websockets by design).
-  const home = useQuery({ queryKey: ["farmer-home"], queryFn: () => api("farmer/home", farmerHomeSchema), refetchInterval: 5_000 });
+  const home = useQuery({ queryKey: ["farmer-home", locale], queryFn: () => api(`farmer/home?lang=${locale}`, farmerHomeSchema), refetchInterval: 5_000 });
 
   return (
     <>

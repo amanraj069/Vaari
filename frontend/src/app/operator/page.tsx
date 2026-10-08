@@ -1,25 +1,26 @@
 "use client";
 
 /**
- * Operator hero page. The one decision: approve tomorrow's plan. Answer first (one line), then the
- * numbers that matter, then each machine's lane. Marking a machine as in the workshop re-plans on
- * the spot; cards glide to their new slots and the summary says exactly what moved and who was told.
+ * /operator, today's board. What the machines follow: the PUBLISHED plan, one lane per machine,
+ * with fields past the farmer's last waiting day in ember. Anything waiting for the operator (a
+ * draft after a breakdown, requests with no date yet) is a calm banner that leads to /operator/plan,
+ * where plans are checked and approved. Marking a machine as in the workshop makes a draft at once.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, BellRing, CheckCircle2, RotateCcw, Scale, ShieldCheck, Tractor } from "lucide-react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AlertTriangle, ArrowRight, BellRing, Inbox, RotateCcw, Scale, ShieldCheck, Tractor } from "lucide-react";
+import { LayoutGroup } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
-import { z } from "zod";
-import { operatorBoardSchema, type Lane, type OperatorBoard } from "@/shared";
+import { useState } from "react";
+import { operatorBoardSchema, operatorPlanSchema, type Lane, type OperatorBoard } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
+import { MachineDownDialog } from "@/components/machine-down-dialog";
 import { MachineLane } from "@/components/machine-lane";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { PAGE_TITLE, PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
-import { Button, Card, Pill, Skeleton, StateMessage } from "@/components/ui";
-import { ApiError, api } from "@/lib/api";
+import { ButtonLink, Button, Card, Pill, Skeleton, StateMessage } from "@/components/ui";
+import { api } from "@/lib/api";
 import { useDates } from "@/lib/dates";
 
 function OneLineAnswer({ board }: { board: OperatorBoard }) {
@@ -55,56 +56,84 @@ function Kpi({ icon, label, value, hint, tone = "neutral" }: { icon: React.React
   );
 }
 
+/** A draft or new requests waiting for the operator: one sentence and one way forward. */
+function WaitingBanner({ board }: { board: OperatorBoard }) {
+  const t = useTranslations("operator");
+  const { draft, newRequests } = board;
+  if (draft) {
+    return (
+      <section aria-live="polite" className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-card border border-wheat-deep/30 bg-wheat-soft/60 p-5">
+        <div>
+          <h2 className="flex items-center gap-2 font-medium">
+            <Pill kind="draft">{t("draft")}</Pill>
+            {t(`draftTitle_${draft.cause}`, { machine: draft.causeMachineName ?? "" })}
+          </h2>
+          <p className="mt-1 text-sm">
+            {t("draftChanges", { count: draft.changeCount })}{" "}
+            <span className={draft.brokenCount > 0 ? "font-medium text-ember-deep" : ""}>{t("draftBroken", { count: draft.brokenCount })}</span>
+            {newRequests > 0 ? ` ${t("newRequests", { count: newRequests })}` : ""}
+          </p>
+        </div>
+        <ButtonLink href="/operator/plan" variant="accent" className="min-h-12">
+          {t("reviewDraft")}
+          <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />
+        </ButtonLink>
+      </section>
+    );
+  }
+  if (newRequests > 0) {
+    return (
+      <section aria-live="polite" className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-card border border-sky/30 bg-sky-soft/60 p-5">
+        <p className="flex items-center gap-2">
+          <Inbox aria-hidden className="size-5 shrink-0 text-sky" strokeWidth={1.75} />
+          <span>
+            <span className="font-medium">{t("newRequests", { count: newRequests })}</span> {t("newRequestsAction")}
+          </span>
+        </p>
+        <ButtonLink href="/operator/plan" variant="accent" className="min-h-12">
+          {t("planTomorrow")}
+          <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />
+        </ButtonLink>
+      </section>
+    );
+  }
+  return null;
+}
+
 export default function OperatorPage() {
   const t = useTranslations("operator");
   const tc = useTranslations("common");
   const tr = useTranslations("risk");
   const dates = useDates();
   const queryClient = useQueryClient();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [downMachine, setDownMachine] = useState<Lane["machine"] | null>(null);
-  const [downDays, setDownDays] = useState(1);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const board = useQuery({
     queryKey: ["operator-board"],
     queryFn: () => api("operator/board", operatorBoardSchema),
     refetchInterval: 5_000,
   });
-  const setBoard = (next: OperatorBoard) => queryClient.setQueryData(["operator-board"], next);
-
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["operator-board"] });
+    queryClient.invalidateQueries({ queryKey: ["operator-plan"] });
+  };
   const markDown = useMutation({
     mutationFn: (input: { machineId: string; days: number }) =>
-      api(`operator/machines/${input.machineId}/down`, operatorBoardSchema, { method: "POST", body: JSON.stringify({ days: input.days }) }),
-    onSuccess: setBoard,
+      api(`operator/machines/${input.machineId}/down`, operatorPlanSchema, { method: "POST", body: JSON.stringify({ days: input.days }) }),
+    onSuccess: refresh,
   });
   const markBack = useMutation({
-    mutationFn: (machineId: string) => api(`operator/machines/${machineId}/up`, operatorBoardSchema, { method: "POST", body: "{}" }),
-    onSuccess: setBoard,
-  });
-  const approve = useMutation({
-    mutationFn: (version: number) =>
-      api("operator/plan/approve", z.object({ status: z.string() }), { method: "POST", body: JSON.stringify({ version }) }),
-    onSuccess: () => {
-      setNotice(null);
-      queryClient.invalidateQueries({ queryKey: ["operator-board"] });
-    },
-    onError: (error) => {
-      if (error instanceof ApiError && error.status === 409) setNotice(t("staleVersion"));
-      queryClient.invalidateQueries({ queryKey: ["operator-board"] });
-    },
+    mutationFn: (machineId: string) => api(`operator/machines/${machineId}/up`, operatorPlanSchema, { method: "POST", body: "{}" }),
+    onSuccess: refresh,
   });
   const reset = useMutation({
     mutationFn: () => api("operator/demo/reset", operatorBoardSchema, { method: "POST", body: "{}" }),
-    onSuccess: setBoard,
+    onSuccess: (next) => {
+      queryClient.setQueryData(["operator-board"], next);
+      queryClient.invalidateQueries({ queryKey: ["operator-plan"] });
+    },
   });
   const busy = markDown.isPending || markBack.isPending || reset.isPending;
-
-  function openDownDialog(machine: Lane["machine"]) {
-    setDownMachine(machine);
-    setDownDays(1);
-    dialogRef.current?.showModal();
-  }
 
   return (
     <>
@@ -126,108 +155,68 @@ export default function OperatorPage() {
                   <p className="text-sm text-ink-muted">{board.data.chc.name}</p>
                   <SimulatedBadge demoDate={dates.short(board.data.today)} />
                 </div>
-                <h1 className={`mt-2 ${PAGE_TITLE}`}>{t("planFor", { date: dates.full(board.data.planDate) })}</h1>
-              </div>
-              <div className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:items-end">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Pill kind={board.data.plan.status} size="lg">
-                    {board.data.plan.status === "approved" ? t("approved") : t("proposed")}
-                  </Pill>
-                  {board.data.plan.status === "proposed" ? (
-                    <Button variant="accent" className="min-h-12 px-5 text-base" disabled={approve.isPending || busy} onClick={() => approve.mutate(board.data.plan.version)}>
-                      <CheckCircle2 aria-hidden className="size-5" strokeWidth={1.75} />
-                      {approve.isPending ? t("approving") : t("approve")}
-                    </Button>
-                  ) : null}
-                </div>
-                <p className="text-xs text-ink-muted">
-                  {board.data.plan.status === "approved" && board.data.plan.approvedBy
-                    ? t("approvedBy", { name: board.data.plan.approvedBy })
-                    : t("firmingNote", { count: board.data.plan.firmingCount })}
-                </p>
-              </div>
-            </div>
-            {notice ? (
-              <p role="alert" className="mt-4 rounded-control border border-wheat-deep/30 bg-wheat-soft px-4 py-3 text-sm">
-                {notice}
-              </p>
-            ) : null}
-
-            <Card className="mt-6 p-6">
-              <OneLineAnswer board={board.data} />
-            </Card>
-
-            <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-5">
-              <Kpi
-                icon={<ShieldCheck aria-hidden className="size-3.5" strokeWidth={1.75} />}
-                label={t("kpiPromises")}
-                value={`${board.data.counts.promisesOnTrack}/${board.data.counts.promisesOpen}`}
-                tone="good"
-              />
-              <Kpi
-                icon={<AlertTriangle aria-hidden className="size-3.5" strokeWidth={1.75} />}
-                label={t("kpiRisk")}
-                value={String(board.data.counts.burnRisk)}
-                hint={t("kpiRiskHint")}
-                tone={board.data.counts.burnRisk > 0 ? "risk" : "neutral"}
-              />
-              <Kpi
-                icon={<Tractor aria-hidden className="size-3.5" strokeWidth={1.75} />}
-                label={t("kpiMachines")}
-                value={`${board.data.counts.machinesWorking}/${board.data.counts.machinesTotal}`}
-              />
-              <Kpi icon={<BellRing aria-hidden className="size-3.5" strokeWidth={1.75} />} label={t("kpiBroken")} value={String(board.data.counts.brokenThisSeason)} />
-              <Kpi
-                icon={<Scale aria-hidden className="size-3.5" strokeWidth={1.75} />}
-                label={t("kpiFairness")}
-                value={tc("days", { count: Math.max(0, board.data.solver.maxDelayVsQueueDays) })}
-                hint={t("kpiFairnessHint")}
-              />
-            </div>
-
-            <AnimatePresence>
-              {board.data.lastReplan ? (
-                <motion.section
-                  key={board.data.lastReplan.at}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-5 rounded-card border border-sky/30 bg-sky-soft/60 p-5"
-                  aria-live="polite"
-                >
-                  <h2 className="font-medium">
-                    {board.data.lastReplan.cause === "breakdown"
-                      ? t("replanTitleBreakdown", { machine: board.data.lastReplan.machineName ?? "" })
-                      : board.data.lastReplan.cause === "machine_back"
-                        ? t("replanTitleBack", { machine: board.data.lastReplan.machineName ?? "" })
-                        : board.data.lastReplan.cause === "farmer_update"
-                          ? t("replanTitleFarmer")
-                          : t("replanTitleOther")}
-                  </h2>
-                  <p className="mt-1 text-sm">
-                    {t("replanMoved", { count: board.data.lastReplan.moved.length })} ·{" "}
-                    {board.data.lastReplan.broken.length === 0 ? t("replanNoneBroken") : t("replanBroken", { count: board.data.lastReplan.broken.length })}
+                <h1 className={`mt-2 ${PAGE_TITLE}`}>
+                  {board.data.planDate ? t("boardTitle", { date: dates.full(board.data.planDate) }) : t("boardTitleNone")}
+                </h1>
+                {board.data.published?.approvedBy ? (
+                  <p className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
+                    <Pill kind="approved">{t("approved")}</Pill>
+                    {t("publishedBy", { name: board.data.published.approvedBy })}
                   </p>
-                  {board.data.lastReplan.broken.length > 0 ? (
-                    <ul className="mt-2 space-y-1 text-sm">
-                      {board.data.lastReplan.broken.map((item) => (
-                        <li key={item.fieldId} className="flex flex-wrap items-center gap-2">
-                          <BellRing aria-hidden className="size-4 text-ember-deep" strokeWidth={1.75} />
-                          <span className="font-medium tabular">#{String(item.token).padStart(3, "0")}</span> {item.farmerName}:
-                          <span className="tabular line-through decoration-ink-muted/60">
-                            {item.previous?.kind === "firm" ? dates.short(item.previous.date) : item.previous ? dates.range(item.previous.startDate, item.previous.endDate) : "—"}
-                          </span>
-                          →
-                          <span className="tabular font-medium">
-                            {item.next?.kind === "firm" ? dates.short(item.next.date) : item.next ? dates.range(item.next.startDate, item.next.endDate) : tr("unplanned")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </motion.section>
-              ) : null}
-            </AnimatePresence>
+                ) : null}
+              </div>
+              <ButtonLink href="/operator/plan" variant={board.data.draft || board.data.newRequests > 0 ? "secondary" : "accent"} className="min-h-12">
+                {t("planTomorrow")}
+                <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />
+              </ButtonLink>
+            </div>
+
+            <WaitingBanner board={board.data} />
+
+            {!board.data.published ? (
+              <div className="mt-6">
+                <StateMessage
+                  title={t("noPublishedTitle")}
+                  body={t("noPublishedBody")}
+                  action={<ButtonLink href="/operator/plan" variant="accent">{t("planTomorrow")}</ButtonLink>}
+                />
+              </div>
+            ) : (
+              <>
+                <Card className="mt-6 p-6">
+                  <OneLineAnswer board={board.data} />
+                </Card>
+
+                <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                  <Kpi
+                    icon={<ShieldCheck aria-hidden className="size-3.5" strokeWidth={1.75} />}
+                    label={t("kpiPromises")}
+                    value={`${board.data.counts.promisesOnTrack}/${board.data.counts.promisesOpen}`}
+                    tone="good"
+                  />
+                  <Kpi
+                    icon={<AlertTriangle aria-hidden className="size-3.5" strokeWidth={1.75} />}
+                    label={t("kpiRisk")}
+                    value={String(board.data.counts.burnRisk)}
+                    hint={t("kpiRiskHint")}
+                    tone={board.data.counts.burnRisk > 0 ? "risk" : "neutral"}
+                  />
+                  <Kpi icon={<Inbox aria-hidden className="size-3.5" strokeWidth={1.75} />} label={t("kpiRequested")} value={String(board.data.counts.requested)} />
+                  <Kpi
+                    icon={<Tractor aria-hidden className="size-3.5" strokeWidth={1.75} />}
+                    label={t("kpiMachines")}
+                    value={`${board.data.counts.machinesWorking}/${board.data.counts.machinesTotal}`}
+                  />
+                  <Kpi icon={<BellRing aria-hidden className="size-3.5" strokeWidth={1.75} />} label={t("kpiBroken")} value={String(board.data.counts.brokenThisSeason)} />
+                  <Kpi
+                    icon={<Scale aria-hidden className="size-3.5" strokeWidth={1.75} />}
+                    label={t("kpiFairness")}
+                    value={tc("days", { count: Math.max(0, board.data.solver?.maxDelayVsQueueDays ?? 0) })}
+                    hint={t("kpiFairnessHint")}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_20rem]">
               <section aria-labelledby="lanes-title">
@@ -244,28 +233,30 @@ export default function OperatorPage() {
                         index={index}
                         dayStart="08:00"
                         busy={busy}
-                        onMarkDown={() => openDownDialog(lane.machine)}
+                        onMarkDown={() => setDownMachine(lane.machine)}
                         onMarkBack={() => markBack.mutate(lane.machine.id)}
                       />
                     ))}
                   </ul>
                 </LayoutGroup>
-                <p className="mt-3 text-xs text-ink-muted">
-                  {t("solverNote", { status: board.data.solver.status, mode: board.data.solver.mode.replace("_", "-"), seconds: board.data.solver.wallSeconds })}
-                </p>
+                {board.data.solver ? (
+                  <p className="mt-3 text-xs text-ink-muted">
+                    {t("solverNote", { status: board.data.solver.status, mode: board.data.solver.mode.replace("_", "-"), seconds: board.data.solver.wallSeconds })}
+                  </p>
+                ) : null}
               </section>
 
               <aside aria-labelledby="risk-title">
                 <div className="flex items-baseline justify-between">
                   <h2 id="risk-title" className="font-display text-2xl">{t("atRiskTitle")}</h2>
-                  <Link href="/operator/queue" className="text-sm text-sky underline underline-offset-2">{t("fullQueue")}</Link>
+                  <Link href="/operator/queue" className="inline-flex min-h-11 min-w-11 shrink-0 items-center whitespace-nowrap text-sm text-sky underline underline-offset-2">{t("fullQueue")}</Link>
                 </div>
                 {board.data.atRisk.length === 0 ? (
                   <p className="mt-3 text-sm text-ink-muted">{t("atRiskEmpty")}</p>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {board.data.atRisk.slice(0, 8).map((item) => (
-                      <li key={item.fieldId} className="rounded-card border border-line bg-surface p-4">
+                      <li key={item.fieldId} className={`rounded-card border bg-surface p-4 ${item.risk === "at_risk" ? "border-ember/50" : "border-line"}`}>
                         <div className="flex items-center justify-between gap-2 text-sm">
                           <span>
                             <span className="font-medium tabular">#{String(item.token).padStart(3, "0")}</span> {item.farmerName}
@@ -290,44 +281,7 @@ export default function OperatorPage() {
         )}
       </PageMain>
 
-      <dialog ref={dialogRef} className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-card border border-line bg-surface p-0 text-ink backdrop:bg-black/50" onClose={() => setDownMachine(null)}>
-        {downMachine ? (
-          <form
-            method="dialog"
-            className="p-6"
-            onSubmit={(event) => {
-              event.preventDefault();
-              markDown.mutate({ machineId: downMachine.id, days: downDays });
-              dialogRef.current?.close();
-            }}
-          >
-            <h2 className="font-display text-2xl">{t("downTitle", { machine: downMachine.name })}</h2>
-            <p className="mt-2 text-ink-muted">{t("downBody")}</p>
-            <fieldset className="mt-5">
-              <legend className="text-sm font-medium">{t("downDays")}</legend>
-              <div className="mt-2 flex gap-2">
-                {[1, 2, 3].map((days) => (
-                  <button
-                    key={days}
-                    type="button"
-                    aria-pressed={downDays === days}
-                    onClick={() => setDownDays(days)}
-                    className={`min-h-11 flex-1 rounded-control border ${downDays === days ? "border-ink bg-ink text-paper" : "border-line-strong bg-surface"}`}
-                  >
-                    {tc("days", { count: days })}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => dialogRef.current?.close()}>
-                {t("cancel")}
-              </Button>
-              <Button type="submit">{t("replanNow")}</Button>
-            </div>
-          </form>
-        ) : null}
-      </dialog>
+      <MachineDownDialog machine={downMachine} onClose={() => setDownMachine(null)} onConfirm={(input) => markDown.mutate(input)} />
 
       {busy ? (
         <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm text-paper">

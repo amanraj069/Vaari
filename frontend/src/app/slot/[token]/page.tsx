@@ -26,9 +26,10 @@ export default function SlotPage() {
   const queryClient = useQueryClient();
   const path = `slot/${encodeURIComponent(token)}`;
 
+  // The reason sentence comes from the backend in the reader's language.
   const slot = useQuery({
-    queryKey: ["slot", token],
-    queryFn: () => api(path, farmerFieldSchema, {}, NO_REDIRECT),
+    queryKey: ["slot", token, locale],
+    queryFn: () => api(`${path}?lang=${locale}`, farmerFieldSchema, {}, NO_REDIRECT),
     refetchInterval: 15_000,
     // A bad or foreign link will not get better by retrying.
     retry: (count, error) => !(error instanceof ApiError && [401, 403, 404].includes(error.status)) && count < 2,
@@ -37,12 +38,14 @@ export default function SlotPage() {
   const why = useQuery({
     queryKey: ["slot-why", token, locale, JSON.stringify(slot.data?.promise ?? null)],
     queryFn: () => api(`${path}/why?lang=${locale}`, whySchema, {}, NO_REDIRECT),
-    enabled: slot.isSuccess && slot.data.state !== "done",
+    // Only a promised date has a "why": a request waits for the operator's plan.
+    enabled: slot.isSuccess && (slot.data.status === "firm" || slot.data.status === "window"),
   });
   const shorten = useMutation({
-    mutationFn: (waitingLimitDays: number) => api(`${path}/waiting-limit`, farmerFieldSchema, { method: "POST", body: JSON.stringify({ waitingLimitDays }) }, NO_REDIRECT),
+    mutationFn: (waitingLimitDays: number) =>
+      api(`${path}/waiting-limit?lang=${locale}`, farmerFieldSchema, { method: "POST", body: JSON.stringify({ waitingLimitDays }) }, NO_REDIRECT),
     onSuccess: (field) => {
-      queryClient.setQueryData(["slot", token], field);
+      queryClient.setQueryData(["slot", token, locale], field);
       queryClient.invalidateQueries({ queryKey: ["slot-why", token] });
       toast(t("updated"));
     },
@@ -54,7 +57,14 @@ export default function SlotPage() {
     const status = slot.error instanceof ApiError ? slot.error.status : 0;
     state = status === 401 ? { kind: "invalid" } : status === 403 ? { kind: "forbidden" } : status === 404 ? { kind: "notFound" } : { kind: "unavailable", onRetry: () => slot.refetch() };
   } else {
-    const whyState: WhyState = why.isSuccess ? { kind: "ready", reasons: why.data.reasons.map((reason) => reason.text) } : why.isError ? { kind: "error" } : { kind: "loading" };
+    const promised = slot.data.status === "firm" || slot.data.status === "window";
+    const whyState: WhyState = !promised
+      ? { kind: "none" }
+      : why.isSuccess
+        ? { kind: "ready", reasons: why.data.reasons.map((reason) => reason.text) }
+        : why.isError
+          ? { kind: "error" }
+          : { kind: "loading" };
     state = {
       kind: "ready",
       field: slot.data,

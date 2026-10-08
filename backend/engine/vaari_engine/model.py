@@ -11,11 +11,11 @@ promises to break, preferring those with the most slack before their burn deadli
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
 
 from ortools.sat.python import cp_model
 
-from .problem import Job, Problem, promise_bounds, promise_latest_day
+from .problem import Assignment, ImpossiblePinError, Problem, promise_bounds, promise_latest_day, wheat_loss_kg
+from .search import plan_by_search
 
 # Pass-2 weights (cost units). Wheat loss is in kilograms; the rest are scaled against it.
 UNSERVED_WEIGHT = 50_000  # per job, plus per-acre below: leaving a field unplanned is the worst outcome
@@ -26,26 +26,6 @@ TRAVEL_WEIGHT_PER_KM = 10
 CHURN_WEIGHT_PER_DAY = 30  # moving a field from its previous planned day
 BREAK_WEIGHT = 1_000  # minimal-break: per promise broken (slack before burn deadline is subtracted)
 BROKEN_EARLINESS_WEIGHT_PER_ACRE_DAY = 200  # a farmer whose promise broke gets the earliest new date
-
-
-@dataclass
-class Assignment:
-    day_machine_by_job: dict[str, tuple[str, int]] = field(default_factory=dict)
-    unserved_job_ids: set[str] = field(default_factory=set)
-    broken_field_ids: set[str] = field(default_factory=set)
-    status: str = "optimal"  # optimal | feasible | fallback
-    mode: str = "normal"  # normal | minimal_break
-    burn_pass_objective: int | None = None
-    cost_pass_objective: int | None = None
-    wall_seconds: float = 0.0
-
-
-def wheat_loss_kg(problem: Problem, acres: float, day: int) -> float:
-    optimum_last_day = problem.request.optimum_last_day
-    if optimum_last_day is None or day <= optimum_last_day:
-        return 0.0
-    kg_per_acre_per_day = problem.settings.wheat_loss_kg_per_acre_per_week / 7
-    return acres * kg_per_acre_per_day * (day - optimum_last_day)
 
 
 class _AssignmentModel:
@@ -207,14 +187,6 @@ class _AssignmentModel:
                 result.unserved_job_ids.add(job_id)
 
 
-class ImpossiblePinError(ValueError):
-    """A manual move to a day the machine cannot work (rain, down) or before the field is ready."""
-
-    def __init__(self, field_id: str, machine_id: str, day: int) -> None:
-        super().__init__(f"field {field_id} cannot be pinned to {machine_id} on day {day}")
-        self.field_id, self.machine_id, self.day = field_id, machine_id, day
-
-
 def _new_solver(seconds: float) -> cp_model.CpSolver:
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = max(0.5, seconds)
@@ -245,19 +217,18 @@ def assign(problem: Problem) -> Assignment:
         break_solver = _new_solver(time_budget / 3)
         break_status = break_solver.solve(break_model.model)
         if break_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            return _finish(greedy_assign(problem), started)
+            return _finish(_fallback(problem, result.mode), started)
         fixed_broken = {field_id for field_id, broken in break_model.broken.items() if break_solver.value(broken)}
         result.broken_field_ids = fixed_broken
+        result.breaks_proven_minimal = break_status == cp_model.OPTIMAL
         burn_model = _AssignmentModel(problem, soft_promises=False, fixed_broken=fixed_broken)
         burn_model.model.minimize(burn_model.burn_objective())
         burn_solver = _new_solver(time_budget / 3)
         burn_status = burn_solver.solve(burn_model.model)
 
     if burn_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        # Timed out without any plan: fall back to a greedy plan, flagged as such.
-        fallback = greedy_assign(problem)
-        fallback.mode = result.mode
-        return _finish(fallback, started)
+        # Timed out without any plan: fall back to the search planner, flagged as such.
+        return _finish(_fallback(problem, result.mode), started)
 
     late_fields = round(burn_solver.objective_value)
     result.burn_pass_objective = late_fields
@@ -286,48 +257,32 @@ def _finish(result: Assignment, started: float) -> Assignment:
     return result
 
 
-def greedy_assign(problem: Problem) -> Assignment:
-    """Earliest-deadline-first plan used only when CP-SAT finds nothing in time.
+def fewest_broken_promises(problem: Problem, seconds: float) -> tuple[Assignment, bool] | None:
+    """CP-SAT's answer to one question: what is the fewest promises any plan must break?
 
-    Promised jobs go first, ordered by their promise; then the rest by burn deadline.
+    Returns a plan that breaks that few (preferring the farmers who can wait longest) and whether
+    CP-SAT proved it, or None if it found no plan in time. The search planner asks this only when
+    its own best plan would break a promise: packing promises into crowded days is exactly where
+    an exact method beats local search. The capacity here uses the round-trip travel bound, which
+    is never shorter than a real route, so the plan is also valid for the search's exact routes.
     """
-    result = Assignment(status="fallback")
-    minutes_used: dict[tuple[str, int], int] = {}
-    villages_visited: dict[tuple[str, int], set[str]] = {}
+    break_model = _AssignmentModel(problem, soft_promises=True, fixed_broken=None)
+    break_model.model.minimize(break_model.break_objective())
+    solver = _new_solver(seconds)
+    solver.parameters.relative_gap_limit = 0.0  # prove the count, not just come close
+    status = solver.solve(break_model.model)
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return None
+    result = Assignment(status="feasible", method="cpsat")
+    break_model.read(solver, result)
+    result.broken_field_ids = {field_id for field_id, broken in break_model.broken.items() if solver.value(broken)}
+    return result, status == cp_model.OPTIMAL
 
-    def sort_key(job: Job) -> tuple[int, int, int]:
-        promise_day = promise_latest_day(job.promise) if job.promise is not None else 10**6
-        return (promise_day, job.burn_deadline, job.request_order)
 
-    for job in sorted(problem.jobs, key=sort_key):
-        placed = False
-        for day in problem.candidate_days(job):
-            if job.promise is not None:
-                earliest, latest = promise_bounds(job.promise)
-                if earliest is not None and day < earliest:
-                    continue
-            for machine in problem.machines:
-                if not problem.machine_works(machine, day):
-                    continue
-                key = (machine.id, day)
-                visited = villages_visited.setdefault(key, set())
-                extra_travel = 0 if job.village_id in visited else problem.round_trip_minutes[job.village_id]
-                needed = problem.work_minutes(job.acres, machine, use_plan_rate=False) + extra_travel
-                if minutes_used.get(key, 0) + needed <= problem.capacity_minutes(machine):
-                    minutes_used[key] = minutes_used.get(key, 0) + needed
-                    visited.add(job.village_id)
-                    result.day_machine_by_job[job.job_id] = (machine.id, day)
-                    placed = True
-                    break
-            if placed:
-                break
-        if not placed:
-            result.unserved_job_ids.add(job.job_id)
-        elif job.promise is not None and result.day_machine_by_job[job.job_id][1] > promise_latest_day(job.promise):
-            result.broken_field_ids.add(job.field_id)
-    jobs_by_id = {job.job_id: job for job in problem.jobs}
-    for job_id in result.unserved_job_ids:
-        job = jobs_by_id[job_id]
-        if job.promise is not None:
-            result.broken_field_ids.add(job.field_id)
-    return result
+def _fallback(problem: Problem, mode: str) -> Assignment:
+    """CP-SAT found no plan in time: use the search planner's plan, flagged as a fallback."""
+    fallback = plan_by_search(problem, seed=problem.settings.search_seed, check_breaks_exactly=False).assignment
+    fallback.status = "fallback"
+    if mode == "minimal_break":
+        fallback.mode = mode
+    return fallback

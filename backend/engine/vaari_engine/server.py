@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from .contract import ExplainRequest, ExplainResponse, SolveRequest, SolveResponse
 from .explain import explain
-from .model import ImpossiblePinError
+from .problem import ImpossiblePinError
 from .solve import solve
 
 app = FastAPI(title="Vaari engine", version="0.1.0")
