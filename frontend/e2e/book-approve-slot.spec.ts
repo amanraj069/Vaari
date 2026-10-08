@@ -1,10 +1,12 @@
 /**
- * The facilitator -> operator -> farmer loop through the real UI and API:
- * a facilitator books a field on /book and gets a slot link; the operator approves tomorrow's plan;
- * the farmer opens the link with no account and sees a firm date. axe checks /book and /slot.
- * The field is 1 acre so it fits tomorrow's capacity and the planner can promise a firm date; a
- * larger field in this crowded demo season gets a window instead, which approval does not firm
- * until its day is within two days (that is the product rule, not a test shortcut).
+ * The vertical slice through the real UI and API, start to finish:
+ *   a facilitator books a field on /book and gets the farmer's slot link -> the link says
+ *   "Requested" (no date until a plan is published) -> the operator sees the new request on
+ *   /operator, makes tomorrow's plan on /operator/plan, reads that this farmer gets a first date,
+ *   and approves -> the farmer opens the link with no account and sees a firm date.
+ * The field is 1 acre and ready tomorrow, so it fits tomorrow's capacity and the first promise is
+ * firm (a date within two days is promised firm; later dates start as a window). axe checks the
+ * slot page in both states and the plan page.
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -23,20 +25,18 @@ async function expectNoAxeViolations(page: Page) {
   expect(result.violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`)).toEqual([]);
 }
 
-test("facilitator books, operator approves, slot link shows a firm date", async ({ browser }) => {
-  // 1. Facilitator books a field for a farmer without an account.
+test("facilitator books, operator generates and approves, the slot link shows a firm date", async ({ browser }) => {
+  // 1. A facilitator books a field for a farmer without an account.
   const facilitator = await signedInPage(browser, "facilitator");
   await facilitator.goto("/book");
   await expect(facilitator.getByRole("heading", { name: "Book a field for a farmer" })).toBeVisible();
   await expect(facilitator.getByRole("navigation", { name: "Main" }).getByRole("link")).toHaveText(["Book a field"]);
-  await expectNoAxeViolations(facilitator);
 
   const next = () => facilitator.getByRole("button", { name: "Next", exact: true }).click();
   await facilitator.getByRole("textbox", { name: /Farmer's name/ }).fill("Paramjit Kaur");
   await next();
   await facilitator.getByRole("button", { name: "Balian", exact: true }).click();
   await next();
-  // 1 acre: small enough to fit tomorrow's capacity, so the planner can promise a firm date.
   for (let click = 0; click < 4; click += 1) await facilitator.getByRole("button", { name: "Less" }).click();
   await expect(facilitator.locator("output")).toHaveText("1");
   await next();
@@ -44,25 +44,48 @@ test("facilitator books, operator approves, slot link shows a firm date", async 
   await next();
   await facilitator.getByRole("slider", { name: "Waiting" }).fill("3");
   await next();
+  // The confirmation step shows everything before booking.
+  await expect(facilitator.getByRole("heading", { name: "Check before booking" })).toBeVisible();
   await facilitator.getByRole("button", { name: "Book and get the link" }).click();
   await expect(facilitator.getByRole("heading", { name: "Booked for Paramjit Kaur" })).toBeVisible();
   const slotUrl = await facilitator.getByRole("textbox").inputValue();
   expect(slotUrl).toMatch(/\/slot\/[\w.-]+$/);
-  await expect(facilitator.getByRole("listitem").filter({ hasText: "Paramjit Kaur" })).toBeVisible();
+  const token = new URL(slotUrl).pathname.split("/").pop()!;
 
-  // 2. The operator approves tomorrow's plan.
-  const operator = await signedInPage(browser, "operator");
-  await operator.goto("/operator");
-  await operator.getByRole("button", { name: "Approve plan" }).click();
-  await expect(operator.getByText("Approved", { exact: true })).toBeVisible();
-
-  // 3. The farmer opens the link, no account, and sees a firm date (only the promise is shown).
+  // 2. Until a plan is published, the farmer's link says "Requested" and promises nothing.
   const farmer = await (await browser.newContext()).newPage();
   await farmer.goto(slotUrl);
+  await expect(farmer.getByText("Your request is in")).toBeVisible();
+  await expect(farmer.getByText("Requested").first()).toBeVisible();
+  await expect(farmer.getByText("Firm date")).toHaveCount(0);
+  await expect(farmer.getByRole("list", { name: "Progress of this turn" }).locator('[aria-current="step"]')).toContainText("Booked");
+  await expectNoAxeViolations(farmer);
+
+  // 3. The operator sees the new request on today's board and plans tomorrow.
+  const operator = await signedInPage(browser, "operator");
+  await operator.goto("/operator");
+  await expect(operator.getByText(/\d+ new requests? (has|have) no date yet\./)).toBeVisible();
+  await operator.getByRole("main").getByRole("link", { name: "Plan tomorrow" }).last().click();
+  await expect(operator).toHaveURL(/\/operator\/plan$/);
+  await operator.getByRole("button", { name: "Make a fresh plan" }).first().click();
+  // The draft says exactly what approving will do, before anything is published.
+  await expect(operator.getByText("Draft", { exact: true }).first()).toBeVisible();
+  await expect(operator.getByText("Nothing changes for farmers until you approve.", { exact: false })).toBeVisible();
+  await expect(operator.getByText(/farmers? gets? a first date/)).toBeVisible();
+  await expect(operator.getByRole("complementary", { name: "What approving does" }).getByText("Paramjit Kaur")).toBeVisible();
+  await expectNoAxeViolations(operator);
+  // Still nothing for the farmer: a draft is not a promise.
+  const beforeApproval = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { status: string };
+  expect(beforeApproval.status).toBe("requested");
+
+  await operator.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(operator.getByText(/Published by Harpal Singh/)).toBeVisible();
+
+  // 4. The farmer's link now shows a firm date: exactly the date the backend promised.
+  await farmer.reload();
   await expect(farmer.getByText("The machine comes on")).toBeVisible();
-  // The page shows exactly the date the backend promised (the solver may pick 1 or 2 November).
-  const token = new URL(slotUrl).pathname.split("/").pop()!;
-  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { promise: { kind: string; date?: string } | null };
+  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { status: string; promise: { kind: string; date?: string } | null };
+  expect(slot.status).toBe("firm");
   expect(slot.promise?.kind).toBe("firm");
   const promised = new Date(`${slot.promise!.date}T00:00:00Z`);
   // English dates are day-first (Indian usage): "Sunday", "1 November".
@@ -71,6 +94,8 @@ test("facilitator books, operator approves, slot link shows a firm date", async 
   await expect(farmer.getByText(weekday, { exact: true })).toBeVisible();
   await expect(farmer.getByText(dayMonth, { exact: true })).toBeVisible();
   await expect(farmer.getByText("Firm date").first()).toBeVisible();
+  // The plain reason names the machine and the stop.
+  await expect(farmer.getByText(/comes to Balian on .*Your field is stop \d+ of \d+ that day\./)).toBeVisible();
   await expect(farmer.getByRole("list", { name: "Progress of this turn" }).locator('[aria-current="step"]')).toContainText("Planned");
   await expect(farmer.getByRole("heading", { name: "Why this date" })).toBeVisible();
   await expect(farmer.getByText("Simulated season, real fire timing")).toBeVisible();
@@ -81,5 +106,4 @@ test("facilitator books, operator approves, slot link shows a firm date", async 
   // (Next.js also renders an empty route-announcer alert; pick ours by its text.)
   await expect(farmer.getByRole("alert").filter({ hasText: "This link does not work" })).toBeVisible();
   expect(new URL(farmer.url()).pathname).toMatch(/^\/slot\//);
-  await expectNoAxeViolations(farmer);
 });

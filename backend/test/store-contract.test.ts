@@ -40,14 +40,16 @@ function field(chcId: string, id: string, overrides: Partial<FieldRecord> = {}):
   return {
     chcId, id, token: 1, farmerId: "farmer-a", farmerName: "A", villageId: "v1", acres: 2, readyDay: 30, waitingLimitDays: 5,
     requestOrder: 0, createdAt: "2026-10-08T00:00:00.000Z", state: "waiting", plannedDay: null, plannedMachineId: null, bookedBy: null,
-    ...overrides,
+    soonerRequestedAt: null, ...overrides,
   };
 }
 
 function plan(chcId: string, version: number, planDate = "2026-11-01"): PlanRecord {
   return {
-    chcId, planDay: 31, planDate, version, status: "proposed", createdAt: new Date().toISOString(), approvedAt: null, approvedBy: null,
-    solve: emptySolve, firmingFieldIds: ["f1"], executionArn: null, lastReplan: null,
+    chcId, planDay: 31, planDate, version, status: "draft", createdAt: new Date().toISOString(), approvedAt: null, approvedBy: null,
+    solve: emptySolve, cause: "generate", causeMachineId: null, pins: [{ fieldId: "f1", machineId: "m1", day: 31 }],
+    changes: { promised: [{ fieldId: "f1", promise: { kind: "firm", day: 31 } }], firmed: [], moved: [], broken: [], rePromised: [], unplaced: [] },
+    publish: null, executionArn: null,
   };
 }
 
@@ -103,12 +105,44 @@ for (const { name, make } of stores) {
       expect((await store.latestPlan(chcId))?.planDate).toBe("2026-11-02");
     });
 
-    it("approves a plan version exactly once (conditional write)", async () => {
-      const approved = await store.approvePlan(chcId, "2026-11-02", 3, "Harpal", "2026-10-31T12:00:00.000Z");
-      expect(approved).toMatchObject({ status: "approved", approvedBy: "Harpal", firmingFieldIds: [] });
-      await expect(store.approvePlan(chcId, "2026-11-02", 3, "Harpal", "2026-10-31T12:01:00.000Z")).rejects.toBeInstanceOf(StoreConflictError);
-      // A version that does not exist cannot be approved either.
-      await expect(store.approvePlan(chcId, "2026-11-02", 99, "Harpal", "x")).rejects.toBeInstanceOf(StoreConflictError);
+    it("publishes a draft in two steps: begins exactly once, completes safely more than once", async () => {
+      const writes = { promises: [{ chcId, fieldId: "f1", version: 1, promise: { kind: "firm" as const, day: 31 }, state: "held" as const, at: "x", reason: "first_promise" as const }], fields: [] };
+      const approval = { approvedBy: "Harpal", approvedAt: "2026-10-31T12:00:00.000Z", changes: plan(chcId, 3).changes, publish: writes };
+      expect(await store.latestApprovedPlan(chcId)).toBeNull();
+      // Completing a draft that never began publishing is refused.
+      await expect(store.completePublish(chcId, "2026-11-02", 3)).rejects.toBeInstanceOf(StoreConflictError);
+
+      const publishing = await store.beginPublish(chcId, "2026-11-02", 3, approval);
+      expect(publishing).toMatchObject({ status: "publishing", approvedBy: "Harpal", publish: writes, pins: plan(chcId, 3).pins });
+      // Only one approval ever starts, and a missing version cannot start one.
+      await expect(store.beginPublish(chcId, "2026-11-02", 3, approval)).rejects.toBeInstanceOf(StoreConflictError);
+      await expect(store.beginPublish(chcId, "2026-11-02", 99, approval)).rejects.toBeInstanceOf(StoreConflictError);
+      // Publishing is not published yet.
+      expect(await store.latestApprovedPlan(chcId)).toBeNull();
+      expect((await store.latestPlan(chcId))?.status).toBe("publishing");
+
+      expect((await store.completePublish(chcId, "2026-11-02", 3)).status).toBe("approved");
+      // A crash-recovery run may complete it again: nothing changes, nothing fails.
+      expect(await store.completePublish(chcId, "2026-11-02", 3)).toMatchObject({ status: "approved", version: 3, publish: writes });
+
+      // A newer draft does not hide the published plan.
+      await store.createPlan(plan(chcId, 4, "2026-11-02"));
+      expect((await store.latestPlan(chcId))?.status).toBe("draft");
+      expect((await store.latestApprovedPlan(chcId))?.version).toBe(3);
+    });
+
+    it("sets a field's place in the plan, safely repeated, and leaves sown or missing fields alone", async () => {
+      await store.putField(field(chcId, "p1", { soonerRequestedAt: "2026-10-31T08:00:00.000Z" }));
+      const update = { fieldId: "p1", plannedDay: 33, plannedMachineId: "m1", state: "promised" as const };
+      await store.setFieldPlan(chcId, update);
+      await store.setFieldPlan(chcId, update);
+      expect(await store.getField(chcId, "p1")).toEqual(field(chcId, "p1", { plannedDay: 33, plannedMachineId: "m1", state: "promised", soonerRequestedAt: null }));
+
+      await store.putField(field(chcId, "p2", { state: "done", plannedDay: 31 }));
+      await store.setFieldPlan(chcId, { ...update, fieldId: "p2" });
+      expect((await store.getField(chcId, "p2"))?.state).toBe("done");
+      await store.setFieldPlan(chcId, { ...update, fieldId: "missing" });
+      expect(await store.getField(chcId, "missing")).toBeNull();
     });
 
     it("stores work logs and fire checks", async () => {

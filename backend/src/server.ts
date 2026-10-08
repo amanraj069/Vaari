@@ -6,7 +6,7 @@ import { createApp, logger } from "./app";
 import { loadConfig } from "./config";
 import { createTokenVerifier } from "./auth/tokens";
 import { createEngineClient } from "./engine/client";
-import { DEMO_CHC_ID, seedDemo } from "./demo/seed";
+import { DEMO_CHC_ID, DEMO_OPERATOR_NAME, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
 import { createStore } from "./store";
 
@@ -29,7 +29,8 @@ export async function buildRuntime(options: { freshDemo?: boolean } = {}) {
     async resetDemo() {
       await store.clearChcData(DEMO_CHC_ID);
       await seedDemo(store, config);
-      await planner.replan(DEMO_CHC_ID, "new_request");
+      // The season is already running: start as if the operator published a plan last evening.
+      await planner.publishInitialPlan(DEMO_CHC_ID, DEMO_OPERATOR_NAME);
     },
   };
   // With DynamoDB the season survives restarts: seed only when the demo CHC does not exist yet.

@@ -57,7 +57,7 @@ describe("onboarding a Google user", () => {
     expect(home.body).toMatchObject({ farmerName: "Simran Kaur", fields: [] });
     const villages = await request(app).get("/villages").set(bearer("google-farmer")).expect(200);
     await request(app)
-      .post("/farmer/requests")
+      .post("/fields")
       .set(bearer("google-farmer"))
       .send({ villageId: villages.body[0].id, acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 })
       .expect(201);

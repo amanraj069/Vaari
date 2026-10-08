@@ -5,7 +5,7 @@
  * thing on the card. Firm dates and windows look different, and a moved date says why, right here.
  */
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, ChevronDown, History, Phone, Sparkles, TriangleAlert } from "lucide-react";
+import { BellRing, ChevronDown, History, Hourglass, Phone, Sparkles, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -38,6 +38,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
     enabled: whyOpen,
   });
   const promise = field.promise;
+  const requested = field.status === "requested";
   // Same rule as the slot page: a promise that runs past the farmer's last day is said out loud.
   const promiseLastDate = promise ? (promise.kind === "firm" ? promise.date : promise.endDate) : null;
   const late = field.state !== "done" && promiseLastDate !== null && promiseLastDate > field.burnDeadlineDate;
@@ -48,6 +49,14 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
         <div className="flex items-start gap-2 border-b border-ember/30 bg-ember-soft/60 px-5 py-3 text-ember-deep">
           <BellRing aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
           <p className="text-base">{t("brokenNotice")}</p>
+        </div>
+      ) : field.soonerRequested ? (
+        <div className="flex items-start gap-2 border-b border-wheat-deep/30 bg-wheat-soft/60 px-5 py-3">
+          <Hourglass aria-hidden className="mt-0.5 size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
+          <div>
+            <p className="text-base font-medium">{ts("soonerTitle")}</p>
+            <p className="text-sm">{ts("soonerBody", { date: dates.full(field.burnDeadlineDate) })}</p>
+          </div>
         </div>
       ) : late ? (
         <div role="alert" className="flex items-start gap-2 border-b border-ember/30 bg-ember-soft/60 px-5 py-3 text-ember-deep">
@@ -69,9 +78,17 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
           <p className="text-xs font-medium eyebrow text-ink-muted">{t("token")}</p>
           <p className="font-display text-4xl leading-none tabular">#{String(field.token).padStart(3, "0")}</p>
         </div>
-        {promise ? (
+        {field.status === "kept" ? (
+          <Pill kind="done" size="lg">
+            {ts("doneTitle")}
+          </Pill>
+        ) : promise ? (
           <Pill kind={promise.kind} size="lg">
             {promise.kind === "firm" ? t("firm") : t("window")}
+          </Pill>
+        ) : requested && field.reason.code === "requested" ? (
+          <Pill kind="requested" size="lg">
+            {ts("requestedPill")}
           </Pill>
         ) : (
           <Pill kind="unplanned" size="lg">
@@ -106,14 +123,13 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
                 <p className="mt-1 text-base text-ink-muted">{t("windowBody")}</p>
               </>
             ) : (
-              <>
-                <p className="font-display text-3xl">{t("noDate")}</p>
-                <p className="mt-1 text-base text-ink-muted">{t("noDateBody")}</p>
-              </>
+              <p className="font-display text-3xl">{requested && field.reason.code === "requested" ? ts("requestedTitle") : t("noDate")}</p>
             )}
           </motion.div>
         </AnimatePresence>
         {field.fieldsAhead !== null ? <p className="mt-3 text-lg">{t("fieldsAhead", { count: field.fieldsAhead })}</p> : null}
+        {/* The backend's one plain sentence: where this turn stands, from stored facts only. */}
+        <p className="mt-2 text-base text-ink-muted">{field.reason.text}</p>
       </div>
 
       <div className="px-5 pt-4">
@@ -121,6 +137,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 px-5">
+        {promise ? (
         <button
           type="button"
           aria-expanded={whyOpen}
@@ -131,6 +148,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
           {t("why")}
           <ChevronDown aria-hidden className={`size-4 transition-transform ${whyOpen ? "rotate-180" : ""}`} strokeWidth={1.75} />
         </button>
+        ) : null}
         {operatorPhone ? (
           <a href={`tel:${operatorPhone.replace(/\s/g, "")}`} className="inline-flex min-h-12 items-center gap-2 rounded-control px-4 text-base text-ink-muted hover:text-ink">
             <Phone aria-hidden className="size-5" strokeWidth={1.75} />

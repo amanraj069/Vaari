@@ -20,7 +20,10 @@ when { principal.role == "facilitator" && resource.bookedBy == principal.userId 
 @id("operator-own-chc")
 permit (
   principal,
-  action in [Action::"ViewBoard", Action::"ViewQueue", Action::"ApprovePlan", Action::"ReportBreakdown", Action::"MovePlan", Action::"ResetDemo"],
+  action in [
+    Action::"ViewBoard", Action::"ViewQueue", Action::"GeneratePlan", Action::"MovePlan", Action::"ApprovePlan",
+    Action::"ReportBreakdown", Action::"MarkSown", Action::"ResetDemo"
+  ],
   resource is Chc
 )
 when { principal.role == "operator" && resource.chcId == principal.chcId };

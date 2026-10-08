@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/session";
 
-const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "public/", "facilitator/", "slot/"];
+const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields", "operator/", "public/", "facilitator/", "slot/"];
 
 async function forward(request: Request, path: string[]) {
   const joined = path.join("/");

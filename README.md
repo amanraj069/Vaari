@@ -26,6 +26,8 @@ npm run dev
 
 Open http://localhost:3000 and click **Try as farmer** or **Try as operator**.
 
+**The whole loop in two minutes** (simulated season): sign in as the facilitator, book a field on `/book` and copy the farmer's link; open it in a private window (no account): it says *Requested*. Sign in as the operator: `/operator` shows the new request; on `/operator/plan` click **Make a fresh plan**, read *What approving does*, optionally click a field to move it, then **Approve and publish**. Reload the farmer's link: a firm date, the machine and its stop, and the reason in one sentence. Nothing a farmer sees changes until the operator approves.
+
 Tests: `cd backend && npm test` runs everything in the backend: the engine (solver invariants for both planners, and the search compared with brute force on 200 small instances, whose gap it prints), then the API (Cedar, core loop, contract). `npm run test:engine` and `npm run test:api` run one half.
 
 **See the planner work, no server needed:**

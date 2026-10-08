@@ -5,7 +5,7 @@
  */
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { operatorBoardSchema, solveResponseSchema } from "../src/shared";
+import { operatorBoardSchema, operatorPlanSchema, solveResponseSchema } from "../src/shared";
 import { createApp } from "../src/app";
 import { DEMO_CHC_ID } from "../src/demo/seed";
 import { buildRuntime } from "../src/server";
@@ -28,50 +28,28 @@ afterAll(() => {
 });
 
 describe("API with the search planner", () => {
-  it("plans the demo season with the search and reports its objective", async () => {
-    const { solve } = await runtime.dependencies.planner.latestSolve(DEMO_CHC_ID);
-    const parsed = solveResponseSchema.parse(solve);
+  it("publishes the demo season with the search and reports its objective", async () => {
+    const published = await runtime.dependencies.planner.publishedPlan(DEMO_CHC_ID);
+    const parsed = solveResponseSchema.parse(published!.solve);
     expect(parsed.solver.method).toBe("search");
     expect(parsed.solver.travelSource).toBe("straight-line");
     expect(parsed.objective?.brokenPromises).toBe(0);
     expect(parsed.objective?.unservedFields).toBe(parsed.unservedFieldIds.length);
   });
 
-  it("a breakdown re-plan keeps every promise or reports it broken", async () => {
-    const before = operatorBoardSchema.parse(
-      (await request(app).get("/operator/board").set("authorization", `Bearer ${operatorToken}`).expect(200)).body,
-    );
-    const after = operatorBoardSchema.parse(
-      (
-        await request(app)
-          .post("/operator/machines/m2/down")
-          .set("authorization", `Bearer ${operatorToken}`)
-          .send({ days: 1 })
-          .expect(200)
-      ).body,
-    );
-    expect(after.lanes.find((lane) => lane.machine.id === "m2")?.stops).toHaveLength(0);
-    const broken = after.lastReplan?.broken.length ?? 0;
+  it("a breakdown draft keeps every promise or names each one it breaks; approval publishes it once", async () => {
+    const auth = { authorization: `Bearer ${operatorToken}` };
+    const before = operatorBoardSchema.parse((await request(app).get("/operator/board").set(auth).expect(200)).body);
+    const draft = operatorPlanSchema.parse((await request(app).post("/operator/machines/m2/down").set(auth).send({ days: 1 }).expect(200)).body);
+    expect(draft.lanes.find((lane) => lane.machine.id === "m2")?.stops).toHaveLength(0);
+    const broken = draft.changes!.broken.length;
+    // If anything would break, the engine was asked exactly how few must break.
+    if (broken > 0) expect(draft.solver?.breaksProvenMinimal).not.toBeNull();
+
+    await request(app).post("/operator/plan/approve").set(auth).send({ version: draft.plan!.version }).expect(200);
+    await request(app).post("/operator/plan/approve").set(auth).send({ version: draft.plan!.version }).expect(409);
+    const after = operatorBoardSchema.parse((await request(app).get("/operator/board").set(auth).expect(200)).body);
     expect(after.counts.promisesOnTrack).toBe(after.counts.promisesOpen);
     expect(after.counts.brokenThisSeason).toBe(before.counts.brokenThisSeason + broken);
-    const { solve } = await runtime.dependencies.planner.latestSolve(DEMO_CHC_ID);
-    // If anything broke, CP-SAT was asked how few must break.
-    if (broken > 0) expect(solve.solver.breaksProvenMinimal).not.toBeUndefined();
-  });
-
-  it("approval still firms the plan exactly once", async () => {
-    const board = operatorBoardSchema.parse(
-      (await request(app).get("/operator/board").set("authorization", `Bearer ${operatorToken}`).expect(200)).body,
-    );
-    await request(app)
-      .post("/operator/plan/approve")
-      .set("authorization", `Bearer ${operatorToken}`)
-      .send({ version: board.plan.version })
-      .expect(200);
-    await request(app)
-      .post("/operator/plan/approve")
-      .set("authorization", `Bearer ${operatorToken}`)
-      .send({ version: board.plan.version })
-      .expect(409);
   });
 });

@@ -1,5 +1,6 @@
 /**
- * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered) and /design:
+ * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered), the operator's
+ * /operator and /operator/plan, and /design:
  * English, Punjabi, Hindi x light, dark x 360px, 1280px. Each combination must have zero axe
  * WCAG 2.1 A/AA violations, no sideways scroll, a single-row header, and 44px touch targets.
  * Plus keyboard use of the "I cannot wait longer" dialog and the reduced-motion setting.
@@ -12,18 +13,28 @@ const THEMES = ["light", "dark"] as const;
 const WIDTHS = [360, 1280] as const;
 let slotPath = "";
 
+// One demo sign-in per role, reused: the demo endpoint allows 20 sign-ins a minute (on purpose), and
+// this matrix opens dozens of contexts.
+const sessions = new Map<string, Awaited<ReturnType<BrowserContext["storageState"]>>>();
+
 async function context(browser: Browser, options: { width: number; locale: string; theme: string; role?: string }): Promise<BrowserContext> {
-  const created = await browser.newContext({ viewport: { width: options.width, height: 900 } });
+  if (options.role && !sessions.has(options.role)) {
+    const login = await browser.newContext();
+    const response = await login.request.post("http://localhost:3100/api/auth/demo", { data: { role: options.role } });
+    expect(response.ok()).toBe(true);
+    sessions.set(options.role, await login.storageState());
+    await login.close();
+  }
+  const created = await browser.newContext({
+    viewport: { width: options.width, height: 900 },
+    storageState: options.role ? sessions.get(options.role) : undefined,
+  });
   await created.addCookies([{ name: "NEXT_LOCALE", value: options.locale, url: "http://localhost:3100" }]);
   await created.addInitScript((theme) => {
     try {
       localStorage.setItem("theme", theme);
     } catch {}
   }, options.theme);
-  if (options.role) {
-    const response = await created.request.post("http://localhost:3100/api/auth/demo", { data: { role: options.role } });
-    expect(response.ok()).toBe(true);
-  }
   return created;
 }
 
@@ -31,7 +42,7 @@ test.beforeAll(async ({ browser }) => {
   // One real booking gives a real slot link to check.
   const facilitator = await context(browser, { width: 1280, locale: "en", theme: "light", role: "facilitator" });
   const villages = (await (await facilitator.request.get("http://localhost:3100/api/proxy/villages")).json()) as { id: string }[];
-  const booking = await facilitator.request.post("http://localhost:3100/api/proxy/facilitator/fields", {
+  const booking = await facilitator.request.post("http://localhost:3100/api/proxy/fields", {
     data: { farmerName: "Manjit Kaur", villageId: villages[0]!.id, acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 },
   });
   expect(booking.status()).toBe(201);
@@ -44,6 +55,9 @@ const PAGES = [
   { name: "book", role: "facilitator", path: () => "/book", ready: "main section" },
   { name: "slot", role: undefined, path: () => slotPath, ready: "text=/#\\d{3}/" },
   { name: "slot-tampered", role: undefined, path: () => `${slotPath.slice(0, -4)}AAAA`, ready: '[role="alert"] h1' },
+  // Operators work on laptops in the office and tablets in the field: the same bar applies.
+  { name: "operator", role: "operator", path: () => "/operator", ready: "main h1" },
+  { name: "operator-plan", role: "operator", path: () => "/operator/plan", ready: "main h1" },
 ] as const;
 
 for (const pageSpec of PAGES) {
@@ -142,7 +156,8 @@ test("reduced motion is respected", async ({ browser }) => {
   const created = await browser.newContext({ reducedMotion: "reduce" });
   const page = await created.newPage();
   await page.goto(slotPath);
-  await page.getByRole("heading", { name: "Why this date" }).waitFor();
+  // The token number is on the slot page in every state (this booking is still a request).
+  await page.locator("text=/#\\d{3}/").first().waitFor();
   const duration = await page.evaluate(() => {
     const probe = document.createElement("div");
     probe.className = "animate-pulse";

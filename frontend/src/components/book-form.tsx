@@ -8,7 +8,7 @@
 import { ArrowLeft, ArrowRight, Check, Copy, Minus, Plus, Search, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import type { FacilitatorBooking, FacilitatorBookingInput, VillageOption } from "@/shared";
+import type { Booking, BookingInput, VillageOption } from "@/shared";
 import { copyText } from "@/lib/api";
 import { useDates } from "@/lib/dates";
 import { Slider } from "./slider";
@@ -27,7 +27,7 @@ function addDays(iso: string, days: number): string {
 type Props = {
   villages: VillageOption[] | null;
   today: string | null;
-  onSubmit: (input: FacilitatorBookingInput) => Promise<FacilitatorBooking>;
+  onSubmit: (input: BookingInput & { farmerName: string }) => Promise<Booking>;
   /** Base for the shareable link; defaults to this site's origin. */
   origin?: string;
 };
@@ -47,7 +47,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
   const [readyDate, setReadyDate] = useState<string | null>(null);
   const [waitDays, setWaitDays] = useState(6);
   const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
-  const [booking, setBooking] = useState<FacilitatorBooking | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
 
   const readyOptions = useMemo(() => (today ? Array.from({ length: READY_CHOICES }, (_, index) => addDays(today, index)) : []), [today]);
   const village = villages?.find((item) => item.id === villageId);

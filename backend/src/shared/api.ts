@@ -55,6 +55,17 @@ export type PromiseHistoryItem = z.infer<typeof promiseHistoryItemSchema>;
 
 export const fieldStateSchema = z.enum(["waiting", "promised", "done"]);
 
+/**
+ * Where a farmer's turn stands: requested (no date yet) -> window -> firm (within two days) ->
+ * kept | broken. A broken promise is replaced by a new one at once (backend/src/domain/promises.ts).
+ */
+export const promiseStatusSchema = z.enum(["requested", "window", "firm", "kept", "broken"]);
+export type PromiseStatus = z.infer<typeof promiseStatusSchema>;
+
+/** The one plain sentence under the date on a slot page (phrased by backend templates, en/pa/hi). */
+export const slotReasonCodeSchema = z.enum(["requested", "unplaced", "window", "firm_route", "firm", "moved", "kept", "broken_no_date"]);
+export type SlotReasonCode = z.infer<typeof slotReasonCodeSchema>;
+
 export const farmerFieldSchema = z.object({
   id: z.string(),
   token: z.number().int(),
@@ -66,9 +77,17 @@ export const farmerFieldSchema = z.object({
   waitingLimitDays: z.number().int(),
   burnDeadlineDate: z.string(),
   state: fieldStateSchema,
+  status: promiseStatusSchema,
   promise: promiseViewSchema.nullable(),
   plannedDate: z.string().nullable(),
   fieldsAhead: z.number().int().nullable(),
+  // 1 = next in line. Null until a published plan places the field.
+  queuePosition: z.number().int().nullable(),
+  // For a firm date: which machine comes, and which stop of its day this field is.
+  visit: z.object({ machineName: z.string(), stop: z.number().int(), stops: z.number().int() }).nullable(),
+  reason: z.object({ code: slotReasonCodeSchema, text: z.string() }),
+  // The farmer said "I cannot wait longer"; the operator's next plan decides the new date.
+  soonerRequested: z.boolean(),
   history: z.array(promiseHistoryItemSchema),
   notice: z
     .object({ kind: z.enum(["broken", "firmed", "moved_earlier"]), at: z.string() })
@@ -116,6 +135,8 @@ export type QueueItem = z.infer<typeof queueItemSchema>;
 
 export const laneStopSchema = z.object({
   fieldId: z.string(),
+  // Against this plan's day: at_risk = after the farmer's last waiting day, tight = within a day of it.
+  risk: riskSchema,
   token: z.number().int(),
   farmerName: z.string(),
   villageName: z.string(),
@@ -152,63 +173,99 @@ export const laneSchema = z.object({
 });
 export type Lane = z.infer<typeof laneSchema>;
 
-export const replanSummarySchema = z.object({
-  at: z.string(),
-  cause: z.enum(["breakdown", "machine_back", "rain", "manual_move", "new_request", "farmer_update"]),
-  machineName: z.string().nullable(),
-  moved: z.array(
-    z.object({
-      fieldId: z.string(),
-      token: z.number().int(),
-      farmerName: z.string(),
-      fromDate: z.string().nullable(),
-      toDate: z.string().nullable(),
-    }),
-  ),
-  broken: z.array(
-    z.object({
-      fieldId: z.string(),
-      token: z.number().int(),
-      farmerName: z.string(),
-      previous: promiseViewSchema.nullable(),
-      next: promiseViewSchema.nullable(),
-    }),
-  ),
-});
-export type ReplanSummary = z.infer<typeof replanSummarySchema>;
+export const planCauseSchema = z.enum(["generate", "breakdown", "machine_back", "rain", "manual_move", "farmer_update"]);
+export type PlanCause = z.infer<typeof planCauseSchema>;
 
+/**
+ * A plan version: a draft until the operator approves it, which publishes it to farmers.
+ * "publishing" lasts only while approval writes the promises (or until the next request finishes
+ * a publish that a crash interrupted).
+ */
+export const planSummarySchema = z.object({
+  version: z.number().int(),
+  status: z.enum(["draft", "publishing", "approved"]),
+  planDate: z.string(),
+  createdAt: z.string(),
+  approvedAt: z.string().nullable(),
+  approvedBy: z.string().nullable(),
+  cause: planCauseSchema,
+  causeMachineName: z.string().nullable(),
+});
+export type PlanSummary = z.infer<typeof planSummarySchema>;
+
+const fieldRefSchema = z.object({ fieldId: z.string(), token: z.number().int(), farmerName: z.string(), villageName: z.string() });
+
+/** What approving a draft does (or what approving it did), field by field. */
+export const planChangesViewSchema = z.object({
+  promised: z.array(fieldRefSchema.extend({ promise: promiseViewSchema })),
+  firmed: z.array(fieldRefSchema.extend({ date: z.string() })),
+  moved: z.array(fieldRefSchema.extend({ fromDate: z.string().nullable(), toDate: z.string().nullable() })),
+  broken: z.array(fieldRefSchema.extend({ previous: promiseViewSchema, next: promiseViewSchema.nullable() })),
+  rePromised: z.array(fieldRefSchema.extend({ previous: promiseViewSchema, next: promiseViewSchema })),
+  unplaced: z.array(fieldRefSchema),
+});
+export type PlanChangesView = z.infer<typeof planChangesViewSchema>;
+
+export const solverViewSchema = z.object({
+  status: z.enum(["optimal", "feasible", "fallback"]),
+  mode: z.enum(["normal", "minimal_break"]),
+  wallSeconds: z.number(),
+  maxDelayVsQueueDays: z.number().int(),
+  fieldsBeyondFairnessK: z.number().int(),
+  // When promises break: true if the planner proved no plan could break fewer.
+  breaksProvenMinimal: z.boolean().nullable(),
+});
+
+/** /operator: the published plan the machines follow, plus anything waiting for a decision. */
 export const operatorBoardSchema = z.object({
   chc: z.object({ id: z.string(), name: z.string() }),
   today: z.string(),
-  planDate: z.string(),
-  plan: z.object({
-    status: z.enum(["proposed", "approved"]),
-    version: z.number().int(),
-    approvedAt: z.string().nullable(),
-    approvedBy: z.string().nullable(),
-    firmingCount: z.number().int(),
-  }),
+  planDate: z.string().nullable(),
+  published: planSummarySchema.nullable(),
+  // A draft newer than the published plan, waiting on /operator/plan.
+  draft: planSummarySchema.extend({ changeCount: z.number().int(), brokenCount: z.number().int() }).nullable(),
+  // Requested fields that no plan covers yet (booked after the latest plan was made).
+  newRequests: z.number().int(),
   counts: z.object({
     machinesWorking: z.number().int(),
     machinesTotal: z.number().int(),
     promisesOpen: z.number().int(),
     promisesOnTrack: z.number().int(),
     burnRisk: z.number().int(),
-    unplanned: z.number().int(),
+    requested: z.number().int(),
     brokenThisSeason: z.number().int(),
   }),
   lanes: z.array(laneSchema),
   atRisk: z.array(queueItemSchema),
-  lastReplan: replanSummarySchema.nullable(),
-  solver: z.object({
-    status: z.enum(["optimal", "feasible", "fallback"]),
-    mode: z.enum(["normal", "minimal_break"]),
-    wallSeconds: z.number(),
-    maxDelayVsQueueDays: z.number().int(),
-    fieldsBeyondFairnessK: z.number().int(),
-  }),
+  solver: solverViewSchema.nullable(),
 });
 export type OperatorBoard = z.infer<typeof operatorBoardSchema>;
+
+/** /operator/plan: the newest plan (usually a draft), what approving it does, and how to change it. */
+export const operatorPlanSchema = z.object({
+  chc: z.object({ id: z.string(), name: z.string() }),
+  today: z.string(),
+  plan: planSummarySchema.nullable(),
+  changes: planChangesViewSchema.nullable(),
+  pins: z.array(z.object({ fieldId: z.string(), token: z.number().int(), farmerName: z.string(), machineName: z.string(), date: z.string() })),
+  lanes: z.array(laneSchema),
+  newRequests: z.number().int(),
+  moveOptions: z.object({
+    machines: z.array(z.object({ id: z.string(), name: z.string(), downDates: z.array(z.string()) })),
+    dates: z.array(z.string()),
+    rainDates: z.array(z.string()),
+  }),
+  solver: solverViewSchema.nullable(),
+});
+export type OperatorPlan = z.infer<typeof operatorPlanSchema>;
+
+/** The operator moves a field to a machine and day; the engine re-plans everything else around it. */
+export const moveInputSchema = z.object({
+  fieldId: z.string().min(1),
+  machineId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type MoveInput = z.infer<typeof moveInputSchema>;
 
 export const whySchema = z.object({
   fieldId: z.string(),
@@ -238,18 +295,20 @@ export const publicSummarySchema = z.object({
 });
 export type PublicSummary = z.infer<typeof publicSummarySchema>;
 
-/** A facilitator books a field for a farmer who may have no account (the farmer gets a slot link). */
-export const facilitatorBookingInputSchema = fieldRequestInputSchema.extend({
-  farmerName: z.string().trim().min(1).max(80),
-  waitingLimitDays: z.number().int().min(3).max(10),
+/**
+ * POST /fields. A farmer books for themselves; a facilitator books for a farmer who may have no
+ * account and must give the farmer's name. Either way the answer carries the farmer's slot link.
+ */
+export const bookingInputSchema = fieldRequestInputSchema.extend({
+  farmerName: z.string().trim().min(1).max(80).optional(),
 });
-export type FacilitatorBookingInput = z.infer<typeof facilitatorBookingInputSchema>;
+export type BookingInput = z.infer<typeof bookingInputSchema>;
 
 export const slotLinkSchema = z.object({ token: z.string(), path: z.string() });
 export type SlotLink = z.infer<typeof slotLinkSchema>;
 
-export const facilitatorBookingSchema = z.object({ field: farmerFieldSchema, slot: slotLinkSchema });
-export type FacilitatorBooking = z.infer<typeof facilitatorBookingSchema>;
+export const bookingSchema = z.object({ field: farmerFieldSchema, slot: slotLinkSchema });
+export type Booking = z.infer<typeof bookingSchema>;
 
 /** "I cannot wait longer": a farmer shortens how long they can wait after harvest. */
 export const waitingLimitInputSchema = z.object({ waitingLimitDays: z.number().int().min(1).max(30) });

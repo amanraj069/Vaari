@@ -19,11 +19,14 @@ import {
   StoreConflictError,
   type ChcRecord,
   type FarmerRecord,
+  type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
   type MachineRecord,
+  type PlanChanges,
   type PlanRecord,
   type PromiseRecord,
+  type PublishWrites,
   type UserRecord,
   type VaariStore,
   type WorkLogRecord,
@@ -130,6 +133,24 @@ export class DynamoStore implements VaariStore {
   async putField(field: FieldRecord) {
     await this.put("fields", withoutNullKeys({ ...omit(field, ["id"]), fieldId: field.id }, ["bookedBy"]));
   }
+  async setFieldPlan(chcId: string, update: FieldPlanUpdate) {
+    try {
+      await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("fields"),
+          Key: { chcId, fieldId: update.fieldId },
+          // A field removed or sown since the plan was approved is left alone.
+          ConditionExpression: "attribute_exists(fieldId) AND #state <> :done",
+          UpdateExpression: "SET plannedDay = :day, plannedMachineId = :machine, #state = :state REMOVE soonerRequestedAt",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: { ":done": "done", ":day": update.plannedDay, ":machine": update.plannedMachineId, ":state": update.state },
+        }),
+      );
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return;
+      throw error;
+    }
+  }
   async listFieldsByFarmer(chcId: string, farmerId: string) {
     // A farmer has a handful of fields inside one CHC partition: query the partition, filter by farmer.
     const items = await this.queryPartition("fields", chcId, {
@@ -181,6 +202,28 @@ export class DynamoStore implements VaariStore {
     const item = (page.Items as Item[] | undefined)?.[0];
     return item ? fromPlanItem(item) : null;
   }
+  async latestApprovedPlan(chcId: string) {
+    // Newest first, filtered to approved. DynamoDB applies Limit before the filter, so page until
+    // one turns up (a CHC has tens of plan versions a season; usually the first page has it).
+    let startKey: Item | undefined;
+    do {
+      const page = await this.documents.send(
+        new QueryCommand({
+          TableName: this.table("plans"),
+          KeyConditionExpression: "chcId = :chc",
+          FilterExpression: "#status = :approved",
+          ExpressionAttributeNames: { "#status": "status" },
+          ExpressionAttributeValues: { ":chc": chcId, ":approved": "approved" },
+          ScanIndexForward: false,
+          ExclusiveStartKey: startKey,
+        }),
+      );
+      const item = (page.Items as Item[] | undefined)?.[0];
+      if (item) return fromPlanItem(item);
+      startKey = page.LastEvaluatedKey as Item | undefined;
+    } while (startKey);
+    return null;
+  }
   async createPlan(plan: PlanRecord) {
     try {
       await this.documents.send(
@@ -195,23 +238,56 @@ export class DynamoStore implements VaariStore {
       throw error;
     }
   }
-  async approvePlan(chcId: string, planDate: string, version: number, approvedBy: string, approvedAt: string) {
+  async beginPublish(
+    chcId: string,
+    planDate: string,
+    version: number,
+    approval: { approvedBy: string; approvedAt: string; changes: PlanChanges; publish: PublishWrites },
+  ) {
     try {
       const result = await this.documents.send(
         new UpdateCommand({
           TableName: this.table("plans"),
           Key: { chcId, planKey: planKey(planDate, version) },
-          // Only a proposed plan at exactly this version can be approved, once.
-          ConditionExpression: "attribute_exists(planKey) AND #status = :proposed AND #version = :version",
-          UpdateExpression: "SET #status = :approved, approvedAt = :at, approvedBy = :by, firmingFieldIds = :none",
+          // Only a draft at exactly this version can start publishing, once.
+          ConditionExpression: "attribute_exists(planKey) AND #status = :draft AND #version = :version",
+          UpdateExpression: "SET #status = :publishing, approvedAt = :at, approvedBy = :by, changes = :changes, publish = :publish",
           ExpressionAttributeNames: { "#status": "status", "#version": "version" },
-          ExpressionAttributeValues: { ":proposed": "proposed", ":approved": "approved", ":version": version, ":at": approvedAt, ":by": approvedBy, ":none": [] },
+          ExpressionAttributeValues: {
+            ":draft": "draft",
+            ":publishing": "publishing",
+            ":version": version,
+            ":at": approval.approvedAt,
+            ":by": approval.approvedBy,
+            ":changes": approval.changes,
+            ":publish": approval.publish,
+          },
           ReturnValues: "ALL_NEW",
         }),
       );
       return fromPlanItem(result.Attributes as Item);
     } catch (error) {
-      if (error instanceof ConditionalCheckFailedException) throw new StoreConflictError("plan is not a proposed plan at that version");
+      if (error instanceof ConditionalCheckFailedException) throw new StoreConflictError("plan is not a draft at that version");
+      throw error;
+    }
+  }
+  async completePublish(chcId: string, planDate: string, version: number) {
+    try {
+      const result = await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("plans"),
+          Key: { chcId, planKey: planKey(planDate, version) },
+          // Publishing -> approved; repeating it on an approved plan changes nothing.
+          ConditionExpression: "attribute_exists(planKey) AND #status IN (:publishing, :approved)",
+          UpdateExpression: "SET #status = :approved",
+          ExpressionAttributeNames: { "#status": "status" },
+          ExpressionAttributeValues: { ":publishing": "publishing", ":approved": "approved" },
+          ReturnValues: "ALL_NEW",
+        }),
+      );
+      return fromPlanItem(result.Attributes as Item);
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) throw new StoreConflictError("plan is not being published");
       throw error;
     }
   }
@@ -290,13 +366,23 @@ function fromMachineItem(item: Item): MachineRecord {
   return { ...omit(item, ["machineId"]), id: item.machineId } as MachineRecord;
 }
 function fromFieldItem(item: Item): FieldRecord {
-  return { ...omit(item, ["fieldId"]), id: item.fieldId, bookedBy: item.bookedBy ?? null } as FieldRecord;
+  return { ...omit(item, ["fieldId"]), id: item.fieldId, bookedBy: item.bookedBy ?? null, soonerRequestedAt: item.soonerRequestedAt ?? null } as FieldRecord;
 }
 function fromPromiseItem(item: Item): PromiseRecord {
   return omit(item, ["promiseKey"]) as PromiseRecord;
 }
+/** Plans written before drafts existed said "proposed" and carried no changes; read them as drafts. */
 function fromPlanItem(item: Item): PlanRecord {
-  return { ...omit(item, ["planKey"]), lastReplan: item.lastReplan ?? null } as PlanRecord;
+  const plan = omit(item, ["planKey", "lastReplan", "firmingFieldIds"]);
+  return {
+    ...plan,
+    status: plan.status === "proposed" ? "draft" : plan.status,
+    cause: plan.cause ?? "generate",
+    causeMachineId: plan.causeMachineId ?? null,
+    pins: plan.pins ?? [],
+    changes: plan.changes ?? { promised: [], firmed: [], moved: [], broken: [], rePromised: [], unplaced: [] },
+    publish: plan.publish ?? null,
+  } as PlanRecord;
 }
 function fromUserItem(item: Item): UserRecord {
   return { ...item, chcId: item.chcId ?? null, farmerId: item.farmerId ?? null } as UserRecord;

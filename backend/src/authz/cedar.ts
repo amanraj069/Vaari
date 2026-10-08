@@ -15,9 +15,11 @@ export type Action =
   | "RequestField"
   | "ViewBoard"
   | "ViewQueue"
+  | "GeneratePlan"
+  | "MovePlan"
   | "ApprovePlan"
   | "ReportBreakdown"
-  | "MovePlan"
+  | "MarkSown"
   | "ResetDemo"
   | "ViewFarmerContact"
   | "ViewAggregates";

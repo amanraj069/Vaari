@@ -11,7 +11,8 @@ import { ZodError } from "zod";
 import type { Config } from "./config";
 import { AuthError, type TokenVerifier } from "./auth/tokens";
 import { EngineError, type EngineClient } from "./engine/client";
-import { ConflictError, NotFoundError, Planner } from "./domain/planner";
+import { ConflictError, ImpossibleMoveError, NotFoundError, Planner } from "./domain/planner";
+import { PromiseTransitionError } from "./domain/promises";
 import type { VaariStore } from "./store/types";
 import { ForbiddenError, buildRoutes } from "./routes";
 
@@ -96,6 +97,10 @@ export function createApp(dependencies: AppDependencies) {
       response.status(404).json({ error: "NOT_FOUND", message: error.message });
     } else if (error instanceof ConflictError) {
       response.status(409).json({ error: "CONFLICT", message: error.message });
+    } else if (error instanceof PromiseTransitionError) {
+      response.status(409).json({ error: "PROMISE_RULE", message: error.message });
+    } else if (error instanceof ImpossibleMoveError) {
+      response.status(422).json({ error: "IMPOSSIBLE_MOVE", message: error.message });
     } else if (error instanceof EngineError) {
       request.log.error({ code: error.code, message: error.message }, "engine error");
       response.status(error.code === "IMPOSSIBLE_PIN" ? 422 : 502).json({ error: error.code });

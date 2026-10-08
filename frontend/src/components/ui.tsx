@@ -3,7 +3,7 @@
  * Risk and promise state always show an icon and a word, never colour alone.
  */
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck2, CalendarRange, CheckCheck, CircleDashed, Clock3, Loader2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, CalendarRange, CheckCheck, CircleDashed, Clock3, FilePenLine, Hourglass, Loader2, ShieldCheck } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
 type Variant = "primary" | "accent" | "secondary" | "quiet";
@@ -28,17 +28,19 @@ export function Card({ className = "", children }: { className?: string; childre
   return <div className={`rounded-card border border-line bg-surface ${className}`}>{children}</div>;
 }
 
-export type PillKind = "firm" | "window" | "safe" | "tight" | "at_risk" | "unplanned" | "approved" | "proposed" | "done";
+export type PillKind = "firm" | "window" | "requested" | "safe" | "tight" | "at_risk" | "unplanned" | "approved" | "draft" | "done";
 
 const PILL: Record<PillKind, { className: string; Icon: typeof ShieldCheck }> = {
   firm: { className: "bg-field-soft text-field border-field/30", Icon: CalendarCheck2 },
   window: { className: "bg-sky-soft text-sky border-sky/30", Icon: CalendarRange },
+  // Waiting for the operator's next plan: not a risk, so not ember.
+  requested: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: Hourglass },
   safe: { className: "bg-field-soft text-field border-field/30", Icon: ShieldCheck },
   tight: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: Clock3 },
   at_risk: { className: "bg-ember-soft text-ember-deep border-ember/40", Icon: AlertTriangle },
   unplanned: { className: "bg-ember-soft text-ember-deep border-ember/40", Icon: CircleDashed },
   approved: { className: "bg-field-soft text-field border-field/30", Icon: ShieldCheck },
-  proposed: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: Clock3 },
+  draft: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: FilePenLine },
   done: { className: "bg-field-soft text-field border-field/30", Icon: CheckCheck },
 };
 

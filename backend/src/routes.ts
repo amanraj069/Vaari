@@ -7,11 +7,11 @@ import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import {
+  bookingInputSchema,
   dateToDay,
-  facilitatorBookingInputSchema,
   waitingLimitInputSchema,
-  fieldRequestInputSchema,
   localeSchema,
+  moveInputSchema,
   onboardingInputSchema,
   roleSchema,
   type ChcOption,
@@ -25,7 +25,7 @@ import { authorize, type Action, type Resource } from "./authz/cedar";
 import { DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
 import type { FieldRecord } from "./store/types";
-import { buildBoard, buildBookedFields, buildFarmerField, buildFarmerHome, buildQueue } from "./domain/views";
+import { buildBoard, buildBookedFields, buildFarmerHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
 import { mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { reasonText } from "./explain/templates";
 
@@ -52,6 +52,9 @@ function requireChc(principal: Principal): string {
   if (!principal.chcId) throw new ForbiddenError(["principal has no CHC"]);
   return principal.chcId;
 }
+
+/** The language for server-phrased sentences (?lang=en|pa|hi; English if missing or unknown). */
+const localeOf = (request: Request): Locale => localeSchema.catch("en").parse(request.query.lang);
 
 export function buildRoutes(dependencies: AppDependencies): Router {
   // Read store and planner through `dependencies` on every request: a demo reset swaps them.
@@ -220,7 +223,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const { principal } = request;
       if (principal.role !== "farmer" || !principal.farmerId) throw new ForbiddenError(["not a farmer"]);
-      const home = await buildFarmerHome(dependencies.planner, dependencies.store, principal.farmerId, requireChc(principal));
+      const home = await buildFarmerHome(dependencies.planner, dependencies.store, principal.farmerId, requireChc(principal), localeOf(request));
       for (const field of home.fields) {
         requireCedar(principal, "ViewField", { type: "Field", id: field.id, chcId: requireChc(principal), farmerId: principal.farmerId, bookedBy: null });
       }
@@ -228,29 +231,45 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // A booking. A farmer books for themselves; a facilitator books for a farmer who may have no
+  // account (a farmer record is created) and must give the farmer's name. The field is stored as a
+  // request at once; it gets a date when the operator publishes a plan. The answer carries the
+  // farmer's slot link either way.
   router.post(
-    "/farmer/requests",
+    "/fields",
     authenticate,
     asyncHandler(async (request, response) => {
       const { principal } = request;
       const chcId = requireChc(principal);
       requireCedar(principal, "RequestField", { type: "Chc", id: chcId });
-      if (principal.role !== "farmer" || !principal.farmerId) throw new ForbiddenError(["only farmers book for themselves here"]);
-      const input = fieldRequestInputSchema.parse(request.body);
+      const input = bookingInputSchema.parse(request.body);
       const today = dependencies.planner.today();
       const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
       if (readyDay < today - 7 || readyDay > today + 30) {
         response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
         return;
       }
-      const farmer = await dependencies.store.getFarmer(principal.farmerId);
-      const field = await dependencies.planner.requestField(
-        chcId,
-        { farmerId: principal.farmerId, farmerName: farmer?.name ?? principal.name, bookedBy: null },
-        input,
-      );
-      const allFields = await dependencies.store.listFields(chcId);
-      response.status(201).json(await buildFarmerField(dependencies.planner, dependencies.store, field, allFields));
+      let farmer: { farmerId: string; farmerName: string; bookedBy: string | null };
+      if (principal.role === "facilitator") {
+        if (!input.farmerName) {
+          response.status(400).json({ error: "FARMER_NAME_REQUIRED" });
+          return;
+        }
+        const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
+        await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: "", language: "pa", facilitatorId: principal.userId });
+        farmer = { farmerId, farmerName: input.farmerName, bookedBy: principal.userId };
+      } else if (principal.role === "farmer" && principal.farmerId) {
+        const record = await dependencies.store.getFarmer(principal.farmerId);
+        farmer = { farmerId: principal.farmerId, farmerName: record?.name ?? principal.name, bookedBy: null };
+      } else {
+        throw new ForbiddenError(["only farmers and facilitators book fields"]);
+      }
+      const field = await dependencies.planner.requestField(chcId, farmer, input);
+      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
+      response.status(201).json({
+        field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
+        slot: { token, path: `/slot/${token}` },
+      });
     }),
   );
 
@@ -287,7 +306,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     authenticate,
     asyncHandler(async (request, response) => {
       const { principal } = request;
-      const locale: Locale = localeSchema.catch("en").parse(request.query.lang);
+      const locale = localeOf(request);
       // Fields are keyed by (chcId, fieldId): the caller's CHC makes this a direct GetItem.
       const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
       if (!field) throw new NotFoundError("field not found");
@@ -318,8 +337,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const { chcId, fieldId } = await verifySlotToken(config, String(request.params.token));
       const field = await dependencies.store.getField(chcId, fieldId);
       if (!field) throw new NotFoundError("field not found");
-      const allFields = await dependencies.store.listFields(chcId);
-      response.json(await buildFarmerField(dependencies.planner, dependencies.store, field, allFields));
+      response.json(await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)));
     }),
   );
 
@@ -336,7 +354,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     slotLimiter,
     asyncHandler(async (request, response) => {
       const field = await fieldFromSlot(String(request.params.token));
-      response.json(await explainField(field, localeSchema.catch("en").parse(request.query.lang)));
+      response.json(await explainField(field, localeOf(request)));
     }),
   );
 
@@ -347,41 +365,11 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const field = await fieldFromSlot(String(request.params.token));
       const { waitingLimitDays } = waitingLimitInputSchema.parse(request.body);
       const updated = await dependencies.planner.shortenWaitingLimit(field.chcId, field.id, waitingLimitDays);
-      const allFields = await dependencies.store.listFields(field.chcId);
-      response.json(await buildFarmerField(dependencies.planner, dependencies.store, updated, allFields));
+      response.json(await buildOneFarmerField(dependencies.planner, dependencies.store, updated, localeOf(request)));
     }),
   );
 
   // --- Facilitator --------------------------------------------------------------------------
-
-  // A facilitator books for a farmer without an account; the answer includes the farmer's slot link.
-  router.post(
-    "/facilitator/fields",
-    authenticate,
-    asyncHandler(async (request, response) => {
-      const { principal } = request;
-      if (principal.role !== "facilitator") throw new ForbiddenError(["not a facilitator"]);
-      const chcId = requireChc(principal);
-      requireCedar(principal, "RequestField", { type: "Chc", id: chcId });
-      const input = facilitatorBookingInputSchema.parse(request.body);
-      const today = dependencies.planner.today();
-      const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
-      if (readyDay < today - 7 || readyDay > today + 30) {
-        response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
-        return;
-      }
-      const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
-      await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: "", language: "pa", facilitatorId: principal.userId });
-      const field = await dependencies.planner.requestField(
-        chcId,
-        { farmerId, farmerName: input.farmerName, bookedBy: principal.userId },
-        { villageId: input.villageId, acres: input.acres, readyDate: input.readyDate, waitingLimitDays: input.waitingLimitDays },
-      );
-      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
-      const allFields = await dependencies.store.listFields(chcId);
-      response.status(201).json({ field: await buildFarmerField(dependencies.planner, dependencies.store, field, allFields), slot: { token, path: `/slot/${token}` } });
-    }),
-  );
 
   // Fields this facilitator booked for farmers, via the booked-by-index; Cedar re-checks each one.
   router.get(
@@ -422,6 +410,44 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // The planning workspace: the newest plan (usually a draft), what approving it does, the moves.
+  router.get(
+    "/operator/plan",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "ViewBoard", { type: "Chc", id: chcId });
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // Runs the engine and stores a DRAFT. Nothing a farmer sees changes until it is approved.
+  router.post(
+    "/operator/plan/generate",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "GeneratePlan", { type: "Chc", id: chcId });
+      await dependencies.planner.generatePlan(chcId);
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // Moves one field to a machine and day; the engine re-plans everyone else around it (new draft).
+  router.post(
+    "/operator/plan/move",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "MovePlan", { type: "Chc", id: chcId });
+      const input = moveInputSchema.parse(request.body);
+      await dependencies.planner.moveField(chcId, input.fieldId, input.machineId, dependencies.planner.isoToDay(input.date));
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // Publishes the draft the operator reviewed: promises are created, firmed or (only in
+  // minimal-break mode) broken now, and farmers see them on their slot links.
   router.post(
     "/operator/plan/approve",
     authenticate,
@@ -429,11 +455,24 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ApprovePlan", { type: "Chc", id: chcId });
       const { version } = z.object({ version: z.number().int() }).parse(request.body);
-      const plan = await dependencies.planner.approvePlan(chcId, version, request.principal.name);
-      response.json({ status: plan.status, version: plan.version, approvedAt: plan.approvedAt });
+      await dependencies.planner.approvePlan(chcId, version, request.principal.name);
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
     }),
   );
 
+  // The machine has sown a field: its promise is kept (or, if late, broken).
+  router.post(
+    "/operator/fields/:fieldId/sown",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "MarkSown", { type: "Chc", id: chcId });
+      const field = await dependencies.planner.markSown(chcId, String(request.params.fieldId));
+      response.json(await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)));
+    }),
+  );
+
+  // A breakdown (or a machine back) makes a new draft at once; the operator reviews and approves it.
   router.post(
     "/operator/machines/:machineId/down",
     authenticate,
@@ -442,7 +481,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       requireCedar(request.principal, "ReportBreakdown", { type: "Chc", id: chcId });
       const { days } = z.object({ days: z.number().int().min(1).max(5).default(1) }).parse(request.body ?? {});
       await dependencies.planner.setMachineDown(chcId, String(request.params.machineId), days);
-      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
     }),
   );
 
@@ -453,7 +492,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ReportBreakdown", { type: "Chc", id: chcId });
       await dependencies.planner.setMachineBack(chcId, String(request.params.machineId));
-      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
     }),
   );
 

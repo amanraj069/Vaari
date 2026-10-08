@@ -2,9 +2,9 @@
 
 /** /book: a facilitator books fields for farmers and keeps track of them. */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { z } from "zod";
-import { facilitatorBookingSchema, publicSummarySchema, queueItemSchema, slotLinkSchema, villageOptionSchema, type QueueItem } from "@/shared";
+import { bookingSchema, publicSummarySchema, queueItemSchema, slotLinkSchema, villageOptionSchema, type QueueItem } from "@/shared";
 import { BookForm } from "@/components/book-form";
 import { BookedList, type BookedListState } from "@/components/booked-list";
 import { SimulatedBadge } from "@/components/simulated-badge";
@@ -17,6 +17,7 @@ const bookedSchema = z.object({ today: z.string(), items: z.array(queueItemSchem
 
 export default function BookPage() {
   const t = useTranslations("book");
+  const locale = useLocale();
   const toast = useToast();
   const queryClient = useQueryClient();
   const villages = useQuery({ queryKey: ["villages"], queryFn: () => api("villages", z.array(villageOptionSchema)) });
@@ -53,7 +54,7 @@ export default function BookPage() {
             villages={villages.data ?? null}
             today={summary.data?.today ?? null}
             onSubmit={async (input) => {
-              const booking = await api("facilitator/fields", facilitatorBookingSchema, { method: "POST", body: JSON.stringify(input) });
+              const booking = await api(`fields?lang=${locale}`, bookingSchema, { method: "POST", body: JSON.stringify(input) });
               queryClient.invalidateQueries({ queryKey: ["facilitator-fields"] });
               return booking;
             }}
