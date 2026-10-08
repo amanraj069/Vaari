@@ -9,12 +9,12 @@ import type { ComponentProps, ReactNode } from "react";
 type Variant = "primary" | "accent" | "secondary" | "quiet";
 const VARIANT: Record<Variant, string> = {
   primary: "bg-ink text-paper hover:bg-ink/90 border border-ink",
-  accent: "bg-wheat text-ink hover:bg-wheat/90 border border-wheat-deep/30",
+  accent: "bg-wheat text-on-wheat hover:bg-wheat/90 border border-wheat-deep/30",
   secondary: "bg-surface text-ink border border-line-strong hover:border-ink/50",
   quiet: "bg-transparent text-ink hover:bg-ink/5 border border-transparent",
 };
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-[8px] px-4 min-h-11 font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-control px-5 min-h-11 font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function Button({ variant = "primary", className = "", ...props }: ComponentProps<"button"> & { variant?: Variant }) {
   return <button className={`${BASE} ${VARIANT[variant]} ${className}`} {...props} />;
@@ -25,7 +25,7 @@ export function ButtonLink({ variant = "primary", className = "", ...props }: Co
 }
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
-  return <div className={`rounded-[8px] border border-line bg-surface ${className}`}>{children}</div>;
+  return <div className={`rounded-card border border-line bg-surface ${className}`}>{children}</div>;
 }
 
 export type PillKind = "firm" | "window" | "safe" | "tight" | "at_risk" | "unplanned" | "approved" | "proposed";
@@ -63,7 +63,7 @@ export function Spinner({ label }: { label: string }) {
 
 export function StateMessage({ title, body, action, tone = "neutral" }: { title: string; body?: string; action?: ReactNode; tone?: "neutral" | "error" }) {
   return (
-    <div className={`rounded-[8px] border p-6 text-center ${tone === "error" ? "border-ember/40 bg-ember-soft/40" : "border-line bg-surface"}`}>
+    <div className={`rounded-card border p-6 text-center ${tone === "error" ? "border-ember/40 bg-ember-soft/40" : "border-line bg-surface"}`}>
       <p className="font-display text-xl">{title}</p>
       {body ? <p className="mx-auto mt-2 max-w-md text-ink-muted">{body}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
@@ -72,5 +72,5 @@ export function StateMessage({ title, body, action, tone = "neutral" }: { title:
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div aria-hidden className={`animate-pulse rounded-[8px] bg-line/60 ${className}`} />;
+  return <div aria-hidden className={`animate-pulse rounded-card bg-line/60 ${className}`} />;
 }

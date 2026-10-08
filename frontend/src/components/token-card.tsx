@@ -39,7 +39,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
   const promise = field.promise;
 
   return (
-    <article className="overflow-hidden rounded-[8px] border border-line bg-surface">
+    <article className="overflow-hidden rounded-card border border-line bg-surface">
       {field.notice?.kind === "broken" ? (
         <div className="flex items-start gap-2 border-b border-ember/30 bg-ember-soft/60 px-5 py-3 text-ember-deep">
           <BellRing aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
@@ -54,7 +54,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
 
       <div className="flex items-start justify-between gap-4 px-5 pt-5">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-muted">{t("token")}</p>
+          <p className="text-xs font-medium eyebrow text-ink-muted">{t("token")}</p>
           <p className="font-display text-4xl leading-none tabular">#{String(field.token).padStart(3, "0")}</p>
         </div>
         {promise ? (
@@ -113,14 +113,14 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
           type="button"
           aria-expanded={whyOpen}
           onClick={() => setWhyOpen((open) => !open)}
-          className="inline-flex min-h-12 items-center gap-2 rounded-[8px] border border-line-strong bg-surface px-4 text-base font-medium hover:border-ink/50"
+          className="inline-flex min-h-12 items-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-base font-medium hover:border-ink/50"
         >
           <Sparkles aria-hidden className="size-5 text-wheat-deep" strokeWidth={1.75} />
           {t("why")}
           <ChevronDown aria-hidden className={`size-4 transition-transform ${whyOpen ? "rotate-180" : ""}`} strokeWidth={1.75} />
         </button>
         {operatorPhone ? (
-          <a href={`tel:${operatorPhone.replace(/\s/g, "")}`} className="inline-flex min-h-12 items-center gap-2 rounded-[8px] px-4 text-base text-ink-muted hover:text-ink">
+          <a href={`tel:${operatorPhone.replace(/\s/g, "")}`} className="inline-flex min-h-12 items-center gap-2 rounded-control px-4 text-base text-ink-muted hover:text-ink">
             <Phone aria-hidden className="size-5" strokeWidth={1.75} />
             {t("callOperator")}
           </a>
@@ -130,7 +130,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
       <AnimatePresence initial={false}>
         {whyOpen ? (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="mx-5 mt-3 rounded-[8px] bg-paper p-4">
+            <div className="mx-5 mt-3 rounded-control bg-paper p-4">
               {why.isPending ? (
                 <Spinner label={t("whyLoading")} />
               ) : why.isError ? (
