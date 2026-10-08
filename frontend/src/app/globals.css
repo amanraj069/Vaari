@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Dark mode is class-based, as in the intake project: ThemeProvider (and the inline script in
+   layout.tsx, before first paint) puts `dark` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Vaari design tokens (CLAUDE.md section 9). Quiet, warm, flat: paper not white, borders not
  * shadows, 8px corners. Ember means burn risk and nothing else. Wheat is a fill, never body text
@@ -16,6 +20,8 @@
   --color-wheat: #d9a22b;
   --color-wheat-soft: #f3e2b8;
   --color-wheat-deep: #8a5f12;
+  /* Text on a wheat fill stays dark in both themes (wheat is light in both). */
+  --color-on-wheat: #1b1a17;
   --color-field: #2f6b3f;
   --color-field-soft: #dcebdc;
   --color-ember: #c8452b;
@@ -31,16 +37,61 @@
   --color-lane-4: #5f8aa6;
   --color-lane-5: #a86f6f;
 
-  --font-display: var(--font-fraunces), "Georgia", serif;
+  /* Fraunces for Latin; browsers fall back glyph by glyph to the Noto Serif faces for Gurmukhi and Devanagari. */
+  --font-display: var(--font-fraunces), var(--font-serif-gurmukhi), var(--font-serif-devanagari), "Georgia", serif;
   --font-sans: var(--font-inter), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
 
-  --radius-card: 8px;
+  /* Radius scale: outer cards and panels, interactive controls, small pieces inside cards. */
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-chip: 8px;
   --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * Dark theme: the same tokens, redefined. Every utility (bg-paper, text-ink, bg-ink text-paper, …)
+ * flips without per-component dark: classes. Warm night tones rather than pure black, so the
+ * product keeps its paper-and-wheat character. Measured contrast on dark paper (#16140f) / surface
+ * (#1f1c16): ink 15.5/14.3, ink-muted 7.1/6.5, field 7.8/7.2, ember-deep 7.5/6.9, ember 5.7/5.2,
+ * wheat-deep 10.8/10.0, sky 8.2/7.6. on-wheat on wheat 8.6. All pass WCAG AA.
+ */
+html.dark {
+  color-scheme: dark;
+  --color-paper: #16140f;
+  --color-surface: #1f1c16;
+  --color-line: #332e25;
+  --color-line-strong: #4b4336;
+  --color-ink: #f1ebdf;
+  --color-ink-muted: #ab9f8c;
+  --color-wheat: #e2ae45;
+  --color-wheat-soft: #3a2e14;
+  --color-wheat-deep: #ecc068;
+  --color-field: #72b886;
+  --color-field-soft: #1d2d21;
+  --color-ember: #e5694c;
+  --color-ember-deep: #f2896f;
+  --color-ember-soft: #3b1f18;
+  --color-sky: #82b3d4;
+  --color-sky-soft: #1a2a35;
+  --color-lane-1: #86ad8c;
+  --color-lane-2: #a596c4;
+  --color-lane-3: #d1a46a;
+  --color-lane-4: #7ea9c4;
+  --color-lane-5: #c48b8b;
+}
+
+/* Hindi pages: try Devanagari before Gurmukhi, so shared marks like the danda (।) come from the
+   Devanagari face. */
+html:lang(hi) {
+  --font-display: var(--font-fraunces), var(--font-serif-devanagari), var(--font-serif-gurmukhi), "Georgia", serif;
 }
 
 @layer base {
   html {
     color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   body {
     background: var(--color-paper);
@@ -60,6 +111,16 @@
 }
 
 @layer utilities {
+  /* Small spaced capitals for Latin labels. Letter-spacing breaks the headline stroke that joins
+     Gurmukhi and Devanagari letters, and those scripts have no capitals, so both are dropped there. */
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+  :is(:lang(pa), :lang(hi)) .eyebrow {
+    text-transform: none;
+    letter-spacing: normal;
+  }
   .tabular {
     font-variant-numeric: tabular-nums;
   }

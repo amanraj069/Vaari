@@ -3,7 +3,8 @@
  * the farmers (invented names) and their fields. Village names and locations are real
  * (OpenStreetMap, data/derived/villages_sangrur.json). Harvest timing will be calibrated from NASA
  * FIRMS fire history in the simulator stage; until then ready days are spread around the demo day.
- * A fixed seed makes every reset produce the same season.
+ * A fixed seed makes every reset produce the same season. Seeding writes only the demo CHC's data
+ * and the four demo persona users (ids start with "demo-"); real users' profiles are never touched.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -60,7 +61,6 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   const random = seededRandom(SEED);
   const pick = <Item>(items: Item[]): Item => items[Math.floor(random() * items.length)]!;
   const villages = loadVillages(config);
-  await store.putVillages(villages);
 
   const baseVillage = villages.find((village) => village.name === "Balian");
   if (!baseVillage) throw new Error("Balian missing from data/derived/villages_sangrur.json");
@@ -80,10 +80,10 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   });
 
   const machines: MachineRecord[] = [
-    { chcId: DEMO_CHC_ID, id: "m1", name: "Super Seeder 1", kind: "super_seeder", hoursPerDay: 8, downDays: [], logs: [] },
-    { chcId: DEMO_CHC_ID, id: "m2", name: "Super Seeder 2", kind: "super_seeder", hoursPerDay: 8, downDays: [], logs: [] },
-    { chcId: DEMO_CHC_ID, id: "m3", name: "Super Seeder 3", kind: "super_seeder", hoursPerDay: 8, downDays: [], logs: [] },
-    { chcId: DEMO_CHC_ID, id: "m4", name: "Happy Seeder", kind: "happy_seeder", hoursPerDay: 8, downDays: [], logs: [] },
+    { chcId: DEMO_CHC_ID, id: "m1", name: "Super Seeder 1", kind: "super_seeder", hoursPerDay: 8, downDays: [] },
+    { chcId: DEMO_CHC_ID, id: "m2", name: "Super Seeder 2", kind: "super_seeder", hoursPerDay: 8, downDays: [] },
+    { chcId: DEMO_CHC_ID, id: "m3", name: "Super Seeder 3", kind: "super_seeder", hoursPerDay: 8, downDays: [] },
+    { chcId: DEMO_CHC_ID, id: "m4", name: "Happy Seeder", kind: "happy_seeder", hoursPerDay: 8, downDays: [] },
   ];
   for (const machine of machines) await store.putMachine(machine);
 

@@ -18,15 +18,17 @@
     "acres": "{acres, plural, one {# acre} other {# acres}}",
     "days": "{count, plural, one {# day} other {# days}}",
     "back": "Back",
-    "unreviewedLanguage": "Translation not yet reviewed by a speaker"
+    "unreviewedLanguage": "Translation not yet reviewed by a speaker",
+    "themeToDark": "Switch to dark mode",
+    "themeToLight": "Switch to light mode"
   },
   "landing": {
     "eyebrow": "For Punjab's paddy-to-wheat window",
     "heroTitle": "Every farmer gets a date for the machine. Nobody has to burn while waiting.",
-    "heroBody": "Vaari plans a Custom Hiring Centre's Super Seeders across a village cluster and gives each farmer a promised sowing date. When a machine breaks, it re-plans without silently breaking a promise.",
+    "heroBody": "Vaari plans the Super Seeders of a Custom Hiring Centre (a co-operative that rents out seeding machines) across a village cluster. A Super Seeder sows wheat straight through paddy stubble. Vaari gives each farmer a promised sowing date, and when a machine breaks, it re-plans without silently breaking a promise.",
     "tryFarmer": "Try as farmer",
     "tryOperator": "Try as operator",
-    "tryNote": "One click, no sign-up. Demo accounts on a simulated season.",
+    "tryNote": "One click, no sign-up.",
     "exampleLabel": "Example token",
     "rolesTitle": "Two people, one decision each",
     "farmerRoleTitle": "Jaswinder, farmer",
@@ -250,5 +252,28 @@
     "facilitator": "Village helper",
     "operator": "CHC operator",
     "officer": "Agriculture officer"
+  },
+  "timeline": {
+    "label": "Progress of this turn",
+    "booked": "Booked",
+    "planned": "Planned",
+    "onTheWay": "On the way",
+    "done": "Done",
+    "current": "current step",
+    "completed": "completed"
+  },
+  "nav": {
+    "plan": "Plan",
+    "queue": "Queue",
+    "myFields": "My fields",
+    "askDate": "Ask for a date",
+    "proof": "See the proof",
+    "signIn": "Sign in",
+    "mainNav": "Main",
+    "accountMenu": "Account",
+    "languageMenu": "Change language",
+    "goToMyPage": "Go to my page",
+    "demoAccount": "Demo account · simulated",
+    "setupPending": "Setup not finished"
   }
 }

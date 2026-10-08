@@ -14,7 +14,7 @@ let app: ReturnType<typeof createApp>;
 const bearer = (userId: string) => ({ authorization: `Bearer ${userId}` });
 
 beforeAll(async () => {
-  const { dependencies } = await buildRuntime();
+  const { dependencies } = await buildRuntime({ freshDemo: true });
   const store = dependencies.store;
   const stubVerifier: TokenVerifier = {
     async verify(token): Promise<Principal> {

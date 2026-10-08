@@ -18,7 +18,7 @@ async function login(role: string) {
 }
 
 beforeAll(async () => {
-  const { dependencies } = await buildRuntime();
+  const { dependencies } = await buildRuntime({ freshDemo: true });
   app = createApp(dependencies);
   await Promise.all(["farmer", "operator", "officer"].map(login));
 });
@@ -101,5 +101,12 @@ describe("core loop", () => {
       .send({ version: board.plan.version })
       .expect(200);
     expect(approved.body.status).toBe("approved");
+    // The conditional write on status and version lets an approval happen exactly once.
+    const again = await request(app)
+      .post("/operator/plan/approve")
+      .set("authorization", `Bearer ${tokens.operator}`)
+      .send({ version: board.plan.version })
+      .expect(409);
+    expect(again.body.error).toBe("CONFLICT");
   });
 });

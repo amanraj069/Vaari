@@ -3,11 +3,11 @@
  * what is real, and one click into the demo as a farmer or an operator.
  */
 import { CalendarCheck2, Cpu, Flame, Satellite, UserCheck } from "lucide-react";
-import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { DemoButton } from "@/components/demo-buttons";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { TopBar } from "@/components/top-bar";
+import { Timeline } from "@/components/timeline";
 import { Pill } from "@/components/ui";
 
 function ExampleToken() {
@@ -17,21 +17,23 @@ function ExampleToken() {
   const exampleDate = new Date("2026-11-01T00:00:00Z");
   return (
     <figure aria-label={t("exampleLabel")} className="relative mx-auto w-full max-w-sm">
-      <div className="absolute -right-2 -top-3 rotate-2 rounded-full border border-dashed border-ink-muted/50 bg-paper px-2 py-0.5 text-xs text-ink-muted">{t("exampleLabel")}</div>
-      <div className="ticket-notch rounded-[8px] border border-line bg-surface p-6">
+      <div className="absolute -top-3.5 right-6 z-10 rotate-2 whitespace-nowrap rounded-full border border-dashed border-ink-muted/60 bg-paper px-2.5 py-0.5 text-xs text-ink-muted">
+        {t("exampleLabel")}
+      </div>
+      <div className="ticket-notch rounded-card border border-line bg-surface p-7 sm:p-8">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-muted">{tf("token")}</p>
+            <p className="text-xs font-medium eyebrow text-ink-muted">{tf("token")}</p>
             <p className="font-display text-4xl leading-none tabular">#018</p>
           </div>
           <Pill kind="firm" size="lg">{tf("firm")}</Pill>
         </div>
-        <div className="my-5 border-t border-dashed border-line-strong" />
+        <div className="my-6 border-t border-dashed border-line-strong" />
         <p className="text-ink-muted">{tf("machineComes")}</p>
         <p className="font-display text-3xl">{format.dateTime(exampleDate, { weekday: "long", timeZone: "UTC" })}</p>
         <p className="font-display text-6xl leading-none tracking-tight">{format.dateTime(exampleDate, { day: "numeric", month: "short", timeZone: "UTC" })}</p>
-        <div className="mt-5 h-1.5 rounded-full bg-line">
-          <div className="ml-[8%] h-1.5 w-[70%] rounded-full bg-field" />
+        <div className="mt-8">
+          <Timeline current="planned" />
         </div>
       </div>
     </figure>
@@ -40,7 +42,6 @@ function ExampleToken() {
 
 export default function LandingPage() {
   const t = useTranslations("landing");
-  const tc = useTranslations("common");
   const steps = [
     { icon: Cpu, title: t("how1Title"), body: t("how1Body") },
     { icon: UserCheck, title: t("how2Title"), body: t("how2Body") },
@@ -48,25 +49,18 @@ export default function LandingPage() {
   ];
   return (
     <>
-      <TopBar>
-        <Link href="/proof" className="inline-flex min-h-9 items-center rounded-[8px] px-3 text-sm text-ink-muted hover:text-ink">
-          {t("proofLink")}
-        </Link>
-        <Link href="/signin" className="ml-auto inline-flex min-h-9 items-center rounded-[8px] px-3 text-sm text-ink-muted hover:text-ink">
-          {tc("signIn")}
-        </Link>
-      </TopBar>
+      <TopBar />
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 md:grid-cols-[1.2fr_1fr] md:pt-20">
+        <section className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 md:grid-cols-[1.2fr_1fr] md:gap-16 md:pb-28 md:pt-24">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.14em] text-wheat-deep">{t("eyebrow")}</p>
-            <h1 className="mt-3 font-display text-4xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">{t("heroTitle")}</h1>
-            <p className="mt-5 max-w-xl text-lg text-ink-muted">{t("heroBody")}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" />
-              <DemoButton role="operator" label={t("tryOperator")} />
+            <p className="text-sm font-medium eyebrow text-wheat-deep">{t("eyebrow")}</p>
+            <h1 className="mt-5 font-display text-4xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">{t("heroTitle")}</h1>
+            <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-muted">{t("heroBody")}</p>
+            <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap sm:gap-4">
+              <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" className="w-full sm:w-auto" />
+              <DemoButton role="operator" label={t("tryOperator")} className="w-full sm:w-auto" />
             </div>
-            <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-muted">
               {t("tryNote")} <SimulatedBadge />
             </p>
           </div>
@@ -74,14 +68,14 @@ export default function LandingPage() {
         </section>
 
         <section className="border-y border-line bg-surface/60">
-          <div className="mx-auto grid max-w-6xl gap-6 px-4 py-14 sm:px-6 md:grid-cols-2">
+          <div className="mx-auto grid max-w-6xl gap-6 px-4 py-20 sm:px-6 md:grid-cols-2">
             <h2 className="font-display text-3xl md:col-span-2">{t("rolesTitle")}</h2>
-            <article className="rounded-[8px] border border-line bg-surface p-6">
+            <article className="rounded-card border border-line bg-surface p-6">
               <h3 className="font-display text-2xl">{t("farmerRoleTitle")}</h3>
               <p className="mt-2 text-ink-muted">{t("farmerRoleBody")}</p>
               <div className="mt-5"><DemoButton role="farmer" label={t("tryFarmer")} variant="accent" /></div>
             </article>
-            <article className="rounded-[8px] border border-line bg-surface p-6">
+            <article className="rounded-card border border-line bg-surface p-6">
               <h3 className="font-display text-2xl">{t("operatorRoleTitle")}</h3>
               <p className="mt-2 text-ink-muted">{t("operatorRoleBody")}</p>
               <div className="mt-5"><DemoButton role="operator" label={t("tryOperator")} /></div>
@@ -89,7 +83,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <h2 className="font-display text-3xl">{t("howTitle")}</h2>
           <ol className="mt-6 grid gap-6 md:grid-cols-3">
             {steps.map((step, index) => (
@@ -105,7 +99,7 @@ export default function LandingPage() {
           </ol>
         </section>
 
-        <section className="mx-auto grid max-w-6xl gap-6 px-4 pb-14 sm:px-6 md:grid-cols-2">
+        <section className="mx-auto grid max-w-6xl gap-6 px-4 pb-20 sm:px-6 md:grid-cols-2">
           <div>
             <h2 className="font-display text-3xl">{t("factsTitle")}</h2>
             <dl className="mt-5 space-y-5">
@@ -121,11 +115,11 @@ export default function LandingPage() {
             </dl>
           </div>
           <div className="space-y-4">
-            <div className="rounded-[8px] border border-dashed border-ink-muted/50 p-5">
+            <div className="rounded-card border border-dashed border-ink-muted/50 p-5">
               <h2 className="flex items-center gap-2 font-medium"><Satellite aria-hidden className="size-4" strokeWidth={1.75} />{t("honestyTitle")}</h2>
               <p className="mt-2 text-sm text-ink-muted">{t("honestyBody")}</p>
             </div>
-            <div className="rounded-[8px] border border-line bg-surface p-5">
+            <div className="rounded-card border border-line bg-surface p-5">
               <h2 className="flex items-center gap-2 font-medium"><Flame aria-hidden className="size-4 text-ember" strokeWidth={1.75} />{t("fireMapTitle")}</h2>
               <p className="mt-2 text-sm text-ink-muted">{t("fireMapPending")}</p>
             </div>

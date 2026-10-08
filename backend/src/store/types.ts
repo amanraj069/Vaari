@@ -1,9 +1,10 @@
 /**
- * Records and the storage interface. The shapes follow the single-table DynamoDB design in
- * CLAUDE.md section 8 (everything keyed by CHC), so the in-memory store used for local development
- * and tests and the DynamoDB store are interchangeable behind `VaariStore`.
+ * Records and the storage interface. Two implementations sit behind `VaariStore`: DynamoDB (one
+ * table per entity, see docs/DECISIONS.md) and an in-memory store for tests and quick local runs,
+ * chosen by REPO=dynamo|memory. Every method takes the keys its table needs (usually chcId), so
+ * each read is a GetItem or a single-partition Query, never a table scan on a hot path.
  */
-import type { FieldPromise, Role, Locale, SolveResponse } from "../shared";
+import type { FieldPromise, Locale, Role, SolveResponse } from "../shared";
 
 export type ChcRecord = {
   id: string;
@@ -16,8 +17,6 @@ export type ChcRecord = {
   rainDays: number[];
 };
 
-export type WorkLogRecord = { day: number; acres: number; hours: number };
-
 export type MachineRecord = {
   chcId: string;
   id: string;
@@ -25,7 +24,17 @@ export type MachineRecord = {
   kind: "super_seeder" | "happy_seeder";
   hoursPerDay: number;
   downDays: number[];
-  logs: WorkLogRecord[];
+};
+
+/** One machine's work on one field on one day. Machine speed is learned from these. */
+export type WorkLogRecord = {
+  chcId: string;
+  date: string; // ISO calendar day
+  machineId: string;
+  fieldId: string;
+  acres: number;
+  hours: number;
+  loggedAt: string;
 };
 
 export type FieldRecord = {
@@ -43,6 +52,7 @@ export type FieldRecord = {
   state: "waiting" | "promised" | "done";
   plannedDay: number | null;
   plannedMachineId: string | null;
+  // The facilitator (user id) who booked this field for a farmer, if any.
   bookedBy: string | null;
 };
 
@@ -58,20 +68,6 @@ export type PromiseRecord = {
   reason: PromiseReason;
 };
 
-export type PlanRecord = {
-  chcId: string;
-  planDay: number;
-  version: number;
-  status: "proposed" | "approved";
-  createdAt: string;
-  approvedAt: string | null;
-  approvedBy: string | null;
-  solve: SolveResponse;
-  // Windows that become firm dates when the operator approves this plan.
-  firmingFieldIds: string[];
-  executionArn: string | null;
-};
-
 export type ReplanCause = "breakdown" | "machine_back" | "rain" | "manual_move" | "new_request";
 
 export type ReplanRecord = {
@@ -83,12 +79,31 @@ export type ReplanRecord = {
   broken: { fieldId: string; previous: FieldPromise | null; next: FieldPromise | null }[];
 };
 
-export type NotificationRecord = {
-  id: string;
-  farmerId: string;
+export type PlanRecord = {
+  chcId: string;
+  planDay: number;
+  planDate: string; // ISO date of planDay; part of the plans table sort key
+  version: number;
+  status: "proposed" | "approved";
+  createdAt: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  solve: SolveResponse;
+  // Windows that become firm dates when the operator approves this plan.
+  firmingFieldIds: string[];
+  executionArn: string | null;
+  // The most recent breakdown/rain/manual re-plan, carried forward so the board can show it.
+  lastReplan: ReplanRecord | null;
+};
+
+/** After-visit satellite check: was fire seen near the field after the machine sowed it? */
+export type FireCheckRecord = {
   fieldId: string;
-  kind: "broken" | "firmed" | "moved_earlier";
-  at: string;
+  checkDate: string; // ISO
+  chcId: string;
+  result: "no_fire_seen" | "fire_seen" | "no_data";
+  detections: number;
+  source: string;
 };
 
 export type FarmerRecord = { id: string; name: string; phone: string; language: Locale; facilitatorId: string | null };
@@ -102,31 +117,55 @@ export type UserRecord = {
   language: Locale;
 };
 
-export type VillageRecord = { id: string; name: string; namePa: string | null; lat: number; lon: number };
+/** Thrown when a conditional write loses: e.g. approving a plan that is no longer proposed. */
+export class StoreConflictError extends Error {}
 
 export interface VaariStore {
-  listVillages(): Promise<VillageRecord[]>;
-  putVillages(villages: VillageRecord[]): Promise<void>;
   listChcs(): Promise<ChcRecord[]>;
   getChc(chcId: string): Promise<ChcRecord | null>;
   putChc(chc: ChcRecord): Promise<void>;
+
   listMachines(chcId: string): Promise<MachineRecord[]>;
   putMachine(machine: MachineRecord): Promise<void>;
+
   listFields(chcId: string): Promise<FieldRecord[]>;
-  getField(fieldId: string): Promise<FieldRecord | null>;
+  getField(chcId: string, fieldId: string): Promise<FieldRecord | null>;
   putField(field: FieldRecord): Promise<void>;
-  listFieldsByFarmer(farmerId: string): Promise<FieldRecord[]>;
-  promiseHistory(fieldId: string): Promise<PromiseRecord[]>;
+  listFieldsByFarmer(chcId: string, farmerId: string): Promise<FieldRecord[]>;
+  /** Fields a facilitator booked, oldest first (booked-by-index). */
+  listFieldsBookedBy(userId: string): Promise<FieldRecord[]>;
+
+  /** Every promise record in a CHC, ordered by field then version. */
+  listPromises(chcId: string): Promise<PromiseRecord[]>;
+  /** One field's promise history, oldest version first. */
+  promiseHistory(chcId: string, fieldId: string): Promise<PromiseRecord[]>;
   putPromise(record: PromiseRecord): Promise<void>;
+
   latestPlan(chcId: string): Promise<PlanRecord | null>;
-  putPlan(plan: PlanRecord): Promise<void>;
-  lastReplan(chcId: string): Promise<ReplanRecord | null>;
-  putReplan(record: ReplanRecord): Promise<void>;
-  listNotifications(farmerId: string): Promise<NotificationRecord[]>;
-  putNotification(record: NotificationRecord): Promise<void>;
+  /** Creates a plan version; fails with StoreConflictError if that version already exists. */
+  createPlan(plan: PlanRecord): Promise<void>;
+  /**
+   * Approves exactly this plan version, only if it is still proposed (conditional write).
+   * Approving the same version twice throws StoreConflictError.
+   */
+  approvePlan(chcId: string, planDate: string, version: number, approvedBy: string, approvedAt: string): Promise<PlanRecord>;
+
+  listWorkLogs(chcId: string): Promise<WorkLogRecord[]>;
+  putWorkLog(log: WorkLogRecord): Promise<void>;
+
+  listFireChecks(fieldId: string): Promise<FireCheckRecord[]>;
+  putFireCheck(check: FireCheckRecord): Promise<void>;
+
   getFarmer(farmerId: string): Promise<FarmerRecord | null>;
   putFarmer(farmer: FarmerRecord): Promise<void>;
+
   getUser(userId: string): Promise<UserRecord | null>;
-  listUsers(): Promise<UserRecord[]>;
   putUser(user: UserRecord): Promise<void>;
+  /** Users attached to a CHC, ordered by role (chc-index). */
+  listUsersByChc(chcId: string): Promise<UserRecord[]>;
+
+  /** Demo reset: deletes a CHC's machines, fields, promises, plans and work logs. Users and farmers stay. */
+  clearChcData(chcId: string): Promise<void>;
 }
+
+export type VillageRecord = { id: string; name: string; namePa: string | null; lat: number; lon: number };

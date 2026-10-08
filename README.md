@@ -28,6 +28,14 @@ Open http://localhost:3000 and click **Try as farmer** or **Try as operator**.
 
 Tests: `cd backend && npm test` (API, Cedar, core loop) and `npm run test:engine` (solver invariants).
 
+**Data.** By default the backend keeps data in memory (`REPO=memory`). To use DynamoDB, set `REPO=dynamo`, `TABLE_PREFIX` and `AWS_REGION` in `backend/.env` (credentials come from your AWS CLI login), then:
+
+```bash
+cd backend
+npm run db:create   # creates any missing tables and indexes, waits until ACTIVE (safe to re-run)
+npm run db:status   # tables, indexes and item counts
+```
+
 ## How it decides
 
 - **Code decides, the model explains.** OR-Tools CP-SAT assigns fields to (machine, day). Promises are hard constraints. Pass 1 minimises fields past the farmer's last waiting day. Pass 2 then minimises wheat loss, travel, fairness slack and unserved fields.

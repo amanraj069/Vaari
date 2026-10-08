@@ -1,53 +1,39 @@
 /**
- * Entry point. Wires config, store, engine client, token verifier and planner, seeds the demo
- * season (in demo mode), makes the first plan, then listens.
+ * Entry point. Wires config, store (REPO=memory|dynamo), engine client, token verifier and
+ * planner; in demo mode seeds the demo season if it is not there yet; then listens.
  */
 import { createApp, logger } from "./app";
 import { loadConfig } from "./config";
 import { createTokenVerifier } from "./auth/tokens";
 import { createEngineClient } from "./engine/client";
-import { DEMO_CHC_ID, DEMO_USERS, seedDemo } from "./demo/seed";
+import { DEMO_CHC_ID, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
-import { MemoryStore } from "./store/memory";
-import type { VaariStore } from "./store/types";
+import { createStore } from "./store";
 
-export async function buildRuntime() {
+export async function buildRuntime(options: { freshDemo?: boolean } = {}) {
   const config = loadConfig();
-  if (config.STORE_MODE === "dynamodb") throw new Error("STORE_MODE=dynamodb is not wired yet; use memory");
-  let store: VaariStore = new MemoryStore();
+  const store = createStore(config);
   const engine = createEngineClient(config);
-  let planner = new Planner(store, engine, config);
-  const verifierHolder = { current: createTokenVerifier(config, store) };
+  const planner = new Planner(store, engine, config);
 
   const dependencies = {
     config,
-    get store() {
-      return store;
-    },
+    store,
     engine,
-    get planner() {
-      return planner;
-    },
-    verifier: { verify: (token: string) => verifierHolder.current.verify(token) },
+    planner,
+    verifier: createTokenVerifier(config, store),
+    /**
+     * Re-seeds only the demo CHC (its machines, fields, promises, plans, work logs). Users and
+     * farmers are not deleted, so real (Google) users keep their profiles across a reset.
+     */
     async resetDemo() {
-      const fresh = new MemoryStore();
-      await seedDemo(fresh, config);
-      // Real (Google) users keep their profile across a demo reset; only the season is re-seeded.
-      const seededUserIds = new Set(Object.values(DEMO_USERS) as string[]);
-      for (const user of await store.listUsers()) {
-        if (seededUserIds.has(user.userId)) continue;
-        await fresh.putUser(user);
-        const farmer = user.farmerId ? await store.getFarmer(user.farmerId) : null;
-        if (farmer) await fresh.putFarmer(farmer);
-      }
-      const freshPlanner = new Planner(fresh, engine, config);
-      await freshPlanner.replan(DEMO_CHC_ID, "new_request");
-      store = fresh;
-      planner = freshPlanner;
-      verifierHolder.current = createTokenVerifier(config, fresh);
+      await store.clearChcData(DEMO_CHC_ID);
+      await seedDemo(store, config);
+      await planner.replan(DEMO_CHC_ID, "new_request");
     },
   };
-  if (config.DEMO_MODE) await dependencies.resetDemo();
+  // With DynamoDB the season survives restarts: seed only when the demo CHC does not exist yet.
+  if (config.DEMO_MODE && (options.freshDemo || !(await store.getChc(DEMO_CHC_ID)))) await dependencies.resetDemo();
   return { config, dependencies };
 }
 
@@ -55,6 +41,9 @@ if (process.env.NODE_ENV !== "test") {
   const started = Date.now();
   const { config, dependencies } = await buildRuntime();
   createApp(dependencies).listen(config.PORT, () => {
-    logger.info({ port: config.PORT, engineMode: config.ENGINE_MODE, authMode: config.AUTH_MODE, startupMs: Date.now() - started }, "vaari api listening");
+    logger.info(
+      { port: config.PORT, engineMode: config.ENGINE_MODE, authMode: config.AUTH_MODE, repo: config.REPO, tablePrefix: config.REPO === "dynamo" ? config.TABLE_PREFIX : undefined, startupMs: Date.now() - started },
+      "vaari api listening",
+    );
   });
 }

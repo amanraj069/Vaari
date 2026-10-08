@@ -7,7 +7,6 @@ import { useState } from "react";
 import { z } from "zod";
 import { queueItemSchema, type Risk } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
-import { OperatorNav } from "@/components/operator-nav";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { TopBar } from "@/components/top-bar";
 import { Button, Pill, Skeleton, StateMessage } from "@/components/ui";
@@ -28,9 +27,7 @@ export default function OperatorQueuePage() {
 
   return (
     <>
-      <TopBar signedIn>
-        <OperatorNav />
-      </TopBar>
+      <TopBar />
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-4xl">{t("title")}</h1>
@@ -60,7 +57,7 @@ export default function OperatorQueuePage() {
         ) : items.length === 0 ? (
           <p className="mt-6 text-ink-muted">{t("empty")}</p>
         ) : (
-          <ul className="mt-5 divide-y divide-line rounded-[8px] border border-line bg-surface">
+          <ul className="mt-5 divide-y divide-line rounded-card border border-line bg-surface">
             {items.map((item) => (
               <li key={item.fieldId} className="grid gap-3 px-4 py-3 md:grid-cols-[16rem_1fr_11rem] md:items-center">
                 <div className="text-sm">

@@ -17,8 +17,8 @@ import {
   type ReplanSummary,
   type Risk,
 } from "../shared";
-import type { FieldRecord, MachineRecord, NotificationRecord, PromiseRecord, VaariStore } from "../store/types";
-import { currentPromise, type Planner } from "./planner";
+import type { FieldRecord, MachineRecord, PromiseRecord, VaariStore } from "../store/types";
+import { currentPromise, groupPromises, logsByMachine, type Planner } from "./planner";
 
 const HORIZON_DAYS = 10;
 
@@ -41,8 +41,8 @@ export function riskOf(field: FieldRecord, today: number): { risk: Risk; slackDa
   return { risk: "safe", slackDays };
 }
 
-function machineView(planner: Planner, machine: MachineRecord, planDay: number): MachineView {
-  const rate = learnRate(machine.logs);
+function machineView(planner: Planner, machine: MachineRecord, planDay: number, logs: { acres: number; hours: number }[]): MachineView {
+  const rate = learnRate(logs);
   return {
     id: machine.id,
     name: machine.name,
@@ -57,11 +57,12 @@ function machineView(planner: Planner, machine: MachineRecord, planDay: number):
 
 export async function buildQueue(planner: Planner, store: VaariStore, chcId: string): Promise<QueueItem[]> {
   const { fields } = await planner.loadChc(chcId);
-  const villages = new Map((await store.listVillages()).map((village) => [village.id, village]));
+  const villages = new Map(planner.villages().map((village) => [village.id, village]));
+  const historyByField = groupPromises(await store.listPromises(chcId));
   const today = planner.today();
   const items: QueueItem[] = [];
   for (const field of fields.filter((item) => item.state !== "done")) {
-    const held = currentPromise(await store.promiseHistory(field.id));
+    const held = currentPromise(historyByField.get(field.id) ?? []);
     const { risk, slackDays } = riskOf(field, today);
     items.push({
       fieldId: field.id,
@@ -85,22 +86,21 @@ export async function buildQueue(planner: Planner, store: VaariStore, chcId: str
 export async function buildBoard(planner: Planner, store: VaariStore, chcId: string): Promise<OperatorBoard> {
   const { plan, solve } = await planner.latestSolve(chcId);
   const { chc, machines, fields } = await planner.loadChc(chcId);
-  const villages = new Map((await store.listVillages()).map((village) => [village.id, village]));
+  const villages = new Map(planner.villages().map((village) => [village.id, village]));
   const fieldsById = new Map(fields.map((field) => [field.id, field]));
   const planDay = solve.planStartDay;
+  const [promiseRecords, workLogs] = await Promise.all([store.listPromises(chcId), store.listWorkLogs(chcId)]);
+  const historyByField = groupPromises(promiseRecords);
+  const machineLogs = logsByMachine(workLogs);
   const promiseByField = new Map<string, PromiseRecord | null>();
-  let brokenThisSeason = 0;
-  for (const field of fields) {
-    const history = await store.promiseHistory(field.id);
-    promiseByField.set(field.id, currentPromise(history));
-    brokenThisSeason += history.filter((record) => record.state === "broken").length;
-  }
+  for (const field of fields) promiseByField.set(field.id, currentPromise(historyByField.get(field.id) ?? []));
+  const brokenThisSeason = promiseRecords.filter((record) => record.state === "broken").length;
 
   const lanes: Lane[] = machines.map((machine) => {
     const route = solve.routes.find((item) => item.machineId === machine.id && item.day === planDay);
     const down = machine.downDays.includes(planDay);
     return {
-      machine: machineView(planner, machine, planDay),
+      machine: machineView(planner, machine, planDay, machineLogs.get(machine.id) ?? []),
       down,
       stops: (route?.stops ?? []).map((stop) => {
         const field = fieldsById.get(stop.fieldId);
@@ -136,7 +136,7 @@ export async function buildBoard(planner: Planner, store: VaariStore, chcId: str
       : field.plannedDay >= promise.startDay && field.plannedDay <= promise.endDay;
   }).length;
 
-  const lastReplan = await store.lastReplan(chcId);
+  const lastReplan = plan.lastReplan;
   let lastReplanView: ReplanSummary | null = null;
   if (lastReplan) {
     const machineName = machines.find((machine) => machine.id === lastReplan.machineId)?.name ?? null;
@@ -194,23 +194,34 @@ export async function buildBoard(planner: Planner, store: VaariStore, chcId: str
   };
 }
 
+/**
+ * The farmer's notice is read from the promise history (no separate notifications table):
+ * the latest record narrowed a window -> "firmed"; a held promise that replaced a broken one ->
+ * "broken" (the date moved, with the reason in the history).
+ */
+export function noticeFromHistory(history: PromiseRecord[]): FarmerField["notice"] {
+  const latest = history.at(-1);
+  if (!latest) return null;
+  if (latest.state === "held" && latest.reason === "narrowed") return { kind: "firmed", at: latest.at };
+  const previous = history.at(-2);
+  if (latest.state === "held" && previous?.state === "broken") return { kind: "broken", at: latest.at };
+  if (latest.state === "broken") return { kind: "broken", at: latest.at };
+  return null;
+}
+
 export async function buildFarmerField(
   planner: Planner,
   store: VaariStore,
   field: FieldRecord,
   allFields: FieldRecord[],
-  notifications: NotificationRecord[],
 ): Promise<FarmerField> {
-  const villages = new Map((await store.listVillages()).map((village) => [village.id, village]));
-  const history = await store.promiseHistory(field.id);
+  const villages = new Map(planner.villages().map((village) => [village.id, village]));
+  const history = await store.promiseHistory(field.chcId, field.id);
   const held = currentPromise(history);
   const fieldsAhead =
     field.plannedDay === null
       ? null
       : allFields.filter((other) => other.state !== "done" && other.plannedDay !== null && other.plannedDay < field.plannedDay!).length;
-  const latestNotice = notifications
-    .filter((notification) => notification.fieldId === field.id)
-    .sort((left, right) => right.at.localeCompare(left.at))[0];
   return {
     id: field.id,
     token: field.token,
@@ -232,18 +243,20 @@ export async function buildFarmerField(
       at: record.at,
       reason: record.reason,
     })),
-    notice: latestNotice ? { kind: latestNotice.kind, at: latestNotice.at } : null,
+    notice: noticeFromHistory(history),
   };
 }
 
 export async function buildFarmerHome(planner: Planner, store: VaariStore, farmerId: string, chcId: string): Promise<FarmerHome> {
-  const farmer = await store.getFarmer(farmerId);
-  const chc = await store.getChc(chcId);
-  const myFields = (await store.listFieldsByFarmer(farmerId)).sort((left, right) => left.requestOrder - right.requestOrder);
-  const allFields = await store.listFields(chcId);
-  const notifications = await store.listNotifications(farmerId);
+  const [farmer, chc, myFields, allFields] = await Promise.all([
+    store.getFarmer(farmerId),
+    store.getChc(chcId),
+    store.listFieldsByFarmer(chcId, farmerId),
+    store.listFields(chcId),
+  ]);
+  myFields.sort((left, right) => left.requestOrder - right.requestOrder);
   const fields: FarmerField[] = [];
-  for (const field of myFields) fields.push(await buildFarmerField(planner, store, field, allFields, notifications));
+  for (const field of myFields) fields.push(await buildFarmerField(planner, store, field, allFields));
   return {
     today: planner.dayToIso(planner.today()),
     farmerName: farmer?.name ?? "",
@@ -251,4 +264,29 @@ export async function buildFarmerHome(planner: Planner, store: VaariStore, farme
     operatorPhone: chc?.operatorPhone ?? "",
     fields,
   };
+}
+
+/** Fields a facilitator booked (any CHC), as queue rows: who, where, when, how risky. */
+export async function buildBookedFields(planner: Planner, store: VaariStore, fields: FieldRecord[]): Promise<QueueItem[]> {
+  const villages = new Map(planner.villages().map((village) => [village.id, village]));
+  const historyByChc = new Map<string, Map<string, PromiseRecord[]>>();
+  for (const chcId of new Set(fields.map((field) => field.chcId))) historyByChc.set(chcId, groupPromises(await store.listPromises(chcId)));
+  const today = planner.today();
+  return fields.map((field) => {
+    const held = currentPromise(historyByChc.get(field.chcId)?.get(field.id) ?? []);
+    const { risk, slackDays } = riskOf(field, today);
+    return {
+      fieldId: field.id,
+      token: field.token,
+      farmerName: field.farmerName,
+      villageName: villages.get(field.villageId)?.name ?? field.villageId,
+      acres: field.acres,
+      readyDate: planner.dayToIso(field.readyDay),
+      burnDeadlineDate: planner.dayToIso(field.readyDay + field.waitingLimitDays),
+      plannedDate: field.plannedDay === null ? null : planner.dayToIso(field.plannedDay),
+      promise: promiseView(planner, held?.promise ?? null),
+      slackDays,
+      risk,
+    };
+  });
 }

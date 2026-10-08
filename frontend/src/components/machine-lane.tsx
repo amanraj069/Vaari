@@ -39,7 +39,7 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
   const tint = LANE_TINTS[index % LANE_TINTS.length];
 
   return (
-    <motion.li layout className="grid gap-3 rounded-[8px] border border-line bg-surface p-3 md:grid-cols-[14rem_1fr] md:items-center">
+    <motion.li layout className="grid gap-4 rounded-card border border-line bg-surface p-4 md:grid-cols-[14rem_1fr] md:p-5 md:items-center">
       <div className="flex items-start justify-between gap-2 md:block">
         <div>
           <p className="flex items-center gap-2 font-medium">
@@ -51,12 +51,12 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
           </p>
         </div>
         {lane.down ? (
-          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-[8px] border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-control border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
             <Tractor aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markBack")}
           </button>
         ) : (
-          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-[8px] border border-line-strong px-2.5 text-sm text-ink-muted hover:border-ink/50 hover:text-ink disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line-strong px-2.5 text-sm text-ink-muted hover:border-ink/50 hover:text-ink disabled:opacity-50">
             <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markDown")}
           </button>
@@ -66,12 +66,12 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
       <div className="overflow-x-auto">
         <div className="min-w-[36rem]">
           {lane.down ? (
-            <div className="hatched flex h-16 items-center justify-center gap-2 rounded-[6px] border border-dashed border-line-strong text-ink-muted">
+            <div className="hatched flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-line-strong text-ink-muted">
               <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
               {t("inWorkshop")}
             </div>
           ) : lane.stops.length === 0 ? (
-            <div className="flex h-16 items-center justify-center rounded-[6px] border border-dashed border-line text-sm text-ink-muted">{t("noStops")}</div>
+            <div className="flex h-16 items-center justify-center rounded-chip border border-dashed border-line text-sm text-ink-muted">{t("noStops")}</div>
           ) : (
             <ol className="relative flex h-16 items-stretch">
               {lane.stops.map((stop) => {
@@ -92,7 +92,7 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
                     ) : null}
                     <span
                       title={`#${stop.token} ${stop.farmerName} · ${stop.villageName} · ${stop.acres} ac · ${stop.start}–${stop.end}`}
-                      className={`relative flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-[6px] border px-2 text-xs leading-tight ${
+                      className={`relative flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-chip border px-2 text-xs leading-tight ${
                         stop.stretch ? "border-dashed border-ink-muted/60 bg-paper" : `border-ink/10 ${tint}`
                       }`}
                     >

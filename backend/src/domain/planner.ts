@@ -4,23 +4,30 @@
  * breakdown, an approval) goes through one place that enforces the promise rules:
  * - a new field gets its first promise as soon as the engine places it;
  * - a window narrows to a firm date only when the operator approves the plan;
- * - a promise breaks only when the engine ran in minimal-break mode, and the farmer is told at once.
- * Work on one CHC is serialised so two re-plans never interleave.
+ * - a promise breaks only when the engine ran in minimal-break mode, and the farmer sees it at once
+ *   (the farmer page derives that notice from the promise history).
+ * Work on one CHC is serialised in-process; across processes, plan versions are create-only and
+ * approval is a conditional write, so two writers cannot both win.
  */
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { dateToDay, dayToDate, learnRate, type FieldPromise, type FieldRequestInput, type Pin, type SolveRequest, type SolveResponse } from "../shared";
 import type { Config } from "../config";
 import type { EngineClient } from "../engine/client";
-import type {
-  ChcRecord,
-  FieldRecord,
-  MachineRecord,
-  PlanRecord,
-  PromiseReason,
-  PromiseRecord,
-  ReplanCause,
-  ReplanRecord,
-  VaariStore,
+import {
+  StoreConflictError,
+  type ChcRecord,
+  type FieldRecord,
+  type MachineRecord,
+  type PlanRecord,
+  type PromiseReason,
+  type PromiseRecord,
+  type ReplanCause,
+  type ReplanRecord,
+  type VaariStore,
+  type VillageRecord,
+  type WorkLogRecord,
 } from "../store/types";
 
 export class NotFoundError extends Error {}
@@ -43,8 +50,32 @@ export function currentPromise(history: PromiseRecord[]): PromiseRecord | null {
   return null;
 }
 
+/** Promise records of a CHC grouped by field, each history oldest version first. */
+export function groupPromises(records: PromiseRecord[]): Map<string, PromiseRecord[]> {
+  const byField = new Map<string, PromiseRecord[]>();
+  for (const record of records) {
+    const history = byField.get(record.fieldId) ?? [];
+    history.push(record);
+    byField.set(record.fieldId, history);
+  }
+  for (const history of byField.values()) history.sort((left, right) => left.version - right.version);
+  return byField;
+}
+
+/** Work logs grouped by machine, in the shape the rate learner takes. */
+export function logsByMachine(logs: WorkLogRecord[]): Map<string, { acres: number; hours: number }[]> {
+  const byMachine = new Map<string, { acres: number; hours: number }[]>();
+  for (const log of logs) {
+    const list = byMachine.get(log.machineId) ?? [];
+    list.push({ acres: log.acres, hours: log.hours });
+    byMachine.set(log.machineId, list);
+  }
+  return byMachine;
+}
+
 export class Planner {
   private readonly chcQueues = new Map<string, Promise<unknown>>();
+  private villageCache: VillageRecord[] | null = null;
 
   constructor(
     private readonly store: VaariStore,
@@ -59,6 +90,16 @@ export class Planner {
 
   dayToIso(day: number): string {
     return dayToDate(this.config.SEASON_START_DATE, day);
+  }
+
+  /** Village points are static reference data (OpenStreetMap, committed in data/derived), not a table. */
+  villages(): VillageRecord[] {
+    if (!this.villageCache) {
+      const file = path.join(this.config.DATA_DIR, "derived/villages_sangrur.json");
+      const parsed = JSON.parse(readFileSync(file, "utf8")) as { villages: VillageRecord[] };
+      this.villageCache = parsed.villages.map(({ id, name, namePa, lat, lon }) => ({ id, name, namePa: namePa ?? null, lat, lon }));
+    }
+    return this.villageCache;
   }
 
   private withChcLock<Result>(chcId: string, work: () => Promise<Result>): Promise<Result> {
@@ -81,14 +122,17 @@ export class Planner {
     request: SolveRequest;
     activeFields: FieldRecord[];
     promiseByField: Map<string, PromiseRecord>;
+    historyByField: Map<string, PromiseRecord[]>;
   }> {
     const { chc, machines, fields } = await this.loadChc(chcId);
-    const villages = await this.store.listVillages();
-    const chcVillages = villages.filter((village) => chc.villageIds.includes(village.id));
+    const [promiseRecords, workLogs] = await Promise.all([this.store.listPromises(chcId), this.store.listWorkLogs(chcId)]);
+    const historyByField = groupPromises(promiseRecords);
+    const machineLogs = logsByMachine(workLogs);
+    const chcVillages = this.villages().filter((village) => chc.villageIds.includes(village.id));
     const activeFields = fields.filter((field) => field.state !== "done");
     const promiseByField = new Map<string, PromiseRecord>();
     for (const field of activeFields) {
-      const held = currentPromise(await this.store.promiseHistory(field.id));
+      const held = currentPromise(historyByField.get(field.id) ?? []);
       if (held) promiseByField.set(field.id, held);
     }
     const request: SolveRequest = {
@@ -99,7 +143,7 @@ export class Planner {
       base: chc.base,
       villages: chcVillages.map(({ id, name, lat, lon }) => ({ id, name, lat, lon })),
       machines: machines.map((machine) => {
-        const rate = learnRate(machine.logs);
+        const rate = learnRate(machineLogs.get(machine.id) ?? []);
         return {
           id: machine.id,
           name: machine.name,
@@ -122,12 +166,12 @@ export class Planner {
       pins,
       settings: { fairnessKDays: chc.settings.fairnessKDays, timeLimitSeconds: this.config.ENGINE_TIME_LIMIT_SECONDS },
     };
-    return { request, activeFields, promiseByField };
+    return { request, activeFields, promiseByField, historyByField };
   }
 
   /** Re-solve and apply. Callers must hold the CHC lock. */
   private async replanLocked(chcId: string, cause: ReplanCause, machineId: string | null): Promise<ReplanRecord> {
-    const { request, activeFields, promiseByField } = await this.buildSolveRequest(chcId);
+    const { request, activeFields, promiseByField, historyByField } = await this.buildSolveRequest(chcId);
     const solved = await this.engine.solve(request);
     const now = new Date().toISOString();
     const promiseOutByField = new Map(solved.promises.map((item) => [item.fieldId, item]));
@@ -162,10 +206,9 @@ export class Planner {
           });
           holdsPromise = true;
         }
-        await this.store.putNotification({ id: randomUUID(), farmerId: field.farmerId, fieldId: field.id, kind: "broken", at: now });
         broken.push({ fieldId: field.id, previous: held.promise, next: promiseOut.promise });
       } else if (!held && promiseOut?.promise) {
-        const history = await this.store.promiseHistory(field.id);
+        const history = historyByField.get(field.id) ?? [];
         await this.store.putPromise({
           chcId,
           fieldId: field.id,
@@ -191,9 +234,11 @@ export class Planner {
       .filter((item) => item.changed && !item.broken && item.previous?.kind === "window" && item.promise?.kind === "firm")
       .map((item) => item.fieldId);
     const previousPlan = await this.store.latestPlan(chcId);
+    const replan: ReplanRecord = { chcId, at: now, cause, machineId, moved, broken };
     const plan: PlanRecord = {
       chcId,
       planDay: solved.planStartDay,
+      planDate: this.dayToIso(solved.planStartDay),
       version: (previousPlan?.version ?? 0) + 1,
       status: "proposed",
       createdAt: now,
@@ -202,10 +247,15 @@ export class Planner {
       solve: solved,
       firmingFieldIds,
       executionArn: null,
+      // A new booking is not news on the board; keep showing the last breakdown or rain re-plan.
+      lastReplan: cause === "new_request" ? (previousPlan?.lastReplan ?? null) : replan,
     };
-    await this.store.putPlan(plan);
-    const replan: ReplanRecord = { chcId, at: now, cause, machineId, moved, broken };
-    if (cause !== "new_request") await this.store.putReplan(replan);
+    try {
+      await this.store.createPlan(plan);
+    } catch (error) {
+      if (error instanceof StoreConflictError) throw new ConflictError("another re-plan finished first; reload the plan");
+      throw error;
+    }
     return replan;
   }
 
@@ -241,31 +291,41 @@ export class Planner {
       };
       await this.store.putField(field);
       await this.replanLocked(chcId, "new_request", null);
-      const saved = await this.store.getField(field.id);
+      const saved = await this.store.getField(chcId, field.id);
       if (!saved) throw new NotFoundError("field vanished during planning");
       return saved;
     });
   }
 
+  /**
+   * Approves exactly the plan version the operator was looking at. The store's conditional write
+   * makes this happen once: a second approval of the same version (another tab, a retry, a second
+   * API task) fails with a conflict instead of firming promises twice.
+   */
   async approvePlan(chcId: string, version: number, approvedBy: string): Promise<PlanRecord> {
     return this.withChcLock(chcId, async () => {
       const plan = await this.store.latestPlan(chcId);
       if (!plan) throw new NotFoundError("no plan to approve");
       if (plan.version !== version) throw new ConflictError("the plan changed since you opened it; review the new plan");
-      if (plan.status === "approved") return plan;
+      if (plan.status === "approved") throw new ConflictError("this plan is already approved");
       const now = new Date().toISOString();
+      let approved: PlanRecord;
+      try {
+        approved = await this.store.approvePlan(chcId, plan.planDate, version, approvedBy, now);
+      } catch (error) {
+        if (error instanceof StoreConflictError) throw new ConflictError("this plan was already approved or replaced");
+        throw error;
+      }
+      // Only the winner of the conditional write firms the windows.
+      const historyByField = groupPromises(await this.store.listPromises(chcId));
       for (const fieldId of plan.firmingFieldIds) {
-        const held = currentPromise(await this.store.promiseHistory(fieldId));
+        const held = currentPromise(historyByField.get(fieldId) ?? []);
         const day = plan.solve.fieldDays[fieldId];
         if (!held || day === undefined) continue;
         const firm: FieldPromise = { kind: "firm", day };
         await this.store.putPromise({ ...held, state: "replaced", at: now });
         await this.store.putPromise({ chcId, fieldId, version: held.version + 1, promise: firm, state: "held", at: now, reason: "narrowed" });
-        const field = await this.store.getField(fieldId);
-        if (field) await this.store.putNotification({ id: randomUUID(), farmerId: field.farmerId, fieldId, kind: "firmed", at: now });
       }
-      const approved: PlanRecord = { ...plan, status: "approved", approvedAt: now, approvedBy, firmingFieldIds: [] };
-      await this.store.putPlan(approved);
       return approved;
     });
   }

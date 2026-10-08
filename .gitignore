@@ -48,6 +48,13 @@ __pycache__/
 cdk.out/
 .aws-sam/
 .localstack/
+# DynamoDB Local (jar, native libs, on-disk database when not run with -inMemory)
+DynamoDBLocal.jar
+DynamoDBLocal_lib/
+dynamodb-local/
+dynamodb_local_latest.tar.gz
+shared-local-instance.db
+*.db
 
 # ---------------------------------------------------------------------------
 # Logs, OS and editor files

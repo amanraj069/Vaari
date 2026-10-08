@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ChcOption, Locale, Role } from "@/shared";
+import { useRefreshSession } from "@/lib/use-session";
 import { Button } from "./ui";
 
 const LANGUAGES: { code: Locale; label: string }[] = [
@@ -25,6 +26,7 @@ type Props = {
 export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operatorSelfService }: Props) {
   const t = useTranslations("welcome");
   const router = useRouter();
+  const refreshSession = useRefreshSession();
   const [name, setName] = useState(suggestedName);
   const [role, setRole] = useState<"farmer" | "operator">(currentRole === "operator" ? "operator" : "farmer");
   const [chcId, setChcId] = useState(chcs.length === 1 ? chcs[0]!.id : "");
@@ -47,6 +49,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
     }).catch(() => null);
     if (!response?.ok) return setState("failed");
     const { home } = (await response.json()) as { home: string };
+    await refreshSession();
     router.push(home);
     router.refresh();
   }
@@ -66,7 +69,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoComplete="name"
-          className="mt-2 min-h-12 w-full rounded-[8px] border border-line-strong bg-surface px-3"
+          className="mt-2 min-h-12 w-full rounded-control border border-line-strong bg-surface px-3"
         />
       </label>
 
@@ -80,7 +83,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
               disabled={!option.allowed}
               aria-pressed={role === option.value}
               onClick={() => setRole(option.value)}
-              className={`flex min-h-24 flex-col items-start gap-1 rounded-[8px] border p-4 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex min-h-24 flex-col items-start gap-1 rounded-card border p-5 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
                 role === option.value ? "border-ink bg-ink text-paper" : "border-line bg-surface hover:border-ink/50"
               }`}
             >
@@ -106,7 +109,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
               type="button"
               aria-pressed={chcId === chc.id}
               onClick={() => setChcId(chc.id)}
-              className={`flex min-h-14 w-full items-center justify-between gap-3 rounded-[8px] border px-4 text-left ${
+              className={`flex min-h-14 w-full items-center justify-between gap-3 rounded-control border px-4 text-left ${
                 chcId === chc.id ? "border-ink bg-surface ring-2 ring-ink" : "border-line bg-surface hover:border-ink/50"
               }`}
             >
@@ -130,7 +133,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
               lang={option.code}
               aria-pressed={language === option.code}
               onClick={() => setLanguage(option.code)}
-              className={`min-h-12 flex-1 rounded-[8px] border ${language === option.code ? "border-ink bg-ink text-paper" : "border-line bg-surface"}`}
+              className={`min-h-12 flex-1 rounded-control border ${language === option.code ? "border-ink bg-ink text-paper" : "border-line bg-surface"}`}
             >
               {option.label}
             </button>

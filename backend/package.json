@@ -14,9 +14,14 @@
     "test:engine": "cd engine && uv run pytest -q",
     "typecheck": "tsc --noEmit",
     "engine:setup": "cd engine && uv sync",
-    "contract:sync": "node scripts/sync-contract.mjs"
+    "contract:sync": "node scripts/sync-contract.mjs",
+    "db:create": "tsx --env-file-if-exists=.env scripts/db.ts create",
+    "db:status": "tsx --env-file-if-exists=.env scripts/db.ts status",
+    "test:dynamo": "REPO=dynamo TABLE_PREFIX=vaari-test vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1139.0",
+    "@aws-sdk/lib-dynamodb": "3.1139.0",
     "@cedar-policy/cedar-wasm": "4.13.0",
     "aws-jwt-verify": "5.2.1",
     "express": "5.2.1",
