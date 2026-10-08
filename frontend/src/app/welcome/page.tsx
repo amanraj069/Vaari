@@ -7,16 +7,18 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { chcOptionSchema, localeSchema, meSchema } from "@/shared";
+import { PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
 import { WelcomeForm } from "@/components/welcome-form";
-import { COOKIE, ROLE_HOME, serverConfig } from "@/lib/server-config";
+import { COOKIE, serverConfig } from "@/lib/server-config";
 import { apiFetch } from "@/lib/session";
 
 export default async function WelcomePage() {
   const meResponse = await apiFetch("/me").catch(() => null);
   const me = meResponse?.ok ? meSchema.safeParse(await meResponse.json()) : null;
   if (!me?.success) redirect("/signin");
-  if (!me.data.needsOnboarding && me.data.role) redirect(ROLE_HOME[me.data.role] ?? "/");
+  // Already set up: go through /api/auth/resume, which also corrects a stale role cookie.
+  if (!me.data.needsOnboarding && me.data.role) redirect("/api/auth/resume");
 
   const chcResponse = await apiFetch("/chcs").catch(() => null);
   const chcs = chcResponse?.ok ? z.array(chcOptionSchema).parse(await chcResponse.json()) : [];
@@ -25,7 +27,7 @@ export default async function WelcomePage() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto max-w-xl px-4 pb-16 pt-10">
+      <PageMain measure="center">
         <WelcomeForm
           chcs={chcs}
           suggestedName={suggestedName}
@@ -33,7 +35,7 @@ export default async function WelcomePage() {
           locale={localeSchema.catch("en").parse(await getLocale())}
           operatorSelfService={serverConfig.demoMode}
         />
-      </main>
+      </PageMain>
     </>
   );
 }

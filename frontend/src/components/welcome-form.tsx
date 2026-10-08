@@ -2,6 +2,7 @@
 
 /** Onboarding form: name, role (farmer or operator), CHC, language. Big targets, one question per block. */
 import { Check, Sprout, Tractor } from "lucide-react";
+import { PAGE_TITLE } from "./page-shell";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -57,7 +58,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
   return (
     <form onSubmit={submit} className="space-y-8 text-lg">
       <div>
-        <h1 className="font-display text-4xl">{t("title")}</h1>
+        <h1 className={PAGE_TITLE}>{t("title")}</h1>
         <p className="mt-2 text-ink-muted">{t("body")}</p>
       </div>
 

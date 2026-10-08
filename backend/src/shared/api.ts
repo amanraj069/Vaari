@@ -154,7 +154,7 @@ export type Lane = z.infer<typeof laneSchema>;
 
 export const replanSummarySchema = z.object({
   at: z.string(),
-  cause: z.enum(["breakdown", "machine_back", "rain", "manual_move", "new_request"]),
+  cause: z.enum(["breakdown", "machine_back", "rain", "manual_move", "new_request", "farmer_update"]),
   machineName: z.string().nullable(),
   moved: z.array(
     z.object({
@@ -237,3 +237,19 @@ export const publicSummarySchema = z.object({
   villageCount: z.number().int(),
 });
 export type PublicSummary = z.infer<typeof publicSummarySchema>;
+
+/** A facilitator books a field for a farmer who may have no account (the farmer gets a slot link). */
+export const facilitatorBookingInputSchema = fieldRequestInputSchema.extend({
+  farmerName: z.string().trim().min(1).max(80),
+  waitingLimitDays: z.number().int().min(3).max(10),
+});
+export type FacilitatorBookingInput = z.infer<typeof facilitatorBookingInputSchema>;
+
+export const slotLinkSchema = z.object({ token: z.string(), path: z.string() });
+export type SlotLink = z.infer<typeof slotLinkSchema>;
+
+export const facilitatorBookingSchema = z.object({ field: farmerFieldSchema, slot: slotLinkSchema });
+export type FacilitatorBooking = z.infer<typeof facilitatorBookingSchema>;
+
+/** "I cannot wait longer": a farmer shortens how long they can wait after harvest. */
+export const waitingLimitInputSchema = z.object({ waitingLimitDays: z.number().int().min(1).max(30) });

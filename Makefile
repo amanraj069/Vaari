@@ -1,6 +1,6 @@
 # Vaari. Each folder is a normal npm project; this file only saves typing.
 # `make test` and `make dev` run on any laptop with no AWS account.
-.PHONY: setup dev test villages
+.PHONY: setup dev test data
 
 setup:            ## Install backend (npm + Python engine via uv) and frontend (npm)
 	cd backend && npm install && npm run engine:setup
@@ -12,5 +12,5 @@ dev:              ## Backend on :4000 and frontend on :3000 (or run `npm run dev
 test:             ## Engine invariants, Cedar allow/deny, core loop, contract sync
 	cd backend && npm run test:engine && npm test
 
-villages:         ## Re-fetch village points from OpenStreetMap
-	python3 data/scripts/fetch_villages.py
+data:             ## Villages from OpenStreetMap (network), then harvest curves from the FIRMS CSVs (offline)
+	cd backend && npm run data:villages && npm run data:prepare

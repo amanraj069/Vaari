@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const ROLE_PREFIX: Record<string, string[]> = {
   farmer: ["/farmer"],
-  facilitator: ["/farmer"],
+  facilitator: ["/book"],
   operator: ["/operator"],
   officer: [],
 };
-const HOME: Record<string, string> = { farmer: "/farmer", facilitator: "/farmer", operator: "/operator", officer: "/proof" };
+const HOME: Record<string, string> = { farmer: "/farmer", facilitator: "/book", operator: "/operator", officer: "/proof" };
 
 export function middleware(request: NextRequest) {
   const role = request.cookies.get("vaari_role")?.value;
@@ -29,4 +29,4 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/farmer/:path*", "/operator/:path*", "/welcome"] };
+export const config = { matcher: ["/farmer/:path*", "/operator/:path*", "/book/:path*", "/book", "/welcome"] };

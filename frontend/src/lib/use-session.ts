@@ -14,11 +14,16 @@ export function useSession() {
     queryKey: SESSION_QUERY_KEY,
     queryFn: async (): Promise<Me | null> => {
       const response = await fetch("/api/auth/session", { cache: "no-store" });
+      // 503 means "unknown" (API unreachable), not "signed out": fail the query so callers can tell.
+      if (!response.ok) throw new Error(`session check failed (${response.status})`);
       const body = (await response.json()) as { signedIn: boolean; me?: unknown };
       const parsed = meSchema.safeParse(body.me);
       return body.signedIn && parsed.success ? parsed.data : null;
     },
     staleTime: 30_000,
+    // Keep the last known identity through a brief API outage, and keep checking until it is back.
+    retry: 2,
+    refetchInterval: (query) => (query.state.status === "error" ? 5_000 : false),
   });
 }
 

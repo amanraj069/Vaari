@@ -1,0 +1,5 @@
+{"source":"test fixture","villages":[
+ {"id":"vA","name":"Alpha","namePa":null,"lat":30.0,"lon":75.5},
+ {"id":"vB","name":"Bravo","namePa":null,"lat":30.1,"lon":75.6},
+ {"id":"vC","name":"Charlie","namePa":null,"lat":30.3,"lon":75.9}
+]}

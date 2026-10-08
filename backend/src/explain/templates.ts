@@ -63,8 +63,32 @@ const TEMPLATES: Record<Locale, Record<ReasonCode, Template>> = {
   },
 };
 
+const DAY_MS = 86_400_000;
+
+/**
+ * Dates as a farmer would say them: three or more days in a row become one range ("Sunday,
+ * 1 November – Sunday, 8 November"), the rest stay single days. A list of eight weekdays read as
+ * noise on the slot page.
+ */
+function dateListText(isoDates: string[], locale: Locale): string {
+  const sorted = [...new Set(isoDates)].sort();
+  const runs: string[][] = [];
+  for (const iso of sorted) {
+    const run = runs.at(-1);
+    if (run && Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${run.at(-1)}T00:00:00Z`) === DAY_MS) run.push(iso);
+    else runs.push([iso]);
+  }
+  const rangeFormat = new Intl.DateTimeFormat(INTL_LOCALE[locale], { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const parts = runs.flatMap((run) =>
+    run.length >= 3
+      ? [rangeFormat.formatRange(new Date(`${run[0]}T00:00:00Z`), new Date(`${run.at(-1)}T00:00:00Z`))]
+      : run.map((iso) => formatDate(iso, locale)),
+  );
+  return list(parts, locale);
+}
+
 export function reasonText(code: ReasonCode, values: ReasonValues, locale: Locale): string {
-  const dateText = list(values.dates.map((date) => formatDate(date, locale)), locale);
+  const dateText = dateListText(values.dates, locale);
   const machineText = list(values.machines, locale);
   return TEMPLATES[locale][code]({ ...values, dateText, machineText });
 }

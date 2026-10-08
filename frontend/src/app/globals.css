@@ -8,7 +8,7 @@
  * Vaari design tokens (CLAUDE.md section 9). Quiet, warm, flat: paper not white, borders not
  * shadows, 8px corners. Ember means burn risk and nothing else. Wheat is a fill, never body text
  * (too little contrast on paper); text that needs the accent uses wheat-deep.
- * Contrast on paper: ink 16:1, ink-muted 5.4:1, field 5.6:1, ember-deep 5.7:1, wheat-deep 4.9:1.
+ * Contrast on paper: ink 16:1, ink-muted 5.4:1, field 5.6:1, ember-deep 5.7:1, wheat-deep 5.6:1.
  */
 @theme {
   --color-paper: #f5f0e4;
@@ -19,7 +19,7 @@
   --color-ink-muted: #6e6050;
   --color-wheat: #d9a22b;
   --color-wheat-soft: #f3e2b8;
-  --color-wheat-deep: #8a5f12;
+  --color-wheat-deep: #805810; /* 4.9:1 on wheat-soft pills, 5.6:1 on paper (was #8a5f12: 4.39 on wheat-soft) */
   /* Text on a wheat fill stays dark in both themes (wheat is light in both). */
   --color-on-wheat: #1b1a17;
   --color-field: #2f6b3f;
@@ -27,7 +27,7 @@
   --color-ember: #c8452b;
   --color-ember-deep: #a8361f;
   --color-ember-soft: #f6ddd5;
-  --color-sky: #3c6e8f;
+  --color-sky: #346685; /* 5.0:1 on sky-soft "Window" pills (was #3c6e8f: 4.41) */
   --color-sky-soft: #dde8ef;
 
   /* Machine lanes: five muted hues, distinguishable without relying on colour alone (lanes are named). */
@@ -46,6 +46,8 @@
   --radius-control: 12px;
   --radius-chip: 8px;
   --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Landing motion: quick to start, long soft landing (EASE_OUT in landing-motion.tsx). */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /*
@@ -93,6 +95,12 @@ html:lang(hi) {
   html.dark {
     color-scheme: dark;
   }
+  /* In-page links (the landing's section links) glide rather than jump. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
   body {
     background: var(--color-paper);
     color: var(--color-ink);
@@ -136,6 +144,265 @@ html:lang(hi) {
     mask: radial-gradient(circle 10px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
       radial-gradient(circle 10px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
   }
+}
+
+/* Slider track and thumb (native range input). The filled part shows the chosen value. */
+.vaari-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-wheat) var(--fill), var(--color-line) var(--fill));
+}
+.vaari-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-wheat) var(--fill), var(--color-line) var(--fill));
+}
+.vaari-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -11px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-wheat-deep);
+}
+.vaari-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-wheat-deep);
+}
+
+/*
+ * Landing photos. They follow the theme: a wash in the page's own paper colour (light or dark)
+ * keeps text readable and fades the photo into the page, so there is no seam between sections.
+ * The wash is the one place a gradient is allowed (text over a photograph needs it). Until a
+ * photo exists, a painted scene stands in, so the page never shows a broken image.
+ */
+.scene-dawn {
+  background:
+    radial-gradient(ellipse 45% 38% at 72% 42%, #ffd88a 0%, #f1a94a55 45%, transparent 70%),
+    linear-gradient(to bottom, #f6c46f 0%, #e79a4a 38%, #b8743a 55%, #6b4a22 56%, #4a3418 75%, #2a1f10 100%);
+}
+.scene-smoke {
+  background:
+    radial-gradient(ellipse 60% 45% at 30% 60%, #c8452b88 0%, transparent 65%),
+    radial-gradient(ellipse 80% 50% at 70% 30%, #8a7d6e 0%, transparent 70%),
+    linear-gradient(to bottom, #6f655b 0%, #4a3f36 50%, #2a221c 51%, #16120e 100%);
+}
+.scene-sown {
+  background:
+    repeating-linear-gradient(100deg, transparent 0 22px, #2f6b3f55 22px 26px),
+    linear-gradient(to bottom, #e9c98a 0%, #b9a06a 40%, #6d6a3a 41%, #3c4a26 100%);
+}
+.photo-wash-hero {
+  background:
+    linear-gradient(to top, var(--color-paper) 0%, transparent 34%),
+    color-mix(in srgb, var(--color-paper) 80%, transparent);
+}
+/* Wide screens: the words sit on paper at the left and the photo opens up on the right, with a
+   soft fade at the top for the nav and at the bottom into the strip and the next section. */
+@media (min-width: 768px) {
+  .photo-wash-hero {
+    background:
+      linear-gradient(to top, var(--color-paper) 0%, color-mix(in srgb, var(--color-paper) 70%, transparent) 12%, transparent 32%),
+      linear-gradient(to bottom, color-mix(in srgb, var(--color-paper) 60%, transparent) 0%, transparent 22%),
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-paper) 96%, transparent) 0%,
+        color-mix(in srgb, var(--color-paper) 88%, transparent) 28%,
+        color-mix(in srgb, var(--color-paper) 45%, transparent) 48%,
+        color-mix(in srgb, var(--color-paper) 0%, transparent) 64%
+      );
+  }
+}
+/* At night the sunrise is dimmed a little so it sits inside the dark page instead of glaring. */
+html.dark .hero-photo-in img {
+  filter: brightness(0.78) saturate(0.95);
+}
+/* Sign-in photo panel: the sky stays, the lower half fades to paper under the words. */
+.photo-wash-panel {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-paper) 96%, transparent) 0%,
+    color-mix(in srgb, var(--color-paper) 88%, transparent) 38%,
+    color-mix(in srgb, var(--color-paper) 10%, transparent) 75%
+  );
+}
+/* Closing card: the opening photo again. Paper under the words at the left, the sunrise showing
+   through on the right behind the frosted role cards; an even wash on narrow screens. */
+.photo-wash-closing {
+  background: color-mix(in srgb, var(--color-paper) 84%, transparent);
+}
+@media (min-width: 1024px) {
+  .photo-wash-closing {
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-paper) 95%, transparent) 0%,
+      color-mix(in srgb, var(--color-paper) 82%, transparent) 38%,
+      color-mix(in srgb, var(--color-paper) 30%, transparent) 70%,
+      color-mix(in srgb, var(--color-paper) 15%, transparent) 100%
+    );
+  }
+}
+@keyframes slow-zoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.slow-zoom {
+  animation: slow-zoom 16s var(--ease-out) both;
+}
+
+/*
+ * Landing entrance. Plain CSS so it plays from the first paint, before hydration: the photo
+ * develops in, the nav settles, the headline rises word by word out of a soft blur, then the
+ * rest follows. --i is each piece's place in the sequence (set inline in page.tsx).
+ */
+@keyframes photo-develop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hero-photo-in {
+  animation: photo-develop 1.8s ease-out both;
+}
+@keyframes nav-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-nav {
+  animation: nav-settle 0.9s var(--ease-out) 0.15s both;
+}
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-rise {
+  animation: hero-rise 0.9s var(--ease-out) both;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.09s);
+}
+@keyframes hero-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em) rotate(1.5deg);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+.hero-word {
+  display: inline-block;
+  transform-origin: 0 100%;
+  animation: hero-word 1s var(--ease-out) both;
+  animation-delay: calc(0.25s + var(--i, 0) * 0.075s);
+}
+/* The underline under "Vaari." draws like a pen stroke once the word has landed. */
+@keyframes swash-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.hero-swash path {
+  stroke-dasharray: 1;
+  animation: swash-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc(0.65s + var(--i, 0) * 0.075s);
+}
+/* The rule above the strip draws outward from the centre. */
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.hero-rule {
+  animation: rule-draw 1.4s var(--ease-out) 0.8s both;
+}
+
+/* A slow ember breath over the burning-field photo: light from the fire line, not a flicker. */
+.ember-glow {
+  background: radial-gradient(ellipse 55% 30% at 55% 78%, color-mix(in srgb, var(--color-ember) 40%, transparent), transparent 70%);
+  mix-blend-mode: screen;
+  animation: ember-breathe 5s ease-in-out infinite alternate;
+}
+@keyframes ember-breathe {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 0.65;
+  }
+}
+
+/* The example token floats a few pixels, slowly, once it has arrived. */
+@keyframes token-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+.token-float {
+  animation: token-float 4.5s ease-in-out 1.4s infinite alternate;
+}
+
+/* Role cards lift a touch on hover. `translate`, not `transform`, so it composes with the
+   reveal animation's transform. */
+.lift-card {
+  transition:
+    translate 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
+}
+.lift-card:hover {
+  translate: 0 -4px;
+  border-color: var(--color-line-strong);
+}
+
+/* Fire chart: bars rise left to right, like the season itself, when it scrolls into view. */
+[data-reveal] .chart-bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: transform 0.8s var(--ease-out);
+  transition-delay: calc(var(--bar, 0) * 18ms);
+}
+[data-reveal="out"] .chart-bar {
+  transform: scaleY(0);
+  transition: none;
+}
+[data-reveal] .chart-band {
+  transition: opacity 0.8s ease-out 0.6s;
+}
+[data-reveal="out"] .chart-band {
+  opacity: 0;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

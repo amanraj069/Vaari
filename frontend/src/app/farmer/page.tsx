@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { TokenCard } from "@/components/token-card";
+import { DateGuide, MachineCentre } from "@/components/farmer-aside";
+import { PageColumns, PageHeader, PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
 import { Button, ButtonLink, Skeleton, StateMessage } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -22,45 +24,52 @@ export default function FarmerHomePage() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto max-w-xl px-4 pb-16 pt-6 text-lg">
+      <PageMain className="text-lg">
         {home.isPending ? (
           <div className="space-y-4">
-            <Skeleton className="h-9 w-2/3" />
-            <Skeleton className="h-96" />
+            <Skeleton className="h-9 w-2/3 max-w-sm" />
+            <Skeleton className="h-96 max-w-2xl" />
           </div>
         ) : home.isError ? (
           <StateMessage tone="error" title={tc("errorTitle")} body={tc("errorBody")} action={<Button onClick={() => home.refetch()}>{tc("retry")}</Button>} />
         ) : (
           <>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-              <h1 className="font-display text-3xl">{t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" })}</h1>
-              <SimulatedBadge demoDate={dates.short(home.data.today)} />
-            </div>
-            {home.data.fields.length === 0 ? (
-              <StateMessage
-                title={t("emptyTitle")}
-                body={t("emptyBody")}
-                action={
-                  <ButtonLink href="/farmer/request" variant="accent" className="min-h-12 text-lg">
-                    <Plus aria-hidden className="size-5" strokeWidth={1.75} />
-                    {t("addField")}
-                  </ButtonLink>
-                }
-              />
-            ) : (
-              <div className="space-y-5">
-                {home.data.fields.map((field) => (
-                  <TokenCard key={field.id} field={field} today={home.data.today} operatorPhone={home.data.operatorPhone} />
-                ))}
-                <ButtonLink href="/farmer/request" variant="secondary" className="min-h-12 w-full text-lg">
-                  <Plus aria-hidden className="size-5" strokeWidth={1.75} />
-                  {t("addAnother")}
-                </ButtonLink>
-              </div>
-            )}
+            <PageHeader className="mb-6" badge={<SimulatedBadge demoDate={dates.short(home.data.today)} />} title={t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" })} />
+            <PageColumns
+              main={
+                home.data.fields.length === 0 ? (
+                  <StateMessage
+                    title={t("emptyTitle")}
+                    body={t("emptyBody")}
+                    action={
+                      <ButtonLink href="/farmer/request" variant="accent" className="min-h-12 text-lg">
+                        <Plus aria-hidden className="size-5" strokeWidth={1.75} />
+                        {t("addField")}
+                      </ButtonLink>
+                    }
+                  />
+                ) : (
+                  <div className="space-y-5">
+                    {home.data.fields.map((field) => (
+                      <TokenCard key={field.id} field={field} today={home.data.today} operatorPhone={home.data.operatorPhone} />
+                    ))}
+                    <ButtonLink href="/farmer/request" variant="secondary" className="min-h-12 w-full text-lg">
+                      <Plus aria-hidden className="size-5" strokeWidth={1.75} />
+                      {t("addAnother")}
+                    </ButtonLink>
+                  </div>
+                )
+              }
+              aside={
+                <>
+                  <DateGuide />
+                  <MachineCentre chcName={home.data.chcName} operatorPhone={home.data.operatorPhone} />
+                </>
+              }
+            />
           </>
         )}
-      </main>
+      </PageMain>
     </>
   );
 }

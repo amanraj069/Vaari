@@ -5,7 +5,8 @@
  * proportional to time on the field, the gaps are travel. Each stop has a stable layoutId, so in a
  * re-plan the same field glides from its old lane to its new one instead of blinking.
  */
-import { Lock, Tractor, Wrench } from "lucide-react";
+import { Tractor, Wrench } from "lucide-react";
+import { LockPin } from "./lock-pin";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import type { Lane } from "@/shared";
@@ -63,7 +64,7 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-chip" tabIndex={0} role="region" aria-label={t("laneTimeline", { machine: lane.machine.name })}>
         <div className="min-w-[36rem]">
           {lane.down ? (
             <div className="hatched flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-line-strong text-ink-muted">
@@ -97,7 +98,7 @@ export function MachineLane({ lane, index, dayStart, onMarkDown, onMarkBack, bus
                       }`}
                     >
                       <span className="flex items-center gap-1 font-semibold tabular">
-                        {firm ? <Lock aria-label={t("firmLock")} className="size-3 shrink-0" strokeWidth={2} /> : null}#{String(stop.token).padStart(3, "0")}
+                        {firm ? <LockPin compact label={t("firmLock")} /> : null}#{String(stop.token).padStart(3, "0")}
                         {stop.parts > 1 ? <span className="font-normal text-ink-muted">{stop.part}/{stop.parts}</span> : null}
                       </span>
                       <span className="truncate">{stop.villageName}</span>

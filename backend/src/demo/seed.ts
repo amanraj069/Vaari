@@ -1,15 +1,18 @@
 /**
  * The demo season. Everything here is SIMULATED and labelled so in the UI: the CHC, the machines,
  * the farmers (invented names) and their fields. Village names and locations are real
- * (OpenStreetMap, data/derived/villages_sangrur.json). Harvest timing will be calibrated from NASA
- * FIRMS fire history in the simulator stage; until then ready days are spread around the demo day.
- * A fixed seed makes every reset produce the same season. Seeding writes only the demo CHC's data
+ * (OpenStreetMap, data/villages.json). Each field's ready day is drawn from its village's harvest
+ * curve (data/harvest_curves.json, built from NASA FIRMS fire detections, 2024 and 2025 seasons),
+ * restricted to the booking window around the demo day. Field sizes, waiting limits and the
+ * booking window are ASSUMPTIONS, labelled below. A fixed seed makes every reset the same season. Seeding writes only the demo CHC's data
  * and the four demo persona users (ids start with "demo-"); real users' profiles are never touched.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { dateToDay } from "../shared";
 import type { Config } from "../config";
+import { haversineKm } from "../data/geo";
+import { sampleReadyDay, type HarvestCurves } from "../data/harvest";
 import type { FieldRecord, MachineRecord, UserRecord, VaariStore, VillageRecord } from "../store/types";
 
 export const DEMO_CHC_ID = "chc-balian";
@@ -30,7 +33,15 @@ const FIRST_NAMES = [
   "Amarjit", "Balwinder", "Gurmeet", "Hardeep", "Karamjit", "Lakhwinder", "Navdeep", "Ranjit", "Sarabjit",
   "Tarsem", "Inderjit", "Jagtar", "Kuldeep", "Mandeep", "Satnam", "Gurdev", "Malkit", "Nirmal", "Charanjit",
 ];
+// ASSUMPTION: field sizes in acres (no per-field data; swept in the simulator later).
 const FIELD_SIZES_ACRES = [1.5, 2, 2.5, 3, 3, 3.5, 4, 4, 5, 6];
+// ASSUMPTION: days a farmer will wait after harvest before burning (CLAUDE.md: swept over 3 to 10).
+const WAITING_LIMIT_MIN_DAYS = 3;
+const WAITING_LIMIT_MAX_DAYS = 10;
+// ASSUMPTION: by the demo day, the farmers who have booked are those whose fields became ready
+// from 2 days ago up to 7 days ahead. Ready days are drawn from the curves inside this window.
+const BOOKING_WINDOW_DAYS_BEFORE = 2;
+const BOOKING_WINDOW_DAYS_AFTER = 7;
 
 /** mulberry32: a tiny deterministic PRNG so the demo season is identical on every reset. */
 function seededRandom(seed: number): () => number {
@@ -43,29 +54,33 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function distanceKm(latA: number, lonA: number, latB: number, lonB: number): number {
-  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-  const deltaLat = toRadians(latB - latA);
-  const deltaLon = toRadians(lonB - lonA);
-  const chord = Math.sin(deltaLat / 2) ** 2 + Math.cos(toRadians(latA)) * Math.cos(toRadians(latB)) * Math.sin(deltaLon / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(chord));
-}
-
+/** Village points for the whole box (OpenStreetMap), shared with the planner. */
 export function loadVillages(config: Config): VillageRecord[] {
-  const file = path.join(config.DATA_DIR, "derived/villages_sangrur.json");
+  const file = path.join(config.DATA_DIR, "villages.json");
   const parsed = JSON.parse(readFileSync(file, "utf8")) as { villages: VillageRecord[] };
   return parsed.villages.map(({ id, name, namePa, lat, lon }) => ({ id, name, namePa: namePa ?? null, lat, lon }));
+}
+
+export function loadHarvestCurves(config: Config): HarvestCurves {
+  const file = path.join(config.DATA_DIR, "harvest_curves.json");
+  try {
+    return JSON.parse(readFileSync(file, "utf8")) as HarvestCurves;
+  } catch {
+    throw new Error("data/harvest_curves.json is missing: run `npm run data:prepare` in backend/ (needs the FIRMS CSVs in data/raw)");
+  }
 }
 
 export async function seedDemo(store: VaariStore, config: Config): Promise<void> {
   const random = seededRandom(SEED);
   const pick = <Item>(items: Item[]): Item => items[Math.floor(random() * items.length)]!;
   const villages = loadVillages(config);
+  const curves = loadHarvestCurves(config);
+  const curveByVillage = new Map(curves.villages.map((curve) => [curve.villageId, curve.readyDays]));
 
   const baseVillage = villages.find((village) => village.name === "Balian");
-  if (!baseVillage) throw new Error("Balian missing from data/derived/villages_sangrur.json");
+  if (!baseVillage) throw new Error("Balian missing from data/villages.json");
   const clusterVillages = villages
-    .filter((village) => distanceKm(baseVillage.lat, baseVillage.lon, village.lat, village.lon) <= CLUSTER_RADIUS_KM)
+    .filter((village) => haversineKm(baseVillage.lat, baseVillage.lon, village.lat, village.lon) <= CLUSTER_RADIUS_KM)
     .sort((left, right) => left.name.localeCompare(right.name));
 
   await store.putChc({
@@ -88,22 +103,36 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   for (const machine of machines) await store.putMachine(machine);
 
   const today = dateToDay(config.SEASON_START_DATE, config.DEMO_TODAY);
+  // Curves count days from 1 October of the season; convert to the demo season's day index.
+  const curveDayZero = dateToDay(config.SEASON_START_DATE, `${config.SEASON_START_DATE.slice(0, 4)}-10-01`);
+  const windowFrom = today - BOOKING_WINDOW_DAYS_BEFORE - curveDayZero;
+  const windowTo = today + BOOKING_WINDOW_DAYS_AFTER - curveDayZero;
+  const drawReadyDay = (villageId: string): number => {
+    // The village's own curve first (it may itself be blended or district); the district curve if
+    // the village has no ready days inside the booking window.
+    const day =
+      sampleReadyDay(curveByVillage.get(villageId) ?? [], random, windowFrom, windowTo) ??
+      sampleReadyDay(curves.district.readyDays, random, windowFrom, windowTo);
+    if (day === null) throw new Error(`no ready days in the booking window (${config.DEMO_TODAY}); check DEMO_TODAY against the harvest curves`);
+    return day + curveDayZero;
+  };
   const now = new Date().toISOString();
   const jaswinderOrder = 17;
   for (let order = 0; order < FIELD_COUNT; order += 1) {
     const isJaswinder = order === jaswinderOrder;
     const farmerId = isJaswinder ? JASWINDER_FARMER_ID : `farmer-sim-${order}`;
     const farmerName = isJaswinder ? "Jaswinder Singh" : `${pick(FIRST_NAMES)} ${random() < 0.2 ? "Kaur" : "Singh"}`;
+    const villageId = isJaswinder ? baseVillage.id : pick(clusterVillages).id;
     const field: FieldRecord = {
       chcId: DEMO_CHC_ID,
       id: isJaswinder ? "f-jaswinder" : `f-sim-${String(order).padStart(2, "0")}`,
       token: order + 1,
       farmerId,
       farmerName,
-      villageId: isJaswinder ? baseVillage.id : pick(clusterVillages).id,
+      villageId,
       acres: isJaswinder ? 6 : pick(FIELD_SIZES_ACRES),
-      readyDay: isJaswinder ? today + 1 : today - 2 + Math.floor(random() * 8),
-      waitingLimitDays: isJaswinder ? 5 : 3 + Math.floor(random() * 8),
+      readyDay: drawReadyDay(villageId),
+      waitingLimitDays: isJaswinder ? 5 : WAITING_LIMIT_MIN_DAYS + Math.floor(random() * (WAITING_LIMIT_MAX_DAYS - WAITING_LIMIT_MIN_DAYS + 1)),
       requestOrder: order,
       createdAt: now,
       state: "waiting",

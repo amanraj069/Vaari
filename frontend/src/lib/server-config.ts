@@ -27,7 +27,7 @@ export const COOKIE = {
 
 export const ROLE_HOME: Record<string, string> = {
   farmer: "/farmer",
-  facilitator: "/farmer",
+  facilitator: "/book",
   operator: "/operator",
   officer: "/proof",
 };
