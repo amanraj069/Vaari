@@ -6,7 +6,8 @@ import { Github, Mail } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { PAGE_FRAME } from "./page-shell";
 
-export function GlobalFooter() {
+/** contactEmail comes from the server (CONTACT_EMAIL), the same address /privacy gives for deletion. */
+export function GlobalFooter({ contactEmail }: { contactEmail: string }) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   // The credits were first written for the landing page's footer.
@@ -27,7 +28,7 @@ export function GlobalFooter() {
             <a href="https://github.com/amanraj069/Vaari" aria-label={tc("githubLabel")} className="hover:text-ink transition-colors">
               <Github className="size-5" strokeWidth={1.5} />
             </a>
-            <a href="mailto:amanraj3567@gmail.com" aria-label={tc("contactLabel")} className="hover:text-ink transition-colors">
+            <a href={`mailto:${contactEmail}`} aria-label={tc("contactLabel")} className="hover:text-ink transition-colors">
               <Mail className="size-5" strokeWidth={1.5} />
             </a>
           </div>
@@ -60,6 +61,7 @@ export function GlobalFooter() {
               <li><Link href="/#problem" className="hover:text-ink transition-colors">{t("problem")}</Link></li>
               <li><Link href="/#how" className="hover:text-ink transition-colors">{t("how")}</Link></li>
               <li><Link href="/proof" className="hover:text-ink transition-colors">{t("proof")}</Link></li>
+              <li><Link href="/privacy" className="hover:text-ink transition-colors">{t("privacy")}</Link></li>
             </ul>
           </div>
 

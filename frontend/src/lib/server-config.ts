@@ -16,6 +16,8 @@ export const serverConfig = {
   proxySharedSecret: process.env.PROXY_SHARED_SECRET ?? "",
   // The WhatsApp Business number farmers message "my fields" (digits with country code). Empty: no button.
   whatsappBusinessNumber: (process.env.WHATSAPP_BUSINESS_NUMBER ?? "").replace(/\D/g, ""),
+  // Where people write to us, and ask for their data to be deleted (/privacy#deletion, the footer).
+  contactEmail: process.env.CONTACT_EMAIL?.trim() || "amanraj3567@gmail.com",
 };
 
 export const COOKIE = {
