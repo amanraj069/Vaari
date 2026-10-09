@@ -16,6 +16,7 @@ import random
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from typing import Protocol
 
 from .contract import SolveRequest
 from .geo import haversine_km
@@ -62,7 +63,36 @@ def day_to_date(day: int) -> date:
     return date.fromordinal(date.fromisoformat(SEASON_START_DATE).toordinal() + day)
 
 
-def _sample_ready_day(distribution: list[list[float]], rng: random.Random, from_day: int, to_day: int) -> int | None:
+class UniformSource(Protocol):
+    def random(self) -> float: ...
+
+
+def load_reference_data(data_dir: Path | None = None) -> tuple[list[dict], dict]:
+    """Village points (OpenStreetMap) and harvest curves (NASA FIRMS), both committed in data/."""
+    data_dir = data_dir or default_data_dir()
+    try:
+        villages = json.loads((data_dir / "villages.json").read_text())["villages"]
+        curves = json.loads((data_dir / "harvest_curves.json").read_text())
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"{error.filename} is missing: simulated seasons need data/villages.json and data/harvest_curves.json"
+        ) from error
+    return villages, curves
+
+
+def cluster_around(villages: list[dict], base_name: str = BASE_VILLAGE_NAME, radius_km: float = CLUSTER_RADIUS_KM) -> tuple[dict, list[dict]]:
+    """The CHC's base village and every village within the radius, sorted by name."""
+    base = next((village for village in villages if village["name"] == base_name), None)
+    if base is None:
+        raise ValueError(f"{base_name} missing from villages.json")
+    members = sorted(
+        (village for village in villages if haversine_km(base["lat"], base["lon"], village["lat"], village["lon"]) <= radius_km),
+        key=lambda village: village["name"],
+    )
+    return base, members
+
+
+def sample_ready_day(distribution: list[list[float]], rng: UniformSource, from_day: int, to_day: int) -> int | None:
     """Draw a day from a (day, probability) curve restricted to [from_day, to_day] (as harvest.ts)."""
     in_range = [(int(day), probability) for day, probability in distribution if from_day <= day <= to_day]
     total = sum(probability for _day, probability in in_range)
@@ -83,26 +113,8 @@ def seeded_cluster(
     machine_count: int = DEFAULT_MACHINE_COUNT,
     data_dir: Path | None = None,
 ) -> Cluster:
-    data_dir = data_dir or default_data_dir()
-    try:
-        villages = json.loads((data_dir / "villages.json").read_text())["villages"]
-        curves = json.loads((data_dir / "harvest_curves.json").read_text())
-    except FileNotFoundError as error:
-        raise FileNotFoundError(
-            f"{error.filename} is missing: the seeded cluster needs data/villages.json and data/harvest_curves.json"
-        ) from error
-
-    base = next((village for village in villages if village["name"] == BASE_VILLAGE_NAME), None)
-    if base is None:
-        raise ValueError(f"{BASE_VILLAGE_NAME} missing from villages.json")
-    cluster_villages = sorted(
-        (
-            village
-            for village in villages
-            if haversine_km(base["lat"], base["lon"], village["lat"], village["lon"]) <= CLUSTER_RADIUS_KM
-        ),
-        key=lambda village: village["name"],
-    )
+    villages, curves = load_reference_data(data_dir)
+    base, cluster_villages = cluster_around(villages)
     curve_by_village = {curve["villageId"]: curve["readyDays"] for curve in curves["villages"]}
 
     rng = random.Random(seed)
@@ -116,9 +128,9 @@ def seeded_cluster(
     for order in range(field_count):
         village = cluster_villages[rng.randrange(len(cluster_villages))]
         # The village's own curve (which may itself be blended toward the district), else the district's.
-        ready_day = _sample_ready_day(curve_by_village.get(village["id"], []), rng, window_from, window_to)
+        ready_day = sample_ready_day(curve_by_village.get(village["id"], []), rng, window_from, window_to)
         if ready_day is None:
-            ready_day = _sample_ready_day(curves["district"]["readyDays"], rng, window_from, window_to)
+            ready_day = sample_ready_day(curves["district"]["readyDays"], rng, window_from, window_to)
         if ready_day is None:
             raise ValueError(f"no harvest-curve days between day {window_from} and {window_to}; pick another --today")
         fields.append(

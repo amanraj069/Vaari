@@ -15,6 +15,7 @@
     "test:engine": "cd engine && uv run pytest -q",
     "preplan": "node scripts/ensure-engine.mjs",
     "plan": "cd engine && uv run --quiet python -m vaari_engine plan",
+    "simulate": "cd engine && uv run --quiet python -m vaari_engine simulate",
     "typecheck": "tsc --noEmit",
     "engine:setup": "cd engine && uv sync",
     "contract:sync": "node scripts/sync-contract.mjs",
@@ -22,6 +23,7 @@
     "db:status": "tsx --env-file-if-exists=.env scripts/db.ts status",
     "test:dynamo": "REPO=dynamo TABLE_PREFIX=vaari-test vitest run",
     "data:villages": "tsx scripts/data/villages.ts",
+    "data:boundaries": "tsx scripts/data/boundaries.ts",
     "data:prepare": "tsx scripts/data/prepare.ts"
   },
   "dependencies": {

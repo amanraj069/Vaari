@@ -1,6 +1,6 @@
 # Vaari. Each folder is a normal npm project; this file only saves typing.
 # `make test` and `make dev` run on any laptop with no AWS account.
-.PHONY: setup dev test plan data
+.PHONY: setup dev test plan simulate data
 
 setup:            ## Install backend (npm + Python engine via uv) and frontend (npm)
 	cd backend && npm install && npm run engine:setup
@@ -14,6 +14,9 @@ test:             ## Engine invariants and brute-force gap, Cedar allow/deny, co
 
 plan:             ## Plan the seeded, simulated cluster in the terminal (SEED=1 by default)
 	cd backend && npm run plan -- --seed $(or $(SEED),1)
+
+simulate:         ## 50 district seasons x 3 policies -> data/sim/results.json (about 14 min on 6 workers; RUNS=5 for a quick look)
+	cd backend && npm run simulate -- --runs $(or $(RUNS),50) --seed $(or $(SEED),1)
 
 data:             ## Villages from OpenStreetMap (network), then harvest curves from the FIRMS CSVs (offline)
 	cd backend && npm run data:villages && npm run data:prepare

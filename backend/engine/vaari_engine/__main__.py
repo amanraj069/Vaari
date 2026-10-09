@@ -25,8 +25,12 @@ def main() -> int:
         from .plan_cli import run
 
         return run(sys.argv[2:])
+    if command == "simulate":
+        from .sim.runner import main as simulate
+
+        return simulate(sys.argv[2:])
     if len(sys.argv) != 2 or command not in ("solve", "explain"):
-        print("usage: python -m vaari_engine solve|explain < request.json\n       python -m vaari_engine plan [--seed N]", file=sys.stderr)
+        print("usage: python -m vaari_engine solve|explain < request.json\n       python -m vaari_engine plan [--seed N]\n       python -m vaari_engine simulate [--runs N] [--seed N]", file=sys.stderr)
         return 2
     raw = sys.stdin.read()
     try:
