@@ -1,7 +1,8 @@
 """Machine speed learned from work logs.
 
 Why it exists: sources disagree on Super Seeder speed (CEEW interviews: about 5.3 acres in an
-8-hour day; a district agriculture office: 10-12). Each machine starts from a cautious prior that
+8-hour day; The Tribune, Jalandhar, 2019, reporting an agriculture department camp: 10-12 a day,
+https://www.tribuneindia.com/news/archive/jalandhar/news-detail-863925). Each machine starts from a cautious prior that
 spans that range and narrows as the operator logs real work. Promises use the 20th percentile so
 they hold on slow days; tomorrow's route uses the median so machines are not left idle.
 """
@@ -11,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 PRIOR_LOW_ACRES_PER_DAY = 5.3  # CEEW operator interviews (8-hour day)
-PRIOR_HIGH_ACRES_PER_DAY = 12.0  # district agriculture office, upper end
+PRIOR_HIGH_ACRES_PER_DAY = 12.0  # The Tribune, Jalandhar (2019), agriculture department camp: 10-12 a day, upper end
 PRIOR_REFERENCE_HOURS = 8.0
 PRIOR_PSEUDO_OBSERVATIONS = 5  # assumed: how much the prior weighs against real logs
 PROMISE_QUANTILE = 0.2

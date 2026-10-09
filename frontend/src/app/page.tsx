@@ -3,7 +3,7 @@
  * Vaari promises; the problem shows why it matters (the smoke, sourced numbers and a chart of real
  * NASA FIRMS detections in one panel); the fix shows how a promised date replaces the wait; the
  * close returns to the opening photo with the two demo roles. Fine print (yield cost, what is
- * simulated, credits) lives in the footer. Every number is from CLAUDE.md's sourced facts or
+ * simulated, credits) lives in the footer. Every number is from a cited source or
  * computed from data/ (fire-season.json); photos are labelled AI-generated illustrations.
  */
 import { CalendarCheck2, ChevronDown, Cpu, Flame, FlaskConical, PhoneOff, Satellite, Sprout, Ticket, UserCheck, Wheat, Wind, type LucideIcon } from "lucide-react";
@@ -198,10 +198,12 @@ function Problem() {
   const t = useTranslations("landing");
   const facts = fireSeasonFacts();
   const stats = [
-    { value: 10909, label: t("stat1Label"), source: t("stat1Source") },
-    { value: 663, label: t("stat2Label"), source: t("stat1Source") },
-    { value: fireSeason.detectionsBySeason["2024"], label: t("stat3Label"), source: t("stat3Source") },
-    { value: facts.optimumShare, suffix: "%", label: t("stat4Label"), source: t("stat3Source") },
+    // The Tribune, 2 October 2025: "663 hotspot villages across eight districts ... 6,815 of the
+    // 10,909 farm fires reported in 2024". The link is in the messages (stat1SourceUrl).
+    { value: 10909, label: t("stat1Label"), source: t("stat1Source"), url: t("stat1SourceUrl") },
+    { value: 663, label: t("stat2Label"), source: t("stat1Source"), url: t("stat1SourceUrl") },
+    { value: fireSeason.detectionsBySeason["2024"], label: t("stat3Label"), source: t("stat3Source"), url: null },
+    { value: facts.optimumShare, suffix: "%", label: t("stat4Label"), source: t("stat3Source"), url: null },
   ];
   return (
     <section id="problem" aria-labelledby="problem-title" className={`scroll-mt-4 ${SECTION_SPACE}`}>
@@ -232,7 +234,15 @@ function Problem() {
                 <dd className="order-1 font-display text-3xl leading-none tracking-tight text-ember-deep tabular sm:text-5xl">
                   <CountUp value={stat.value} suffix={stat.suffix} />
                 </dd>
-                <dd className="order-3 mt-2 text-xs text-ink-muted">{stat.source}</dd>
+                <dd className="order-3 mt-2 text-xs text-ink-muted">
+                  {stat.url ? (
+                    <a href={stat.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 min-w-11 items-center underline underline-offset-2 hover:text-ink">
+                      {stat.source}
+                    </a>
+                  ) : (
+                    stat.source
+                  )}
+                </dd>
               </StaggerItem>
             ))}
           </Stagger>

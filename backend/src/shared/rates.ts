@@ -1,6 +1,7 @@
 /**
  * Machine speed learned from work logs; the same rule as backend/engine/vaari_engine/rates.py.
- * Sources disagree (CEEW interviews: about 5.3 acres in an 8-hour day; a district office: 10-12),
+ * Sources disagree (CEEW interviews: about 5.3 acres in an 8-hour day; The Tribune, Jalandhar, 2019,
+ * reporting an agriculture department camp: 10-12 a day, https://www.tribuneindia.com/news/archive/jalandhar/news-detail-863925),
  * so each machine starts from a prior spread across that range and narrows with real logs.
  * Promises use the 20th percentile; tomorrow's route uses the median.
  */

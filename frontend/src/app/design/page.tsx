@@ -21,7 +21,7 @@ import { Timeline, TIMELINE_STEPS } from "@/components/timeline";
 import { useToast } from "@/components/toast";
 import { TopBar } from "@/components/top-bar";
 import { Button, Card, Pill, Skeleton, StateMessage, type PillKind } from "@/components/ui";
-import { SAMPLE_BOOKED, SAMPLE_FIELDS, SAMPLE_REASONS, SAMPLE_TODAY } from "@/lib/samples";
+import { SAMPLE_BOOKED, SAMPLE_TODAY, useSamples } from "@/lib/samples";
 
 const LOCALES = [
   { code: "en", label: "English", messages: en },
@@ -58,6 +58,8 @@ function Specimen() {
     : kind === "done" ? ts("doneTitle")
     : tr(kind);
   const toast = useToast();
+  // Sample sentences in the reader's language (messages, namespace "design").
+  const { fields: SAMPLE_FIELDS, reasons: SAMPLE_REASONS } = useSamples();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [slider, setSlider] = useState(6);
   const slotStates: [string, SlotState][] = [
