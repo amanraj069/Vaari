@@ -24,7 +24,8 @@ export type Action =
   | "ResetDemo"
   | "ViewFarmerContact"
   | "ViewAggregates"
-  | "ReissueLink";
+  | "ReissueLink"
+  | "RequestSooner";
 
 export type Resource =
   | { type: "Field"; id: string; chcId: string; farmerPhone: string | null; bookedBy: string | null }

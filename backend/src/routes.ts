@@ -37,7 +37,7 @@ import { DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
 import type { FieldRecord } from "./store/types";
 import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
-import { reasonText } from "./explain/templates";
+import { explainField as explainFieldFor } from "./domain/why";
 import { clientRateLimit } from "./http/client-ip";
 
 export class ForbiddenError extends Error {
@@ -348,33 +348,9 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // "Why this date?" from the solver's own reasons, phrased by templates. Shared by the signed-in,
-  // phone-session and slot-link routes so all say exactly the same thing.
-  const explainField = async (field: FieldRecord, locale: Locale): Promise<Why> => {
-    const { request: solveRequest } = await dependencies.planner.buildSolveRequest(field.chcId);
-    // Unplanned: ask whether any day inside the horizon could work.
-    const currentDay = field.plannedDay ?? dependencies.planner.today() + 1 + (solveRequest.horizonDays ?? 10);
-    const explained = await engine.explain({ ...solveRequest, fieldId: field.id, currentDay });
-    const machines = await dependencies.store.listMachines(field.chcId);
-    const machineName = new Map(machines.map((machine) => [machine.id, machine.name]));
-    return {
-      fieldId: field.id,
-      plannedDate: field.plannedDay === null ? null : dependencies.planner.dayToIso(field.plannedDay),
-      earlierPossible: explained.earlierPossible,
-      reasons: explained.reasons.map((reason) => {
-        const dates = reason.days.map((day) => dependencies.planner.dayToIso(day));
-        const machineNames = reason.machineIds.map((id) => machineName.get(id) ?? id);
-        return {
-          code: reason.code,
-          dates,
-          machineNames,
-          count: reason.count,
-          text: reasonText(reason.code, { dates, machines: machineNames, count: reason.count }, locale),
-        };
-      }),
-      source: "template",
-    };
-  };
+  // "Why this date?" from the solver's own reasons (domain/why.ts), shared with the WhatsApp agent.
+  const explainField = (field: FieldRecord, locale: Locale): Promise<Why> =>
+    explainFieldFor({ planner: dependencies.planner, store: dependencies.store, engine }, field, locale);
 
   /** A field in the caller's CHC (fields are keyed by chcId + fieldId: a direct GetItem). */
   const callerField = async (principal: Principal, fieldId: string): Promise<FieldRecord> => {
@@ -543,7 +519,9 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ApprovePlan", { type: "Chc", id: chcId });
       const { version } = z.object({ version: z.number().int() }).parse(request.body);
-      await dependencies.planner.approvePlan(chcId, version, request.principal.name);
+      const { changes } = await dependencies.planner.approvePlan(chcId, version, request.principal.name);
+      // Farmers whose promise changed hear about it on WhatsApp (consented numbers only; in the background).
+      dependencies.whatsapp.notifier.planPublished(chcId, changes);
       response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
     }),
   );

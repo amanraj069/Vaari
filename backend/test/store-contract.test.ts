@@ -118,6 +118,33 @@ for (const { name, make } of stores) {
       expect(await store.useLoginToken(`never-${run}`, "2026-10-31T00:02:00.000Z")).toBeNull();
     });
 
+    it("claims a WhatsApp message id once, until its claim expires", async () => {
+      const id = `wamid.contract-${run}`;
+      expect(await store.claimInboundMessage(id, "2026-10-31T10:00:00.000Z", "2026-11-03T10:00:00.000Z")).toBe(true);
+      expect(await store.claimInboundMessage(id, "2026-10-31T10:05:00.000Z", "2026-11-03T10:05:00.000Z")).toBe(false);
+      // After the TTL (DynamoDB may not have deleted it yet), the id counts as new.
+      expect(await store.claimInboundMessage(id, "2026-11-04T10:00:00.000Z", "2026-11-07T10:00:00.000Z")).toBe(true);
+    });
+
+    it("uses a WhatsApp draft once, only from its phone, only before it expires", async () => {
+      const draft = { draftId: `draft-${run}`, phone: "+447700900017", chcId, fieldId: "f1", waitingLimitDays: 3, createdAt: "2026-10-31T10:00:00.000Z", expiresAt: "2026-10-31T10:15:00.000Z", usedAt: null };
+      await store.putWhatsAppDraft(draft);
+      expect(await store.useWhatsAppDraft(draft.draftId, "+447700900018", "2026-10-31T10:01:00.000Z")).toBeNull();
+      expect(await store.useWhatsAppDraft(draft.draftId, draft.phone, "2026-10-31T10:16:00.000Z")).toBeNull();
+      expect(await store.useWhatsAppDraft(draft.draftId, draft.phone, "2026-10-31T10:02:00.000Z")).toMatchObject({ draftId: draft.draftId, waitingLimitDays: 3, usedAt: "2026-10-31T10:02:00.000Z" });
+      expect(await store.useWhatsAppDraft(draft.draftId, draft.phone, "2026-10-31T10:03:00.000Z")).toBeNull();
+      expect(await store.useWhatsAppDraft(`missing-${run}`, draft.phone, "2026-10-31T10:03:00.000Z")).toBeNull();
+    });
+
+    it("records an outbound notice and moves its delivery status forward only", async () => {
+      const messageId = `wamid.out-${run}`;
+      await store.putOutboundNotice({ messageId, phoneLast4: "0017", kind: "new_date", chcId, fieldId: "f1", sentAt: "2026-10-31T10:00:00.000Z", status: "accepted", statusAt: "2026-10-31T10:00:00.000Z", error: null });
+      expect(await store.setNoticeStatus(messageId, "delivered", "2026-10-31T10:01:00.000Z", null)).toBe(true);
+      expect(await store.setNoticeStatus(messageId, "sent", "2026-10-31T10:00:30.000Z", null)).toBe(false);
+      expect(await store.setNoticeStatus(`wamid.unknown-${run}`, "read", "2026-10-31T10:02:00.000Z", null)).toBe(false);
+      expect(await store.getOutboundNotice(messageId)).toMatchObject({ status: "delivered", statusAt: "2026-10-31T10:01:00.000Z" });
+    });
+
     it("keeps promise history in version order, including past version 9", async () => {
       for (const version of [10, 2, 1, 9]) {
         await store.putPromise({ chcId, fieldId: "f1", version, promise: { kind: "firm", day: 30 + version }, state: "replaced", at: "x", reason: "replan" });

@@ -7,8 +7,10 @@ import {
   CreateTableCommand,
   DeleteTableCommand,
   DescribeTableCommand,
+  DescribeTimeToLiveCommand,
   ResourceNotFoundException,
   UpdateTableCommand,
+  UpdateTimeToLiveCommand,
   waitUntilTableNotExists,
   type AttributeDefinition,
   type DynamoDBClient,
@@ -90,6 +92,7 @@ export async function ensureTables(client: DynamoDBClient, prefix: string, repor
       report(`created  ${name}${spec.indexes.length ? ` (indexes: ${spec.indexes.map((index) => index.indexName).join(", ")})` : ""}`);
       await waitUntilActive(client, name);
       report(`active   ${name}`);
+      await ensureTimeToLive(client, name, spec, report);
       continue;
     }
     // Table exists: add any index it is missing, one at a time (DynamoDB allows one GSI creation per update).
@@ -108,7 +111,18 @@ export async function ensureTables(client: DynamoDBClient, prefix: string, repor
     }
     await waitUntilActive(client, name);
     report(missing.length ? `active   ${name}` : `exists   ${name}`);
+    await ensureTimeToLive(client, name, spec, report);
   }
+}
+
+/** Turns on TTL for tables that name a ttlAttribute (idempotent). */
+async function ensureTimeToLive(client: DynamoDBClient, name: string, spec: TableSpec, report: Report) {
+  if (!spec.ttlAttribute) return;
+  const current = await client.send(new DescribeTimeToLiveCommand({ TableName: name }));
+  const status = current.TimeToLiveDescription?.TimeToLiveStatus;
+  if (status === "ENABLED" || status === "ENABLING") return;
+  await client.send(new UpdateTimeToLiveCommand({ TableName: name, TimeToLiveSpecification: { Enabled: true, AttributeName: spec.ttlAttribute } }));
+  report(`ttl      ${name} (${spec.ttlAttribute})`);
 }
 
 export async function tableStatus(client: DynamoDBClient, documents: DynamoDBDocumentClient, prefix: string) {

@@ -175,6 +175,37 @@ export type UserRecord = {
  */
 export type LoginTokenRecord = { jti: string; phone: string; expiresAt: string; usedAt: string | null };
 
+/**
+ * A change a farmer asked for on WhatsApp ("I cannot wait longer"), waiting for their Confirm tap.
+ * Only a Confirm button reply naming this id, from this phone, before expiresAt, performs it, once.
+ */
+export type WhatsAppDraftRecord = {
+  draftId: string;
+  phone: string;
+  chcId: string;
+  fieldId: string;
+  waitingLimitDays: number;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+};
+
+export type NoticeKind = "new_date" | "firm_date" | "date_changed";
+export type DeliveryStatus = "accepted" | "sent" | "delivered" | "read" | "failed";
+
+/** One outbound WhatsApp notice and its latest delivery status. Only the phone's last 4 digits are kept. */
+export type OutboundNoticeRecord = {
+  messageId: string; // WhatsApp's message id (wamid), or "local-..." when the send itself failed
+  phoneLast4: string;
+  kind: NoticeKind;
+  chcId: string;
+  fieldId: string;
+  sentAt: string;
+  status: DeliveryStatus;
+  statusAt: string;
+  error: string | null;
+};
+
 /** Thrown when a conditional write loses: e.g. approving a plan that is no longer a draft. */
 export class StoreConflictError extends Error {}
 
@@ -250,6 +281,22 @@ export interface VaariStore {
    * was already used (a conditional write, so two simultaneous exchanges cannot both succeed).
    */
   useLoginToken(jti: string, usedAt: string): Promise<LoginTokenRecord | null>;
+
+  /**
+   * WhatsApp delivers a webhook at least once. Claims a message id: true the first time, false for
+   * a duplicate (a conditional write); the claim expires after `expiresAt` (TTL).
+   */
+  claimInboundMessage(messageId: string, receivedAt: string, expiresAt: string): Promise<boolean>;
+  putWhatsAppDraft(record: WhatsAppDraftRecord): Promise<void>;
+  /**
+   * Uses a draft once: returns it only if it exists, belongs to `phone`, is unused and has not
+   * expired at `at` (a conditional write); otherwise null and nothing changes.
+   */
+  useWhatsAppDraft(draftId: string, phone: string, at: string): Promise<WhatsAppDraftRecord | null>;
+  putOutboundNotice(record: OutboundNoticeRecord): Promise<void>;
+  /** A delivery status webhook. Ignored for unknown ids and for statuses older than the stored one. */
+  setNoticeStatus(messageId: string, status: DeliveryStatus, at: string, error: string | null): Promise<boolean>;
+  getOutboundNotice(messageId: string): Promise<OutboundNoticeRecord | null>;
 
   getUser(userId: string): Promise<UserRecord | null>;
   putUser(user: UserRecord): Promise<void>;

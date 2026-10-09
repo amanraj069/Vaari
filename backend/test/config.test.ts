@@ -56,6 +56,38 @@ describe("production secrets", () => {
   });
 });
 
+describe("WhatsApp in production", () => {
+  const WHATSAPP = {
+    WHATSAPP_ENABLED: "true",
+    WHATSAPP_TOKEN: "token",
+    WHATSAPP_APP_SECRET: "app-secret",
+    WHATSAPP_VERIFY_TOKEN: "verify",
+    WHATSAPP_PHONE_NUMBER_ID: "1234567890",
+    WHATSAPP_TEMPLATE_NEW_DATE: "vaari_new_date",
+    WHATSAPP_TEMPLATE_FIRM_DATE: "vaari_firm_date",
+    WHATSAPP_TEMPLATE_DATE_CHANGED: "vaari_date_changed",
+  };
+
+  it("starts with every WhatsApp setting present, and without them when WhatsApp is off", () => {
+    expect(() => loadConfig(production(WHATSAPP))).not.toThrow();
+    expect(() => loadConfig(production())).not.toThrow();
+  });
+
+  it("refuses to start with WHATSAPP_ENABLED and any secret or template missing", () => {
+    for (const name of Object.keys(WHATSAPP).filter((key) => key !== "WHATSAPP_ENABLED")) {
+      expect(() => loadConfig(production({ ...WHATSAPP, [name]: undefined })), name).toThrow(name);
+    }
+    expect(() => loadConfig(production({ ...WHATSAPP, WHATSAPP_QUEUE: "sqs" }))).toThrow("WHATSAPP_SQS_QUEUE_URL");
+  });
+
+  it(".env.example names every WhatsApp and agent setting (with no values for the secrets)", () => {
+    for (const name of [...Object.keys(WHATSAPP), "WHATSAPP_QUEUE", "WHATSAPP_SQS_QUEUE_URL", "WHATSAPP_ALLOWED_TEST_NUMBERS", "AGENT_ENABLED", "BEDROCK_MODEL_ID", "WEB_BASE_URL"]) {
+      expect(exampleValues[name], name).toBeDefined();
+    }
+    for (const secret of ["WHATSAPP_TOKEN", "WHATSAPP_APP_SECRET", "WHATSAPP_VERIFY_TOKEN"]) expect(exampleValues[secret]).toBe("");
+  });
+});
+
 describe("season dates", () => {
   it("refuses a season that ends before it starts", () => {
     expect(() => loadConfig({ NODE_ENV: "test", SEASON_START_DATE: "2026-10-01", SEASON_END_DATE: "2026-09-30" })).toThrow("SEASON_END_DATE");

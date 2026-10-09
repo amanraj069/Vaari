@@ -22,8 +22,11 @@ import {
   type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
+  type DeliveryStatus,
   type LoginTokenRecord,
   type MachineRecord,
+  type OutboundNoticeRecord,
+  type WhatsAppDraftRecord,
   type PlanChanges,
   type PlanRecord,
   type PromiseRecord,
@@ -50,6 +53,7 @@ function omit(item: Item, keys: string[]): Item {
 }
 
 const BATCH_SIZE = 25;
+const epochSeconds = (iso: string) => Math.floor(Date.parse(iso) / 1000);
 const MAX_BATCH_RETRIES = 8;
 
 export class DynamoStore implements VaariStore {
@@ -347,7 +351,7 @@ export class DynamoStore implements VaariStore {
   }
   async putLoginToken(record: LoginTokenRecord) {
     // usedAt is absent until the link is used; the conditional update below relies on that.
-    await this.put("loginTokens", omit(record, record.usedAt === null ? ["usedAt"] : []));
+    await this.put("loginTokens", { ...omit(record, record.usedAt === null ? ["usedAt"] : []), ttl: epochSeconds(record.expiresAt) + 86_400 });
   }
   async useLoginToken(jti: string, usedAt: string) {
     try {
@@ -361,11 +365,78 @@ export class DynamoStore implements VaariStore {
           ReturnValues: "ALL_NEW",
         }),
       );
-      return result.Attributes as LoginTokenRecord;
+      return omit(result.Attributes as Item, ["ttl"]) as LoginTokenRecord;
     } catch (error) {
       if (error instanceof ConditionalCheckFailedException) return null;
       throw error;
     }
+  }
+
+  // --- WhatsApp ----------------------------------------------------------------------------
+
+  async claimInboundMessage(messageId: string, receivedAt: string, expiresAt: string) {
+    try {
+      await this.documents.send(
+        new PutCommand({
+          TableName: this.table("whatsappMessages"),
+          Item: { messageId, receivedAt, ttl: epochSeconds(expiresAt) },
+          // TTL deletion can lag by hours: an expired claim counts as gone.
+          ConditionExpression: "attribute_not_exists(messageId) OR #ttl < :now",
+          ExpressionAttributeNames: { "#ttl": "ttl" },
+          ExpressionAttributeValues: { ":now": epochSeconds(receivedAt) },
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
+  }
+  async putWhatsAppDraft(record: WhatsAppDraftRecord) {
+    await this.put("whatsappDrafts", { ...omit(record, record.usedAt === null ? ["usedAt"] : []), ttl: epochSeconds(record.expiresAt) + 86_400 });
+  }
+  async useWhatsAppDraft(draftId: string, phone: string, at: string) {
+    try {
+      const result = await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("whatsappDrafts"),
+          Key: { draftId },
+          ConditionExpression: "attribute_exists(draftId) AND phone = :phone AND attribute_not_exists(usedAt) AND expiresAt > :at",
+          UpdateExpression: "SET usedAt = :at",
+          ExpressionAttributeValues: { ":phone": phone, ":at": at },
+          ReturnValues: "ALL_NEW",
+        }),
+      );
+      return omit(result.Attributes as Item, ["ttl"]) as WhatsAppDraftRecord;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return null;
+      throw error;
+    }
+  }
+  async putOutboundNotice(record: OutboundNoticeRecord) {
+    await this.put("whatsappNotices", { ...record });
+  }
+  async setNoticeStatus(messageId: string, status: DeliveryStatus, at: string, error: string | null) {
+    try {
+      await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("whatsappNotices"),
+          Key: { messageId },
+          ConditionExpression: "attribute_exists(messageId) AND statusAt <= :at",
+          UpdateExpression: "SET #status = :status, statusAt = :at, #error = :error",
+          ExpressionAttributeNames: { "#status": "status", "#error": "error" },
+          ExpressionAttributeValues: { ":status": status, ":at": at, ":error": error },
+        }),
+      );
+      return true;
+    } catch (caught) {
+      if (caught instanceof ConditionalCheckFailedException) return false;
+      throw caught;
+    }
+  }
+  async getOutboundNotice(messageId: string) {
+    const item = await this.get("whatsappNotices", { messageId });
+    return item ? (item as OutboundNoticeRecord) : null;
   }
 
   async getUser(userId: string) {

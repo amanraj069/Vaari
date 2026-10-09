@@ -11,8 +11,11 @@ import {
   type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
+  type DeliveryStatus,
   type LoginTokenRecord,
   type MachineRecord,
+  type OutboundNoticeRecord,
+  type WhatsAppDraftRecord,
   type PlanChanges,
   type PlanRecord,
   type PromiseRecord,
@@ -36,6 +39,9 @@ export class MemoryStore implements VaariStore {
   private farmers = new Map<string, FarmerRecord>();
   private users = new Map<string, UserRecord>();
   private loginTokens = new Map<string, LoginTokenRecord>();
+  private inboundMessages = new Map<string, string>(); // messageId -> expiresAt
+  private whatsAppDrafts = new Map<string, WhatsAppDraftRecord>();
+  private outboundNotices = new Map<string, OutboundNoticeRecord>();
 
   async listChcs() {
     return copy([...this.chcs.values()].sort((left, right) => byString(left.id, right.id)));
@@ -176,6 +182,36 @@ export class MemoryStore implements VaariStore {
     const used = { ...record, usedAt };
     this.loginTokens.set(jti, copy(used));
     return copy(used);
+  }
+
+  async claimInboundMessage(messageId: string, receivedAt: string, expiresAt: string) {
+    const held = this.inboundMessages.get(messageId);
+    // Like DynamoDB TTL: an expired claim is as good as gone.
+    if (held !== undefined && held > receivedAt) return false;
+    this.inboundMessages.set(messageId, expiresAt);
+    return true;
+  }
+  async putWhatsAppDraft(record: WhatsAppDraftRecord) {
+    this.whatsAppDrafts.set(record.draftId, copy(record));
+  }
+  async useWhatsAppDraft(draftId: string, phone: string, at: string) {
+    const draft = this.whatsAppDrafts.get(draftId);
+    if (!draft || draft.phone !== phone || draft.usedAt !== null || draft.expiresAt <= at) return null;
+    const used = { ...draft, usedAt: at };
+    this.whatsAppDrafts.set(draftId, copy(used));
+    return copy(used);
+  }
+  async putOutboundNotice(record: OutboundNoticeRecord) {
+    this.outboundNotices.set(record.messageId, copy(record));
+  }
+  async setNoticeStatus(messageId: string, status: DeliveryStatus, at: string, error: string | null) {
+    const notice = this.outboundNotices.get(messageId);
+    if (!notice || notice.statusAt > at) return false;
+    this.outboundNotices.set(messageId, copy({ ...notice, status, statusAt: at, error }));
+    return true;
+  }
+  async getOutboundNotice(messageId: string) {
+    return copy(this.outboundNotices.get(messageId) ?? null);
   }
 
   async getUser(userId: string) {

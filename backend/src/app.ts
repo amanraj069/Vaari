@@ -6,16 +6,18 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
-import pino from "pino";
 import { ZodError } from "zod";
 import { trustProxySetting, type Config } from "./config";
-import { redactUrl, requestSerializer } from "./http/redact";
+import { requestSerializer } from "./http/redact";
+import { logger } from "./logger";
 import { AuthError, type TokenVerifier } from "./auth/tokens";
 import { EngineError, type EngineClient } from "./engine/client";
 import { ConflictError, ImpossibleMoveError, NotFoundError, Planner } from "./domain/planner";
 import { PromiseTransitionError } from "./domain/promises";
 import type { VaariStore } from "./store/types";
 import { ForbiddenError, buildRoutes } from "./routes";
+import type { WhatsAppRuntime } from "./whatsapp";
+import { whatsappRouter } from "./whatsapp/webhook";
 
 export type AppDependencies = {
   config: Config;
@@ -24,44 +26,10 @@ export type AppDependencies = {
   verifier: TokenVerifier;
   planner: Planner;
   resetDemo: () => Promise<void>;
+  whatsapp: WhatsAppRuntime;
 };
 
-/**
- * Dev logs are for spotting problems, so they are one short line per event: the start-up line,
- * failed requests (5xx) with their stack, and permission denials. Successful requests are not
- * logged at all. Production (ECS, CloudWatch) keeps pino's JSON lines so they stay searchable.
- */
-const LEVEL_LABEL: Record<number, string> = { 10: "TRACE", 20: "DEBUG", 30: "INFO ", 40: "WARN ", 50: "ERROR", 60: "FATAL" };
-
-export const devLines = {
-  write(line: string) {
-    const entry = JSON.parse(line) as {
-      level: number;
-      time: number;
-      msg: string;
-      req?: { method: string; url: string };
-      res?: { statusCode: number };
-      err?: { message?: string; stack?: string };
-      [key: string]: unknown;
-    };
-    const { level, time, msg, req, res, err, ...details } = entry;
-    const clock = new Date(time).toTimeString().slice(0, 8);
-    const request = req ? ` ${req.method} ${redactUrl(req.url)}${res ? ` -> ${res.statusCode}` : ""}` : "";
-    const extra = Object.keys(details).length > 0 ? ` ${JSON.stringify(details)}` : "";
-    process.stdout.write(`${clock} ${LEVEL_LABEL[level] ?? level} ${msg}${request}${extra}\n`);
-    if (err?.stack) process.stdout.write(`${err.stack}\n`);
-  },
-};
-
-export const logger = pino(
-  {
-    level: process.env.NODE_ENV === "test" ? "silent" : "info",
-    base: undefined, // no pid or hostname on every line
-    // Never log tokens.
-    redact: ["req.headers.authorization", "req.headers.cookie"],
-  },
-  process.env.NODE_ENV === "production" ? undefined : devLines,
-);
+export { devLines, logger } from "./logger";
 
 export function createApp(dependencies: AppDependencies) {
   const app = express();
@@ -70,6 +38,8 @@ export function createApp(dependencies: AppDependencies) {
   // client address our Next proxy vouches for (http/client-ip.ts).
   app.set("trust proxy", trustProxySetting(dependencies.config));
   app.use(helmet());
+  // Before express.json(): the webhook's signature is checked on the raw bytes.
+  app.use(whatsappRouter(dependencies.config, dependencies.whatsapp.queue));
   app.use(express.json({ limit: "100kb" }));
   app.use(
     pinoHttp({

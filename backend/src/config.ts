@@ -54,6 +54,34 @@ const configSchema = z.object({
   // limits key on the farmer's own address rather than on the Next server's.
   PROXY_SHARED_SECRET: z.string().default(""),
   SLOT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+
+  // WhatsApp (Cloud API). Off by default: the webhook answers 404 and no notice is sent.
+  WHATSAPP_ENABLED: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  WHATSAPP_TOKEN: z.string().default(""),
+  // Meta signs every webhook body with the app secret (X-Hub-Signature-256).
+  WHATSAPP_APP_SECRET: z.string().default(""),
+  // Echoed back during Meta's webhook verification (GET hub.verify_token).
+  WHATSAPP_VERIFY_TOKEN: z.string().default(""),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().default(""),
+  WHATSAPP_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v23.0"),
+  // Utility templates approved in WhatsApp Manager, each with two body parameters: {{1}} the date, {{2}} the sentence.
+  WHATSAPP_TEMPLATE_NEW_DATE: z.string().default(""),
+  WHATSAPP_TEMPLATE_FIRM_DATE: z.string().default(""),
+  WHATSAPP_TEMPLATE_DATE_CHANGED: z.string().default(""),
+  // In DEMO_MODE, notices go only to these numbers (comma-separated, E.164).
+  WHATSAPP_ALLOWED_TEST_NUMBERS: z.string().default(""),
+  // memory: in-process (dev, tests). sqs: the webhook writes to SQS and `npm run worker` reads it.
+  WHATSAPP_QUEUE: z.enum(["memory", "sqs"]).default("memory"),
+  WHATSAPP_SQS_QUEUE_URL: z.string().default(""),
+  WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR: z.coerce.number().int().positive().default(30),
+  // The web app's public address, for the one-time /farmer login links sent on WhatsApp.
+  WEB_BASE_URL: z.string().url().default("http://localhost:3000"),
+  // The agent: off by default; then farmers get the menu and button replies (no model).
+  AGENT_ENABLED: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  // Nova 2 Lite has no in-region or geo inference in ap-south-1: the global profile is the one callable from there.
+  BEDROCK_MODEL_ID: z.string().default("global.amazon.nova-2-lite-v1:0"),
+  BEDROCK_REGION: z.string().optional(),
+  AGENT_TIMEOUT_SECONDS: z.coerce.number().positive().default(20),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -99,6 +127,20 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Config
     const problems = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
     throw new Error(`Invalid configuration: ${problems}`);
   }
+  if (parsed.data.NODE_ENV === "production" && parsed.data.WHATSAPP_ENABLED) {
+    const required = [
+      "WHATSAPP_TOKEN",
+      "WHATSAPP_APP_SECRET",
+      "WHATSAPP_VERIFY_TOKEN",
+      "WHATSAPP_PHONE_NUMBER_ID",
+      "WHATSAPP_TEMPLATE_NEW_DATE",
+      "WHATSAPP_TEMPLATE_FIRM_DATE",
+      "WHATSAPP_TEMPLATE_DATE_CHANGED",
+      ...(parsed.data.WHATSAPP_QUEUE === "sqs" ? ["WHATSAPP_SQS_QUEUE_URL", "AWS_REGION"] : []),
+    ] as const;
+    const missing = required.filter((name) => !environment[name]);
+    if (missing.length > 0) throw new Error(`Refusing to start in production: WHATSAPP_ENABLED=true but ${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} missing`);
+  }
   if (parsed.data.SEASON_END_DATE < parsed.data.SEASON_START_DATE) {
     throw new Error("SEASON_END_DATE must not be before SEASON_START_DATE");
   }
@@ -106,6 +148,15 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Config
     throw new Error("REPO=dynamo needs AWS_REGION (credentials come from the AWS default provider chain)");
   }
   return parsed.data;
+}
+
+/** WHATSAPP_ALLOWED_TEST_NUMBERS as E.164 numbers (anything that is not a phone number is ignored). */
+export function allowedTestNumbers(config: Config, normalise: (input: string) => string | null): Set<string> {
+  return new Set(
+    config.WHATSAPP_ALLOWED_TEST_NUMBERS.split(",")
+      .map((item) => normalise(item))
+      .filter((item): item is string => item !== null),
+  );
 }
 
 /** Express's "trust proxy" value from TRUST_PROXY: a hop count ("1"), "true"/"false", or names/CIDRs. */

@@ -3,9 +3,11 @@
 // session; attr phone). Resources: Field (attrs chcId, farmerPhone, bookedBy), Chc (attr chcId).
 // Farmers have no account: a FarmerPhone principal can only read fields booked with its phone.
 
-// A farmer's phone session sees and asks about the fields booked with that phone, nothing else.
+// A farmer's phone sees and asks about the fields booked with that phone, nothing else. On WhatsApp
+// (a Meta-signed message from that number) it may also ask for an earlier date ("I cannot wait
+// longer"), which takes effect only after a Confirm tap. The web phone session never asks for it.
 @id("farmer-phone-own-fields")
-permit (principal is FarmerPhone, action in [Action::"ViewField", Action::"AskWhy"], resource is Field)
+permit (principal is FarmerPhone, action in [Action::"ViewField", Action::"AskWhy", Action::"RequestSooner"], resource is Field)
 when { resource.farmerPhone != "" && resource.farmerPhone == principal.phone };
 
 // Facilitators ask a CHC for a date on a farmer's behalf.

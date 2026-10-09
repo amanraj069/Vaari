@@ -29,6 +29,13 @@ describe("Cedar policies", () => {
     expect(authorize(farmerPhone, "ViewField", phonelessField).allowed).toBe(false);
   });
 
+  it("a farmer's phone may ask for an earlier date (WhatsApp, after Confirm) on its own fields only", () => {
+    expect(authorize(farmerPhone, "RequestSooner", field).allowed).toBe(true);
+    expect(authorize(otherPhone, "RequestSooner", field).allowed).toBe(false);
+    expect(authorize(farmerPhone, "RequestSooner", phonelessField).allowed).toBe(false);
+    for (const user of [operator, facilitator, officer]) expect(authorize(user, "RequestSooner", field).allowed).toBe(false);
+  });
+
   it("a farmer's phone session can never act: no reissue, contact, booking or operator action", () => {
     for (const action of ["ReissueLink", "ViewFarmerContact"] as Action[]) expect(authorize(farmerPhone, action, field).allowed).toBe(false);
     for (const action of ["RequestField", "ViewAggregates", ...OPERATOR_ACTIONS] as Action[]) {

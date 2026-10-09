@@ -9,9 +9,10 @@ import { createEngineClient } from "./engine/client";
 import { DEMO_CHC_ID, DEMO_OPERATOR_NAME, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
 import { createStore } from "./store";
+import { buildWhatsApp } from "./whatsapp";
 
-export async function buildRuntime(options: { freshDemo?: boolean } = {}) {
-  const config = loadConfig();
+export async function buildRuntime(options: { freshDemo?: boolean; whatsapp?: Parameters<typeof buildWhatsApp>[1]; config?: Partial<ReturnType<typeof loadConfig>> } = {}) {
+  const config = { ...loadConfig(), ...options.config };
   const store = createStore(config);
   const engine = createEngineClient(config);
   const planner = new Planner(store, engine, config);
@@ -22,6 +23,7 @@ export async function buildRuntime(options: { freshDemo?: boolean } = {}) {
     engine,
     planner,
     verifier: createTokenVerifier(config, store),
+    whatsapp: buildWhatsApp({ config, store, planner, engine }, options.whatsapp),
     /**
      * Re-seeds only the demo CHC (its machines, fields, promises, plans, work logs). Users and
      * farmers are not deleted, so real (Google) users keep their profiles across a reset.

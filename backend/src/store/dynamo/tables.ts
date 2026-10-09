@@ -6,7 +6,8 @@
  */
 export type KeySpec = { name: string; type: "S" | "N" };
 export type IndexSpec = { indexName: string; partitionKey: KeySpec; sortKey?: KeySpec };
-export type TableSpec = { name: string; partitionKey: KeySpec; sortKey?: KeySpec; indexes: IndexSpec[] };
+// ttlAttribute: a number attribute (epoch seconds) DynamoDB deletes the item after (TTL).
+export type TableSpec = { name: string; partitionKey: KeySpec; sortKey?: KeySpec; indexes: IndexSpec[]; ttlAttribute?: string };
 
 const S = (name: string): KeySpec => ({ name, type: "S" });
 
@@ -30,7 +31,11 @@ export const TABLES = {
   workLogs: { name: "work-logs", partitionKey: S("chcId"), sortKey: S("logKey"), indexes: [] },
   fireChecks: { name: "fire-checks", partitionKey: S("fieldId"), sortKey: S("checkDate"), indexes: [] },
   // One-time farmer login links, by jti (used at most once; see auth/farmer-session.ts).
-  loginTokens: { name: "login-tokens", partitionKey: S("jti"), indexes: [] },
+  loginTokens: { name: "login-tokens", partitionKey: S("jti"), indexes: [], ttlAttribute: "ttl" },
+  // WhatsApp: inbound message ids already processed (dedupe), Confirm drafts, outbound notices.
+  whatsappMessages: { name: "whatsapp-messages", partitionKey: S("messageId"), indexes: [], ttlAttribute: "ttl" },
+  whatsappDrafts: { name: "whatsapp-drafts", partitionKey: S("draftId"), indexes: [], ttlAttribute: "ttl" },
+  whatsappNotices: { name: "whatsapp-notices", partitionKey: S("messageId"), indexes: [] },
 } satisfies Record<string, TableSpec>;
 
 export type TableKey = keyof typeof TABLES;
