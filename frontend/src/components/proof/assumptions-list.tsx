@@ -57,6 +57,7 @@ export function AssumptionsList({ results }: { results: ProofResults }) {
             </span>
             {t(`in_${name}`, values(name, input))}
             {input.source ? <SourceLine source={input.source} url={input.sourceUrl} /> : null}
+            {input.alsoSource ? <SourceLine source={input.alsoSource} url={input.alsoSourceUrl} /> : null}
           </li>
         ))}
       </ul>

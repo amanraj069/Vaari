@@ -13,6 +13,7 @@ four with the same breakdowns, and every season has the same rain.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -141,8 +142,10 @@ def generate_season(
 ) -> Season:
     """One centre's season for (seed, scenario, run): its farmers, its machines, and the district's
     weather. Without `centre`, the district's first centre (the fire hotspot). `overrides` replace
-    inputs by name: machines (this centre's fleet), acresPerMachine, waitingLimitDays (every farmer
-    waits exactly this long), daysSoonerWithoutDate, phoneQueueReturnsToChc, phoneQueueLateReturnChance."""
+    inputs by name: machines (this centre's fleet), machineShare (this share of the centre's fleet,
+    rounded half up, at least one: the capacity-shortfall scenario), acresPerMachine,
+    waitingLimitDays (every farmer waits exactly this long), daysSoonerWithoutDate,
+    phoneQueueReturnsToChc, phoneQueueLateReturnChance."""
     overrides = overrides or {}
     value = lambda name: overrides.get(name, assumptions.input(name).get("value"))  # noqa: E731
     villages_all, curves = reference or load_reference_data()
@@ -201,7 +204,11 @@ def generate_season(
     breakdown_days = assumptions.input("breakdownDays")
     machines: list[SimMachine] = []
     breakdowns: list[Breakdown] = []
-    for number in range(1, int(overrides.get("machines", centre.machines)) + 1):
+    fleet = int(overrides.get("machines", centre.machines))
+    if "machineShare" in overrides:
+        # Fewer machines for the same farmers (the booked acres above use the full fleet).
+        fleet = max(1, math.floor(centre.machines * float(overrides["machineShare"]) + 0.5))
+    for number in range(1, fleet + 1):
         # One stream per machine: machine 2 is the same machine, with the same breakdowns, in every scenario.
         machine_rng = SplitMix64(derive_seed(seed, scenario, run, *own, "machine", number))
         machine = SimMachine(

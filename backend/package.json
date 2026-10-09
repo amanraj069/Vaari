@@ -16,6 +16,7 @@
     "preplan": "node scripts/ensure-engine.mjs",
     "plan": "cd engine && uv run --quiet python -m vaari_engine plan",
     "simulate": "cd engine && uv run --quiet python -m vaari_engine simulate",
+    "simulate:check": "node scripts/simulate-check.mjs",
     "typecheck": "tsc --noEmit",
     "engine:setup": "cd engine && uv sync",
     "contract:sync": "node scripts/sync-contract.mjs",

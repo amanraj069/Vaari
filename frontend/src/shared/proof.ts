@@ -77,6 +77,9 @@ export const assumptionInputSchema = z.looseObject({
   why: z.string().optional(),
   source: z.string().optional(),
   sourceUrl: z.string().optional(),
+  // A second source, for a range whose two ends come from different places.
+  alsoSource: z.string().optional(),
+  alsoSourceUrl: z.string().optional(),
 });
 export type AssumptionInput = z.infer<typeof assumptionInputSchema>;
 
@@ -157,7 +160,8 @@ export const proofResultsSchema = z.object({
       z.looseObject({ value: z.union([z.number(), z.string()]), source: z.string(), unit: z.string().optional(), sourceUrl: z.string().optional() }),
     ),
   }),
-  scenarios: z.object({ base: scenarioSchema }),
+  // capacityShortfall: half the machines, the same farmers (absent from files written before it existed).
+  scenarios: z.object({ base: scenarioSchema, capacityShortfall: scenarioSchema.optional() }),
   sweeps: z.array(sweepSchema).min(1),
   replay: replaySchema,
 });

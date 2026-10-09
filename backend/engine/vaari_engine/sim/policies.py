@@ -8,12 +8,13 @@ waits for a later day. Rain stops everyone; a breakdown stops one machine. A far
 not sown by their last waiting day burns the stubble and leaves the queue (CEEW: uncertainty over
 the machine is why farmers burn); they sow with an ordinary drill the next day (assumed), and the
 CHC loses that booking. The same rule holds under every policy: a farmer holding a promised date
-waits their full limit, one without gives up `days_sooner_without_date` days sooner (0 in the base
-season, so the promise itself earns Vaari nothing there).
+waits their full limit, one without gives up `days_sooner_without_date` days sooner (2 in the base
+season, assumed; swept from 0, where the promise itself earns Vaari nothing, to 3).
 
 - phone_queue: first come, first served, run as CEEW describes most CHCs: a rental desk. The next
   free machine goes from the CHC to the earliest caller whose field is ready and comes back before
-  the next rental (the 'Direct transfers' season lets it go straight on instead). A rental may come
+  the next rental (`phone_queue_returns_to_chc`; set to false it goes straight on, a rule no
+  scenario uses today). A rental may come
   back late (`phone_queue_late_return_chance`, 0 in the base season): the machine is gone for the
   rest of that day.
 - nearest: nearest village next, a driver-run service. After each field the machine goes straight

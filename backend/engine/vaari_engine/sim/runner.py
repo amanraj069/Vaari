@@ -5,8 +5,9 @@ summarised as a median with the 10th-90th percentile spread. The same seed alway
 file: seasons come from a fixed-arithmetic RNG, the planner is seeded, runs are combined in run
 order (whatever order the worker processes finish in), and nothing time-dependent is written.
 
-Scenarios: the base season; direct transfers (the phone queue given CEEW's best practice, its most
-generous form); and a capacity shortfall (half the machines; no policy can save everyone). Sweeps
+Scenarios (data/sim/assumptions.json): the base season, and a capacity shortfall (the same seasons
+with half of every centre's machines: too few for the acres booked, so no policy can save
+everyone, and the page shows where Vaari stops helping). Sweeps
 over the inputs that could change the answer: acres booked per machine, how long farmers wait, how
 much sooner a farmer with no date gives up, and how often a phone-queue rental comes back late. A
 job identical to another (a sweep point equal to the base season) is played once, and a change that

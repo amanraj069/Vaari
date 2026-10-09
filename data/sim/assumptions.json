@@ -106,7 +106,9 @@
       "label": "real range",
       "min": 5.3,
       "max": 12,
-      "source": "CEEW operator interviews (about 5.3 acres in an 8-hour day) to a district agriculture office (10 to 12); each machine's true speed is drawn from this range and Vaari learns it from the day's work",
+      "source": "CEEW operator interviews: about 5.3 acres in an 8-hour day (the low end). Each machine's true speed is drawn from this range and Vaari learns it from the day's work",
+      "alsoSource": "The Tribune, Jalandhar (2019), reporting an agriculture department camp: a Super Seeder sows 10 to 12 acres a day (the high end)",
+      "alsoSourceUrl": "https://www.tribuneindia.com/news/archive/jalandhar/news-detail-863925",
       "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-annexurehow-custom-hiring-centres-improve-access-to-crop-residue-management-solutions.pdf"
     },
     "machineHoursPerDay": {
@@ -190,6 +192,10 @@
   "scenarios": {
     "base": {
       "about": "the whole district: every centre's farmers and machines, the district's weather"
+    },
+    "capacityShortfall": {
+      "about": "the same district seasons with half the machines (each centre keeps half its fleet, rounded half up, at least one) and the same farmers: too few machines for the acres booked, so no way of working can sow everyone before they give up",
+      "machineShare": 0.5
     }
   },
   "sweeps": [

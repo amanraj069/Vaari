@@ -17,6 +17,7 @@ import { MethodAndSources } from "@/components/proof/method-and-sources";
 import { ProofHero } from "@/components/proof/proof-hero";
 import { ResultsTable } from "@/components/proof/results-table";
 import { SeasonReplay } from "@/components/proof/season-replay";
+import { ShortfallPanel } from "@/components/proof/shortfall-panel";
 import { SweepChart } from "@/components/proof/sweep-chart";
 import { SimulatedBadge } from "@/components/simulated-badge";
 import { PageMain } from "@/components/page-shell";
@@ -69,6 +70,7 @@ export default function ProofPage() {
             <SeasonReplay replay={proof.data.replay} runs={proof.data.runs} seasonStartDate={proof.data.seasonStartDate} />
             <KeyTakeaways results={proof.data} />
             <SweepChart results={proof.data} />
+            <ShortfallPanel results={proof.data} />
             <MethodAndSources results={proof.data} />
           </>
         )}

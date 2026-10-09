@@ -60,6 +60,11 @@ def test_scenarios_and_sweeps_change_only_what_they_name(assumptions, reference)
     assert fewer.machines == base.machines[:2]
     assert fewer.breakdowns == [item for item in base.breakdowns if item.machine_id in {machine.id for machine in base.machines[:2]}]
     assert fewer.rain_days == base.rain_days
+    # The shortfall scenario: half of each centre's fleet (rounded half up, at least one), same farmers.
+    half = generate_season(assumptions, 1, "season", 0, overrides={"machineShare": 0.5}, reference=reference)
+    assert farmers(half) == farmers(base)
+    assert half.machines == base.machines[: max(1, (len(base.machines) + 1) // 2)]
+    assert half.rain_days == base.rain_days
     # Fixed waits: the same farmers, every one waiting exactly that long.
     waits = generate_season(assumptions, 1, "season", 0, overrides={"waitingLimitDays": 4}, reference=reference)
     assert farmers(waits) == farmers(base)
@@ -71,7 +76,7 @@ def test_scenarios_and_sweeps_change_only_what_they_name(assumptions, reference)
     acres = sum(field.acres for field in busier.fields)
     fleet = len(base.machines)
     assert 180 * fleet <= acres < 180 * fleet + max(assumptions.input("fieldAcres")["values"])
-    # The direct-transfers season and the patience sweep change no farmer, only the rules.
+    # The phone queue's direct-transfers rule and the patience sweep change no farmer, only the rules.
     transfers = generate_season(assumptions, 1, "season", 0, overrides={"phoneQueueReturnsToChc": False}, reference=reference)
     assert farmers(transfers) == farmers(base) and base.phone_queue_returns_to_chc and not transfers.phone_queue_returns_to_chc
     patient = generate_season(assumptions, 1, "season", 0, overrides={"daysSoonerWithoutDate": 0}, reference=reference)
@@ -250,7 +255,11 @@ def test_simulate_writes_the_same_file_for_the_same_seed():
     again = simulate(runs=2, seed=5, workers=1, sweep_runs=1, centres=2)
     assert json.dumps(first) == json.dumps(again)
     assert first["schemaVersion"] == 4
-    assert first["runs"] == 2 and set(first["scenarios"]) == {"base"}
+    assert first["runs"] == 2 and set(first["scenarios"]) == {"base", "capacityShortfall"}
+    # The shortfall plays the same seasons with about half the machines and the same farmers.
+    shortfall = first["scenarios"]["capacityShortfall"]
+    assert shortfall["fieldsPerSeason"] == first["scenarios"]["base"]["fieldsPerSeason"]
+    assert shortfall["machines"] < first["scenarios"]["base"]["machines"]
     # The district: every centre's farmers and machines in one season, on the real outline.
     district = first["scenarios"]["base"]
     assert district["centres"] == 2 and district["machines"] == sum(centre["machines"] for centre in first["replay"]["centres"])
