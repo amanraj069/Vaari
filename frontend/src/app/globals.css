@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Vaari design tokens (CLAUDE.md section 9). Quiet, warm, flat: paper not white, borders not
+ * Vaari design tokens. Quiet, warm, flat: paper not white, borders not
  * shadows, 8px corners. Ember means burn risk and nothing else. Wheat is a fill, never body text
  * (too little contrast on paper); text that needs the accent uses wheat-deep.
  * Contrast on paper: ink 16:1, ink-muted 5.4:1, field 5.6:1, ember-deep 5.7:1, wheat-deep 5.6:1.

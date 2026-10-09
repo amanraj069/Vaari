@@ -1,11 +1,8 @@
 # ---------------------------------------------------------------------------
-# Internal: planning notes and AI instructions. Not for the public repo.
+# Internal planning notes. Not for the public repo.
 # ---------------------------------------------------------------------------
 docs/
-CLAUDE.md
 PROJECT_BRIEF.md
-.claude/
-CLAUDE.local.md
 notes/
 scratch/
 

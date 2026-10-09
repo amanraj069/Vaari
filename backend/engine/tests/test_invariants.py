@@ -1,4 +1,4 @@
-"""The engine correctness checks from CLAUDE.md section 10. These must always pass, for both planners
+"""The engine correctness checks. These must always pass, for both planners
 (CP-SAT and the search); each test runs once per planner."""
 
 from __future__ import annotations
