@@ -13,8 +13,10 @@ export function GlobalFooter() {
   const tl = useTranslations("landing"); 
 
   return (
-    <footer className="mt-auto border-t border-line bg-surface/50 pt-16 pb-8">
-      <div className={`${PAGE_FRAME} grid gap-12 lg:grid-cols-4`}>
+    <footer className="footer-weave mt-auto pb-8">
+      {/* A phulkari border marks where the page ends and the footer begins. */}
+      <div aria-hidden className="ornament-band mt-1" />
+      <div className={`${PAGE_FRAME} grid gap-12 pt-16 lg:grid-cols-4`}>
         {/* Brand & Tagline */}
         <div className="flex flex-col gap-4 lg:col-span-1">
           <BrandMark />

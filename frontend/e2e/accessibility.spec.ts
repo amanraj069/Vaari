@@ -1,6 +1,6 @@
 /**
  * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered), the operator's
- * /operator and /operator/plan, and /design:
+ * /operator and /operator/plan, /proof, and /design:
  * English, Punjabi, Hindi x light, dark x 360px, 1280px. Each combination must have zero axe
  * WCAG 2.1 A/AA violations, no sideways scroll, a single-row header, and 44px touch targets.
  * Plus keyboard use of the "I cannot wait longer" dialog and the reduced-motion setting.
@@ -58,6 +58,8 @@ const PAGES = [
   // Operators work on laptops in the office and tablets in the field: the same bar applies.
   { name: "operator", role: "operator", path: () => "/operator", ready: "main h1" },
   { name: "operator-plan", role: "operator", path: () => "/operator/plan", ready: "main h1" },
+  // The evidence page, rendered from the committed data/sim/results.json.
+  { name: "proof", role: undefined, path: () => "/proof", ready: "#replay-title" },
 ] as const;
 
 for (const pageSpec of PAGES) {

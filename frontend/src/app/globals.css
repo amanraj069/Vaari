@@ -36,6 +36,15 @@
   --color-lane-3: #b98b52;
   --color-lane-4: #5f8aa6;
   --color-lane-5: #a86f6f;
+  /* The three policies on /proof charts. Checked with the dataviz palette validator (all pairs,
+     colour-blind and normal vision, >= 3:1 on the card surface) in light and dark. */
+  --color-policy-queue: #9a4f9e;
+  --color-policy-nearest: #2a78d6;
+  --color-policy-vaari: #b8800f;
+  /* How a farmer's season ended on the replay maps: sown by the optimum, sown after it, burned (also a cross). Validated, all pairs. */
+  --color-season-ontime: #2e7d4f;
+  --color-season-late: #c48a12;
+  --color-season-burned: #c8452b;
 
   /* Fraunces for Latin; browsers fall back glyph by glyph to the Noto Serif faces for Gurmukhi and Devanagari. */
   --font-display: var(--font-fraunces), var(--font-serif-gurmukhi), var(--font-serif-devanagari), "Georgia", serif;
@@ -80,6 +89,12 @@ html.dark {
   --color-lane-3: #d1a46a;
   --color-lane-4: #7ea9c4;
   --color-lane-5: #c48b8b;
+  --color-policy-queue: #a855ad;
+  --color-policy-nearest: #3987e5;
+  --color-policy-vaari: #c98500;
+  --color-season-ontime: #30a07a;
+  --color-season-late: #ae8c16;
+  --color-season-burned: #c43a52;
 }
 
 /* Hindi pages: try Devanagari before Gurmukhi, so shared marks like the danda (।) come from the
@@ -232,6 +247,64 @@ html.dark .hero-photo-in img {
 }
 /* Closing card: the opening photo again. Paper under the words at the left, the sunrise showing
    through on the right behind the frosted role cards; an even wash on narrow screens. */
+/* A photographic panel that is dark in both themes (the /proof hero): the photo keeps its real
+   colours, a dark scrim sits under the words, and text inside switches to the light palette by
+   redefining the colour tokens for this subtree only. */
+.on-photo {
+  --color-ink: #f6f1e6;
+  --color-ink-muted: #d9cdb9;
+  --color-line: rgb(255 255 255 / 0.2);
+  --color-line-strong: rgb(255 255 255 / 0.34);
+  --color-wheat-deep: #f0c46c;
+  --color-surface: #1f1c16;
+  --color-paper: #16140f;
+}
+.photo-scrim {
+  background:
+    linear-gradient(to right, rgb(14 12 9 / 0.9) 0%, rgb(14 12 9 / 0.74) 38%, rgb(14 12 9 / 0.28) 70%, rgb(14 12 9 / 0.06) 100%),
+    linear-gradient(to top, rgb(14 12 9 / 0.5) 0%, transparent 45%);
+}
+/* On a phone the words cover the whole photo: an even scrim. */
+@media (max-width: 767px) {
+  .photo-scrim {
+    background: rgb(14 12 9 / 0.74);
+  }
+}
+/* The ornament above the footer: a phulkari border (Punjab's embroidery, gold silk thread on deep
+   red cloth). An original SVG tile drawn as a mask, between a fine gold line and a heavier red one,
+   so it stays sharp at any size and has its own colours in light and dark. Decorative. */
+.ornament-band {
+  --phulkari-cloth: #7a2b1c;
+  --phulkari-thread: #e8b54c;
+  position: relative;
+  height: 1.75rem;
+  background: var(--phulkari-cloth);
+  box-shadow:
+    0 -1px 0 0 color-mix(in srgb, var(--phulkari-thread) 70%, transparent),
+    0 -3px 0 0 var(--color-paper),
+    0 -4px 0 0 color-mix(in srgb, var(--phulkari-thread) 45%, transparent),
+    0 2px 0 0 color-mix(in srgb, var(--phulkari-cloth) 80%, black),
+    0 3px 0 0 color-mix(in srgb, var(--phulkari-cloth) 35%, transparent);
+}
+html.dark .ornament-band {
+  --phulkari-cloth: #5a1f15;
+  --phulkari-thread: #d9a23a;
+}
+.ornament-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--phulkari-thread);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath fill='black' fill-rule='evenodd' d='M0 0L3.5 3.4L7 0zM0 28L3.5 24.6L7 28zM7 0L10.5 3.4L14 0zM7 28L10.5 24.6L14 28zM14 0L17.5 3.4L21 0zM14 28L17.5 24.6L21 28zM21 0L24.5 3.4L28 0zM21 28L24.5 24.6L28 28zM0 5.2h28v0.7H0zM0 22.1h28v0.7H0zM7.00 8.60L7.80 12.06L10.82 10.18L8.94 13.20L12.40 14.00L8.94 14.80L10.82 17.82L7.80 15.94L7.00 19.40L6.20 15.94L3.18 17.82L5.06 14.80L1.60 14.00L5.06 13.20L3.18 10.18L6.20 12.06zM6.1 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0zM21 9.0L26.0 14L21 19.0L16.0 14zM21 10.9L24.1 14L21 17.1L17.9 14zM21 12.6L22.4 14L21 15.4L19.6 14zM13.25 9.2a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0zM13.25 18.8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0zM-0.9 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0zM27.1 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0z'/%3E%3C/svg%3E") repeat-x left center / auto 100%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath fill='black' fill-rule='evenodd' d='M0 0L3.5 3.4L7 0zM0 28L3.5 24.6L7 28zM7 0L10.5 3.4L14 0zM7 28L10.5 24.6L14 28zM14 0L17.5 3.4L21 0zM14 28L17.5 24.6L21 28zM21 0L24.5 3.4L28 0zM21 28L24.5 24.6L28 28zM0 5.2h28v0.7H0zM0 22.1h28v0.7H0zM7.00 8.60L7.80 12.06L10.82 10.18L8.94 13.20L12.40 14.00L8.94 14.80L10.82 17.82L7.80 15.94L7.00 19.40L6.20 15.94L3.18 17.82L5.06 14.80L1.60 14.00L5.06 13.20L3.18 10.18L6.20 12.06zM6.1 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0zM21 9.0L26.0 14L21 19.0L16.0 14zM21 10.9L24.1 14L21 17.1L17.9 14zM21 12.6L22.4 14L21 15.4L19.6 14zM13.25 9.2a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0zM13.25 18.8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0zM-0.9 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0zM27.1 14a0.9 0.9 0 1 0 1.8 0a0.9 0.9 0 1 0 -1.8 0z'/%3E%3C/svg%3E") repeat-x left center / auto 100%;
+}
+/* The footer's ground: a faint woven lattice, like a durrie, under the links. */
+.footer-weave {
+  background-color: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--color-wheat-deep) 5%, transparent) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--color-wheat-deep) 5%, transparent) 0 1px, transparent 1px 14px);
+}
 .photo-wash-closing {
   background: color-mix(in srgb, var(--color-paper) 84%, transparent);
 }
