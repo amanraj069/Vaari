@@ -6,6 +6,8 @@ import { Router, type NextFunction, type Request, type RequestHandler, type Resp
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
 import {
   bookingInputSchema,
   dateToDay,
@@ -13,10 +15,12 @@ import {
   localeSchema,
   moveInputSchema,
   onboardingInputSchema,
+  proofResultsSchema,
   roleSchema,
   type ChcOption,
   type Locale,
   type Me,
+  type ProofResults,
   type Why,
 } from "./shared";
 import type { AppDependencies } from "./app";
@@ -97,6 +101,34 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         fieldCount,
         villageCount: villageIds.size,
       });
+    }),
+  );
+
+  // The evidence page reads only the simulator's results file (written by `npm run simulate`).
+  // Missing: 404 NOT_RUN, and the page shows an empty state. A file that fails the shared schema
+  // is refused (500), never patched. Read again only when the file changes.
+  let proofCache: { mtimeMs: number; body: ProofResults } | null = null;
+  router.get(
+    "/public/proof",
+    asyncHandler(async (request, response) => {
+      const file = path.join(config.DATA_DIR, "sim", "results.json");
+      let mtimeMs: number;
+      try {
+        mtimeMs = (await stat(file)).mtimeMs;
+      } catch {
+        response.status(404).json({ error: "NOT_RUN" });
+        return;
+      }
+      if (proofCache?.mtimeMs !== mtimeMs) {
+        const parsed = proofResultsSchema.safeParse(JSON.parse(await readFile(file, "utf8")));
+        if (!parsed.success) {
+          request.log.error({ issues: parsed.error.issues.slice(0, 5) }, "data/sim/results.json does not match the proof schema");
+          response.status(500).json({ error: "RESULTS_INVALID" });
+          return;
+        }
+        proofCache = { mtimeMs, body: parsed.data };
+      }
+      response.json(proofCache.body);
     }),
   );
 

@@ -35,7 +35,7 @@ Tests: `cd backend && npm test` runs everything in the backend: the engine (solv
 ```bash
 cd backend
 npm run plan -- --seed 1                                         # a simulated 34-field season, planned in about 0.2 s
-npm run plan -- --seed 1 --down m2:2026-11-05 --rain 2026-11-06  # a breakdown and rain: the re-plan keeps promises or says which broke
+npm run plan -- --seed 1 --down m2:2026-11-02 --rain 2026-11-03  # a breakdown and rain: the re-plan keeps promises or says which broke
 npm run plan -- --seed 1 --compare                               # the same cluster planned by CP-SAT too, on one objective
 npm run plan -- --help                                           # every option (--fields, --machines, --today, --method, --json)
 ```
@@ -47,6 +47,10 @@ cd backend
 npm run db:create   # creates any missing tables and indexes, waits until ACTIVE (safe to re-run)
 npm run db:status   # tables, indexes and item counts
 ```
+
+## The evidence (`/proof`)
+
+`npm run simulate -- --runs 50 --seed 1` (in `backend/`, or `make simulate`) plays 50 simulated seasons of the whole of Sangrur district (its real OpenStreetMap outline, 409 villages, 25 machine centres, 100 Super Seeders, about 2,400 farmers) under three policies (a phone queue, nearest village next, and Vaari), in three seasons (base; the phone queue given direct transfers between farmers; half the machines) and three sweeps (acres per machine, how long farmers wait, how much sooner a farmer with no date gives up), and writes `data/sim/results.json`. The phone queue is modelled as CEEW finds most CHCs run it, a rental desk with the machine back at the centre between farmers; farm and season sizes come from CEEW's CHC study. Burned acres become tonnes of straw and kg of PM2.5 with sourced conversions (Punjab's report to the NGT, IPCC, Gadde et al.), and every policy is also compared with the phone queue season by season. The same seed always writes the same file. The `/proof` page shows only numbers read from that file; without it, the page says the simulation has not been run. Every input is in `data/sim/assumptions.json`, labelled "assumed" or "real range". Seasons are simulated: farmers, fields, machines, breakdowns and rain are invented; village positions (OpenStreetMap) and harvest timing (NASA FIRMS) are real. A full run uses half the cores by default (about 14 minutes on 6 workers; any worker count writes the same file); `--runs 20` is enough for a quick look. Harvest timing uses both S-NPP and NOAA-20. The headline assumes farmers without a promised date give up 2 days sooner (no study measures this; the page says so and sweeps 0-3).
 
 ## How it decides
 

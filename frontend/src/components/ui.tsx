@@ -3,7 +3,7 @@
  * Risk and promise state always show an icon and a word, never colour alone.
  */
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck2, CalendarRange, CheckCheck, CircleDashed, Clock3, FilePenLine, Hourglass, Loader2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, CalendarRange, CheckCheck, CircleDashed, Clock3, CloudOff, FilePenLine, Hourglass, Inbox, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
 type Variant = "primary" | "accent" | "secondary" | "quiet";
@@ -64,9 +64,17 @@ export function Spinner({ label }: { label: string }) {
   );
 }
 
-export function StateMessage({ title, body, action, tone = "neutral" }: { title: string; body?: string; action?: ReactNode; tone?: "neutral" | "error" }) {
+/**
+ * Every empty, error and not-found state on the platform: an icon in a soft circle, a plain-language
+ * title, an optional line and an optional action. Never a status code, a command or an internal name.
+ */
+export function StateMessage({ title, body, action, tone = "neutral", icon }: { title: string; body?: string; action?: ReactNode; tone?: "neutral" | "error"; icon?: LucideIcon }) {
+  const Icon = icon ?? (tone === "error" ? CloudOff : Inbox);
   return (
-    <div className={`rounded-card border p-6 text-center ${tone === "error" ? "border-ember/40 bg-ember-soft/40" : "border-line bg-surface"}`}>
+    <div className={`rounded-card border px-6 py-8 text-center ${tone === "error" ? "border-ember/30 bg-ember-soft/30" : "border-line bg-surface"}`}>
+      <span aria-hidden className={`mx-auto mb-4 grid size-14 place-items-center rounded-full ${tone === "error" ? "bg-ember-soft text-ember-deep" : "bg-wheat-soft text-wheat-deep"}`}>
+        <Icon className="size-6" strokeWidth={1.5} />
+      </span>
       <p className="font-display text-xl">{title}</p>
       {body ? <p className="mx-auto mt-2 max-w-md text-ink-muted">{body}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}

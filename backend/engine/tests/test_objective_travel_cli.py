@@ -120,10 +120,11 @@ def test_plan_command_prints_a_labelled_plan():
 
 
 def test_plan_command_replans_around_a_breakdown_with_promises_hard():
-    output = run_plan("--seed", "1", "--down", "m2:2026-11-05", "--rain", "2026-11-06")
-    assert "Re-plan after Super Seeder 2 breaks down on Thu 5 Nov and rain on Fri 6 Nov" in output
-    # This event forces one promise to break; CP-SAT proves that no plan breaks fewer.
-    assert "1 broken" in output and "CP-SAT proved no plan could break fewer" in output
+    output = run_plan("--seed", "1", "--down", "m2:2026-11-02", "--rain", "2026-11-03")
+    assert "Re-plan after Super Seeder 2 breaks down on Mon 2 Nov and rain on Tue 3 Nov" in output
+    # On the S-NPP + NOAA-20 harvest curves this event forces two promises to break; CP-SAT proves
+    # that no plan breaks fewer.
+    assert "2 broken" in output and "CP-SAT proved no plan could break fewer" in output
 
 
 def test_plan_command_json_matches_the_contract():

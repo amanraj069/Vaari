@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 2,
+  "about": "Inputs of the season simulator (backend/engine/vaari_engine/sim). Every input is labelled: 'real range' (taken from a cited source or real data) or 'assumed' (our choice, stated, and swept where it could change the answer). Farmers, fields, machines, breakdowns and rain are SIMULATED; village positions (OpenStreetMap) and harvest timing (NASA FIRMS) are real. Each input is sourced, or labelled assumed and swept. The headline's 2 days for farmers without a date is an assumption the team chose and the page says so.",
+  "inputs": {
+    "harvestReadyDay": {
+      "label": "real range",
+      "rule": "drawn from each village's harvest curve in data/harvest_curves.json, inside the season window",
+      "source": "NASA FIRMS VIIRS standard-processing detections from S-NPP and NOAA-20, 2024 and 2025, over the Sangrur box, shifted 3 days earlier than the fire (the shift is assumed; see data/README.md). NOAA-21 is left out: FIRMS has it only as near-real-time data",
+      "sourceUrl": "https://firms.modaps.eosdis.nasa.gov/"
+    },
+    "seasonWindow": {
+      "label": "assumed",
+      "firstReadyDay": 10,
+      "lastReadyDay": 55,
+      "why": "11 October to 25 November (day 0 = 1 October) holds about 90% of the district harvest curve; earlier and later fields are left out"
+    },
+    "district": {
+      "label": "real range",
+      "value": "Sangrur",
+      "rule": "the real outline of Sangrur and Malerkotla districts (Malerkotla was formed from Sangrur in 2021), and every village inside it within the demo box",
+      "source": "OpenStreetMap administrative boundaries and village points (data/boundaries.json, data/villages.json)",
+      "sourceUrl": "https://www.openstreetmap.org/copyright"
+    },
+    "machineCentres": {
+      "label": "assumed",
+      "value": 25,
+      "rule": "the first at the village with the most fire detections, the rest spread over the district by farthest-point sampling and balancing rounds; every village is served by its nearest centre",
+      "why": "no public list of the district's rental centres; 25 centres of about 4 machines each puts about 100 Super Seeders to rent across the district"
+    },
+    "machines": {
+      "label": "assumed",
+      "value": 4,
+      "why": "machines per centre on average; each centre's fleet is in proportion to the villages it serves (at least one), so every machine carries the same acres"
+    },
+    "acresPerMachine": {
+      "label": "assumed",
+      "value": 140,
+      "min": 100,
+      "max": 175,
+      "why": "acres booked with the CHC per machine in a season. The value is the middle of what CEEW reports real Super Seeders cover: about 100 acres is the optimum (break-even near 105), one entrepreneur covers about 120, the Noorpur Bet cooperative about 175. Farmers are drawn until the season holds this many acres per machine; swept below",
+      "source": "CEEW, Custom Hiring Centres for Better Crop Residue Management: Insights from Punjab (2025)",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-custom-hiring-centres-for-web.pdf"
+    },
+    "fieldAcres": {
+      "label": "assumed",
+      "values": [
+        1.5,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10,
+        13.5
+      ],
+      "why": "acres per booking, mean 6. CEEW: a median government CHC serves about 300 acres for 50 farmers (6 each), a median private CHC 75 acres for 10, Noorpur Bet 750 for 150. The spread (many small farmers, a few large) is our choice; no per-field data",
+      "source": "CEEW, Custom Hiring Centres for Better Crop Residue Management: Insights from Punjab (2025)",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-custom-hiring-centres-for-web.pdf"
+    },
+    "waitingLimitDays": {
+      "label": "assumed",
+      "min": 3,
+      "max": 10,
+      "why": "days a farmer waits after harvest before burning; swept below"
+    },
+    "daysSoonerWithoutDate": {
+      "label": "assumed",
+      "value": 2,
+      "why": "how many days sooner a farmer with no date gives up and burns than one holding a promised date. CEEW and Shyamsundar et al. (Science, 2019) find uncertainty over getting a machine is a main reason farmers burn, but no source measures it in days. The headline assumes 2 days (the team's choice, labelled on the page); the sweep below shows 0 to 3",
+      "source": "CEEW, Why paddy stubble burning continues in Punjab (2024); Shyamsundar et al., Science 365 (2019)",
+      "sourceUrl": "https://www.ceew.in/publications/why-paddy-stubble-burning-continues-in-punjab-crop-burning-challenges-and-solutions"
+    },
+    "afterLastWaitingDay": {
+      "label": "assumed",
+      "rule": "a farmer not sown by their last waiting day burns the stubble, leaves the queue, and sows with an ordinary drill the next day; the CHC loses that booking",
+      "why": "CEEW: uncertainty over when the machine comes is a main reason farmers burn"
+    },
+    "requestLeadDays": {
+      "label": "assumed",
+      "min": 0,
+      "max": 3,
+      "why": "farmers call 0 to 3 days before their paddy is harvested"
+    },
+    "phoneQueueRentals": {
+      "label": "assumed",
+      "rule": "the phone queue is a rental desk: each rental is a trip from the CHC to the farmer and back, and the next caller's rental starts from the CHC",
+      "why": "CEEW: most CHCs rent first come, first served, by phone or in person; only 39% of government CHCs offer a tractor-and-driver package (the rest rent the machine alone, by the hour or day); sending the machine straight from one farmer to the next is a best practice some CHCs adopted to avoid repeated returns to the CHC",
+      "source": "CEEW, Custom Hiring Centres for Better Crop Residue Management: Insights from Punjab (2025)",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-custom-hiring-centres-for-web.pdf"
+    },
+    "phoneQueueLateReturnChance": {
+      "label": "assumed",
+      "value": 0,
+      "why": "the chance that a phone-queue rental comes back late, so the machine is gone for the rest of that day. CEEW: 45% of renting CHCs report delayed returns, 62% of those renting the machine without a driver (38% with one), but no source gives a rate per rental. The base season uses 0; swept below. Vaari and nearest village next are driver-run, so this applies to the phone queue only",
+      "source": "CEEW, Custom Hiring Centres for Better Crop Residue Management: Insights from Punjab (2025)",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-custom-hiring-centres-for-web.pdf"
+    },
+    "nearestVillageRule": {
+      "label": "assumed",
+      "rule": "nearest village next is a driver-run service: after each field the driver goes straight on to the nearest booked field that is ready",
+      "why": "the strongest simple routing rule an operator could follow without a planner"
+    },
+    "machineAcresPerDay": {
+      "label": "real range",
+      "min": 5.3,
+      "max": 12,
+      "source": "CEEW operator interviews (about 5.3 acres in an 8-hour day) to a district agriculture office (10 to 12); each machine's true speed is drawn from this range and Vaari learns it from the day's work",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-annexurehow-custom-hiring-centres-improve-access-to-crop-residue-management-solutions.pdf"
+    },
+    "machineHoursPerDay": {
+      "label": "assumed",
+      "value": 8,
+      "why": "matches the CEEW 8-hour figure"
+    },
+    "setupMinutesPerField": {
+      "label": "assumed",
+      "value": 15,
+      "why": "turning in and lowering the implement"
+    },
+    "roadFactor": {
+      "label": "assumed",
+      "value": 1.3,
+      "why": "straight-line distance to road distance"
+    },
+    "roadSpeedKmh": {
+      "label": "assumed",
+      "value": 20,
+      "why": "tractor with implement on village roads"
+    },
+    "breakdownChancePerMachineDay": {
+      "label": "assumed",
+      "value": 0.03,
+      "why": "known the evening before"
+    },
+    "breakdownDays": {
+      "label": "assumed",
+      "min": 1,
+      "max": 3,
+      "why": "days in the workshop"
+    },
+    "rainChancePerDay": {
+      "label": "assumed",
+      "value": 0.05,
+      "why": "no sowing on a rain day; forecast the evening before"
+    }
+  },
+  "constants": {
+    "optimumLastDay": {
+      "value": 45,
+      "date": "15 November",
+      "source": "PAU Package of Practices, Rabi 2025-26: first fortnight of November is the optimum",
+      "sourceUrl": "https://pau.edu/content/ccil/pf/pp_rabi.pdf"
+    },
+    "wheatLossKgPerAcrePerWeek": {
+      "value": 150,
+      "source": "PAU Package of Practices, Rabi 2025-26",
+      "sourceUrl": "https://pau.edu/content/ccil/pf/pp_rabi.pdf"
+    },
+    "rentRupeesPerAcre": {
+      "value": 2000,
+      "source": "CEEW CHC publication: full Super Seeder package",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-custom-hiring-centres-for-web.pdf"
+    },
+    "breakEvenAcresPerMachine": {
+      "value": 105,
+      "source": "CEEW CHC publication and annexure",
+      "sourceUrl": "https://www.ceew.in/sites/default/files/ceew-annexurehow-custom-hiring-centres-improve-access-to-crop-residue-management-solutions.pdf"
+    },
+    "strawTonnesPerAcre": {
+      "value": 2.63,
+      "unit": "tonnes of paddy straw per acre",
+      "source": "Punjab Pollution Control Board, report to the NGT in OA 632 of 2023: 6.5 tonnes per hectare for non-basmati paddy (6.5 / 2.471 acres per hectare)",
+      "sourceUrl": "https://www.greentribunal.gov.in/sites/default/files/news_updates/Report%20by%20PPCB%20in%20OA%20No.%20632%20of%202023%20(In%20re%20News%20Item%20published%20in%20The%20Hindu%20dated%2006.10.2023%20titled%20Pollution%20takes%20a%20front%20seat%20as%20Stubble%20Fires%20Spike%20in%20Punjab).pdf"
+    },
+    "burnCombustionFactor": {
+      "value": 0.8,
+      "unit": "share of the straw that combusts when a field is burned",
+      "source": "IPCC 2006 Guidelines, Vol. 4, Table 2.6 default, as used for Punjab by Bhadauriya, Chaudhary, Mamatha and Ray, ISPRS Archives XLIII-B3 (2020), p. 1423",
+      "sourceUrl": "https://isprs-archives.copernicus.org/articles/XLIII-B3-2020/1423/2020/isprs-archives-XLIII-B3-2020-1423-2020.pdf"
+    },
+    "pm25GramsPerKgStrawBurned": {
+      "value": 12.95,
+      "unit": "grams of PM2.5 per kg of rice straw burned",
+      "source": "Gadde et al., Environmental Pollution 157 (2009), rice straw open burning, as used for Punjab by Bhadauriya, Chaudhary, Mamatha and Ray, ISPRS Archives XLIII-B3 (2020), p. 1423",
+      "sourceUrl": "https://isprs-archives.copernicus.org/articles/XLIII-B3-2020/1423/2020/isprs-archives-XLIII-B3-2020-1423-2020.pdf"
+    }
+  },
+  "scenarios": {
+    "base": {
+      "about": "the whole district: every centre's farmers and machines, the district's weather"
+    }
+  },
+  "sweeps": [
+    {
+      "parameter": "acresPerMachine",
+      "about": "the base seasons with more or fewer farmers: acres booked per machine, across and just past the range CEEW reports",
+      "values": [
+        100,
+        120,
+        140,
+        160,
+        180
+      ]
+    },
+    {
+      "parameter": "waitingLimitDays",
+      "about": "the base seasons with every farmer waiting exactly this many days",
+      "values": [
+        3,
+        4,
+        5,
+        7,
+        10
+      ]
+    },
+    {
+      "parameter": "daysSoonerWithoutDate",
+      "about": "the base seasons with farmers who have no promised date giving up this many days sooner",
+      "values": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "parameter": "phoneQueueLateReturnChance",
+      "about": "the base seasons with this share of phone-queue rentals coming back late (the machine is gone for the rest of that day)",
+      "values": [
+        0,
+        0.1,
+        0.25,
+        0.5
+      ]
+    }
+  ],
+  "planner": {
+    "about": "Vaari plans each evening with the search planner (seeded, reproducible)",
+    "searchRounds": 30,
+    "horizonDays": 10
+  },
+  "sweepScope": {
+    "about": "each sweep replays the district's first centre (the fire hotspot) alone, 50 seasons per value, to keep a full run on a laptop"
+  },
+  "seasons": {
+    "about": "a full run plays 50 seasons of the whole district",
+    "default": 50
+  }
+}
