@@ -11,6 +11,7 @@ import {
   type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
+  type LoginTokenRecord,
   type MachineRecord,
   type PlanChanges,
   type PlanRecord,
@@ -34,6 +35,7 @@ export class MemoryStore implements VaariStore {
   private fireChecks = new Map<string, FireCheckRecord>();
   private farmers = new Map<string, FarmerRecord>();
   private users = new Map<string, UserRecord>();
+  private loginTokens = new Map<string, LoginTokenRecord>();
 
   async listChcs() {
     return copy([...this.chcs.values()].sort((left, right) => byString(left.id, right.id)));
@@ -76,6 +78,20 @@ export class MemoryStore implements VaariStore {
         .filter((field) => field.bookedBy === userId)
         .sort((left, right) => byString(left.createdAt, right.createdAt)),
     );
+  }
+  async listFieldsByPhone(phone: string) {
+    return copy(
+      [...this.fields.values()]
+        .filter((field) => field.farmerPhone === phone)
+        .sort((left, right) => byString(left.createdAt, right.createdAt)),
+    );
+  }
+  async bumpLinkVersion(chcId: string, fieldId: string) {
+    const field = this.fields.get(`${chcId}/${fieldId}`);
+    if (!field) return null;
+    const bumped = { ...field, linkVersion: field.linkVersion + 1 };
+    this.fields.set(`${chcId}/${fieldId}`, copy(bumped));
+    return copy(bumped);
   }
 
   async listPromises(chcId: string) {
@@ -149,6 +165,17 @@ export class MemoryStore implements VaariStore {
   }
   async putFarmer(farmer: FarmerRecord) {
     this.farmers.set(farmer.id, copy(farmer));
+  }
+
+  async putLoginToken(record: LoginTokenRecord) {
+    this.loginTokens.set(record.jti, copy(record));
+  }
+  async useLoginToken(jti: string, usedAt: string) {
+    const record = this.loginTokens.get(jti);
+    if (!record || record.usedAt !== null) return null;
+    const used = { ...record, usedAt };
+    this.loginTokens.set(jti, copy(used));
+    return copy(used);
   }
 
   async getUser(userId: string) {

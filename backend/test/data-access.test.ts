@@ -16,12 +16,13 @@ let app: ReturnType<typeof createApp>;
 let googleApp: ReturnType<typeof createApp>;
 const tokens: Record<string, string> = {};
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
-const villageId = async () => (await request(app).get("/villages").set(bearer(tokens.farmer!)).expect(200)).body[0].id as string;
+const villageId = async () => (await request(app).get("/villages").set(bearer(tokens.facilitator!)).expect(200)).body[0].id as string;
+const booker = (bookedBy: string, farmerId: string, farmerName: string) => ({ farmerId, farmerName, bookedBy, farmerPhone: null, consentAt: null, consentBy: null });
 
 beforeAll(async () => {
   runtime = await buildRuntime({ freshDemo: true });
   app = createApp(runtime.dependencies);
-  for (const role of ["farmer", "facilitator", "operator"]) {
+  for (const role of ["facilitator", "operator"]) {
     tokens[role] = (await request(app).post("/auth/demo").send({ role }).expect(200)).body.accessToken;
   }
   // A stand-in for Cognito: the bearer token is the user id, the profile comes from the store.
@@ -29,7 +30,7 @@ beforeAll(async () => {
   const googleVerifier: TokenVerifier = {
     async verify(token): Promise<Principal> {
       const user = await store.getUser(token);
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, farmerId: user?.farmerId ?? null, demo: false };
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, demo: false };
     },
   };
   googleApp = createApp({ ...runtime.dependencies, verifier: googleVerifier });
@@ -39,8 +40,8 @@ describe("facilitator bookings", () => {
   it("lists only the fields this facilitator booked", async () => {
     const { planner } = runtime.dependencies;
     const input = { villageId: await villageId(), acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 };
-    const mine = await planner.requestField(DEMO_CHC_ID, { farmerId: "farmer-booked-1", farmerName: "Booked One", bookedBy: DEMO_USERS.facilitator }, input);
-    const theirs = await planner.requestField(DEMO_CHC_ID, { farmerId: "farmer-booked-2", farmerName: "Booked Two", bookedBy: "another-facilitator" }, input);
+    const mine = await planner.requestField(DEMO_CHC_ID, booker(DEMO_USERS.facilitator, "farmer-booked-1", "Booked One"), input);
+    const theirs = await planner.requestField(DEMO_CHC_ID, booker("another-facilitator", "farmer-booked-2", "Booked Two"), input);
     const response = await request(app).get("/facilitator/fields").set(bearer(tokens.facilitator!)).expect(200);
     const ids = response.body.items.map((item: unknown) => queueItemSchema.parse(item).fieldId);
     expect(ids).toContain(mine.id);
@@ -50,23 +51,25 @@ describe("facilitator bookings", () => {
   });
 
   it("is only for facilitators", async () => {
-    await request(app).get("/facilitator/fields").set(bearer(tokens.farmer!)).expect(403);
+    await request(app).get("/facilitator/fields").set(bearer(tokens.operator!)).expect(403);
   });
 });
 
 describe("slot links", () => {
   it("opens exactly one field without signing in", async () => {
-    const link = await request(app).get("/fields/f-jaswinder/slot-link").set(bearer(tokens.farmer!)).expect(200);
+    const link = await request(app).get("/fields/f-jaswinder/slot-link").set(bearer(tokens.operator!)).expect(200);
     expect(link.body.path).toBe(`/slot/${link.body.token}`);
     const slot = await request(app).get(`/slot/${link.body.token}`).expect(200);
     expect(farmerFieldSchema.parse(slot.body).id).toBe("f-jaswinder");
   });
 
-  it("rejects a tampered token and refuses links to other farmers' fields", async () => {
-    const link = await request(app).get("/fields/f-jaswinder/slot-link").set(bearer(tokens.farmer!)).expect(200);
+  it("rejects a tampered token and refuses links to fields a facilitator did not book", async () => {
+    const link = await request(app).get("/fields/f-jaswinder/slot-link").set(bearer(tokens.operator!)).expect(200);
     const tampered = `${link.body.token.slice(0, -4)}AAAA`;
     await request(app).get(`/slot/${tampered}`).expect(401);
-    await request(app).get("/fields/f-sim-00/slot-link").set(bearer(tokens.farmer!)).expect(403);
+    // Seeded fields were booked by nobody: the facilitator may neither copy nor reissue their links.
+    await request(app).get("/fields/f-sim-00/slot-link").set(bearer(tokens.facilitator!)).expect(403);
+    await request(app).post("/fields/f-sim-00/slot-link/reissue").set(bearer(tokens.facilitator!)).expect(403);
   });
 });
 
@@ -74,7 +77,7 @@ describe("real users and demo personas", () => {
   const realUser = "google-real-user-1";
 
   it("a demo persona cannot change any profile", async () => {
-    await request(app).post("/me/profile").set(bearer(tokens.farmer!)).send({ name: "X", role: "operator", chcId: DEMO_CHC_ID, language: "en" }).expect(403);
+    await request(app).post("/me/profile").set(bearer(tokens.facilitator!)).send({ name: "X", role: "operator", chcId: DEMO_CHC_ID, language: "en" }).expect(403);
   });
 
   it("a real user's profile survives a demo reset", async () => {

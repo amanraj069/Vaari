@@ -19,7 +19,7 @@ beforeAll(async () => {
   const stubVerifier: TokenVerifier = {
     async verify(token): Promise<Principal> {
       const user = await store.getUser(token);
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, farmerId: user?.farmerId ?? null, demo: false };
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, demo: false };
     },
   };
   app = createApp({ ...dependencies, store, verifier: stubVerifier });
@@ -47,20 +47,12 @@ describe("onboarding a Google user", () => {
     await request(app).get("/operator/board").set(bearer("google-operator")).expect(200);
   });
 
-  it("a farmer gets an empty home and can ask for a date", async () => {
-    await request(app)
-      .post("/me/profile")
-      .set(bearer("google-farmer"))
-      .send({ name: "Simran Kaur", role: "farmer", chcId: "chc-balian", language: "pa" })
-      .expect(200);
-    const home = await request(app).get("/farmer/home").set(bearer("google-farmer")).expect(200);
-    expect(home.body).toMatchObject({ farmerName: "Simran Kaur", fields: [] });
-    const villages = await request(app).get("/villages").set(bearer("google-farmer")).expect(200);
-    await request(app)
-      .post("/fields")
-      .set(bearer("google-farmer"))
-      .send({ villageId: villages.body[0].id, acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 })
-      .expect(201);
+  it("nobody can sign up as a farmer: farmers have no account, only a phone", async () => {
+    await request(app).post("/me/profile").set(bearer("google-farmer")).send({ name: "Simran Kaur", role: "farmer", chcId: "chc-balian", language: "pa" }).expect(400);
+    const me = meSchema.parse((await request(app).get("/me").set(bearer("google-farmer")).expect(200)).body);
+    expect(me).toMatchObject({ role: null, needsOnboarding: true });
+    // A signed-in user's token is not a farmer phone session.
+    await request(app).get("/farmer/home").set(bearer("google-farmer")).expect(401);
   });
 
   it("rejects unknown CHCs and roles without pages", async () => {

@@ -8,7 +8,8 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import pino from "pino";
 import { ZodError } from "zod";
-import type { Config } from "./config";
+import { trustProxySetting, type Config } from "./config";
+import { redactUrl, requestSerializer } from "./http/redact";
 import { AuthError, type TokenVerifier } from "./auth/tokens";
 import { EngineError, type EngineClient } from "./engine/client";
 import { ConflictError, ImpossibleMoveError, NotFoundError, Planner } from "./domain/planner";
@@ -32,7 +33,7 @@ export type AppDependencies = {
  */
 const LEVEL_LABEL: Record<number, string> = { 10: "TRACE", 20: "DEBUG", 30: "INFO ", 40: "WARN ", 50: "ERROR", 60: "FATAL" };
 
-const devLines = {
+export const devLines = {
   write(line: string) {
     const entry = JSON.parse(line) as {
       level: number;
@@ -45,7 +46,7 @@ const devLines = {
     };
     const { level, time, msg, req, res, err, ...details } = entry;
     const clock = new Date(time).toTimeString().slice(0, 8);
-    const request = req ? ` ${req.method} ${req.url}${res ? ` -> ${res.statusCode}` : ""}` : "";
+    const request = req ? ` ${req.method} ${redactUrl(req.url)}${res ? ` -> ${res.statusCode}` : ""}` : "";
     const extra = Object.keys(details).length > 0 ? ` ${JSON.stringify(details)}` : "";
     process.stdout.write(`${clock} ${LEVEL_LABEL[level] ?? level} ${msg}${request}${extra}\n`);
     if (err?.stack) process.stdout.write(`${err.stack}\n`);
@@ -65,6 +66,9 @@ export const logger = pino(
 export function createApp(dependencies: AppDependencies) {
   const app = express();
   app.disable("x-powered-by");
+  // Which hops may set X-Forwarded-For (TRUST_PROXY). Rate limits use it, together with the
+  // client address our Next proxy vouches for (http/client-ip.ts).
+  app.set("trust proxy", trustProxySetting(dependencies.config));
   app.use(helmet());
   app.use(express.json({ limit: "100kb" }));
   app.use(
@@ -75,7 +79,8 @@ export function createApp(dependencies: AppDependencies) {
       // found, conflict) are normal traffic and stay quiet.
       autoLogging: false,
       serializers: {
-        req: (request: { method: string; url: string }) => ({ method: request.method, url: request.url }),
+        // Slot and farmer-login tokens live in the path: logged URLs are redacted.
+        req: requestSerializer,
         res: (response: { statusCode: number }) => ({ statusCode: response.statusCode }),
       },
     }),

@@ -37,13 +37,14 @@ describe("demo seed", () => {
     await seedDemo(first, config);
     await seedDemo(second, config);
     expect(await second.listFields(DEMO_CHC_ID)).toEqual(
-      (await first.listFields(DEMO_CHC_ID)).map((field) => ({ ...field, createdAt: expect.any(String) })),
+      // Timestamps are when the seed ran; everything else is identical.
+      (await first.listFields(DEMO_CHC_ID)).map((field) => ({ ...field, createdAt: expect.any(String), consentAt: field.consentAt === null ? null : expect.any(String) })),
     );
   });
 
   it("never overwrites a real user's profile", async () => {
     const store = new MemoryStore();
-    const realUser = { userId: "google-sub-123", name: "Real Person", role: "operator" as const, chcId: DEMO_CHC_ID, farmerId: null, language: "pa" as const };
+    const realUser = { userId: "google-sub-123", name: "Real Person", role: "operator" as const, chcId: DEMO_CHC_ID, language: "pa" as const };
     await store.putUser(realUser);
     await seedDemo(store, config);
     expect(await store.getUser(realUser.userId)).toEqual(realUser);

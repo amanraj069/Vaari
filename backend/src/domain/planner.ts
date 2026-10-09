@@ -7,7 +7,8 @@
  *
  * - A booking is a request: it is stored at once (no engine run) and waits for the next plan.
  * - Generate, move a field, a breakdown, a machine back, or a farmer's "I cannot wait longer" each
- *   make a new draft, with the list of what approving it would change (domain/promises.ts).
+ *   make a new draft, with the list of what approving it would change (domain/promises.ts). A
+ *   farmer's update keeps the operator's manual moves in the draft; it never starts it over.
  * - Approving publishes: requested fields get their first promise (firm if the day is within two
  *   days, else a window), windows inside two days become firm, and a promise breaks only when the
  *   engine ran in minimal-break mode. Every change passes the promise state machine.
@@ -25,7 +26,7 @@ import {
   type SolveRequest,
 } from "../shared";
 import type { Config } from "../config";
-import type { EngineClient } from "../engine/client";
+import { EngineError, type EngineClient } from "../engine/client";
 import { loadVillages } from "../demo/seed";
 import {
   StoreConflictError,
@@ -414,8 +415,15 @@ export class Planner {
     await this.approvePlan(chcId, draft.version, approvedBy);
   }
 
-  /** A booking is stored at once as a request; it gets a date when the operator publishes a plan. */
-  async requestField(chcId: string, farmer: { farmerId: string; farmerName: string; bookedBy: string | null }, input: BookingInput): Promise<FieldRecord> {
+  /**
+   * A booking is stored at once as a request; it gets a date when the operator publishes a plan.
+   * The farmer's phone (E.164) and the consent the facilitator recorded are stored on the field.
+   */
+  async requestField(
+    chcId: string,
+    farmer: { farmerId: string; farmerName: string; bookedBy: string | null; farmerPhone: string | null; consentAt: string | null; consentBy: string | null },
+    input: Pick<BookingInput, "villageId" | "acres" | "readyDate" | "waitingLimitDays">,
+  ): Promise<FieldRecord> {
     return this.withChcWork(chcId, async () => {
       const { chc, fields } = await this.loadChc(chcId);
       if (!chc.villageIds.includes(input.villageId)) throw new NotFoundError("village is not served by this CHC");
@@ -435,6 +443,10 @@ export class Planner {
         plannedDay: null,
         plannedMachineId: null,
         bookedBy: farmer.bookedBy,
+        farmerPhone: farmer.farmerPhone,
+        consentAt: farmer.consentAt,
+        consentBy: farmer.consentBy,
+        linkVersion: 1,
         soonerRequestedAt: null,
       };
       await this.store.putField(field);
@@ -442,12 +454,22 @@ export class Planner {
     });
   }
 
+  /** A helper reissues a field's slot link: the version goes up and every older link stops working (401). */
+  async reissueLink(chcId: string, fieldId: string): Promise<FieldRecord> {
+    const field = await this.store.bumpLinkVersion(chcId, fieldId);
+    if (!field) throw new NotFoundError("field not found");
+    return field;
+  }
+
   /**
-   * "I cannot wait longer": the farmer's last waiting day moves earlier and a new draft is made in
-   * which their promise is released, so the engine can look for an earlier day. The farmer keeps
-   * the current promise until the operator publishes; publishing gives them the new date only if
-   * it is no later. Only shortening is allowed from a slot link; a longer wait would quietly lower
-   * the field's priority without anyone deciding that.
+   * "I cannot wait longer": the farmer's last waiting day moves earlier and the field is marked for
+   * the operator's attention (soonerRequestedAt; the board and plan list it until a plan covering it
+   * is published). The current draft is re-planned with the operator's manual moves kept as they
+   * are, the farmer's promise released so the engine can look for an earlier day; if those moves
+   * can no longer all hold, the operator's draft is left untouched and only the mark is added. The
+   * farmer keeps the current promise until the operator publishes; publishing gives them the new
+   * date only if it is no later. Only shortening is allowed from a slot link; a longer wait would
+   * quietly lower the field's priority without anyone deciding that.
    */
   async shortenWaitingLimit(chcId: string, fieldId: string, waitingLimitDays: number): Promise<FieldRecord> {
     return this.withChcWork(chcId, async () => {
@@ -457,7 +479,13 @@ export class Planner {
       if (waitingLimitDays >= field.waitingLimitDays) throw new ConflictError("the new waiting limit must be shorter than the current one");
       const updated: FieldRecord = { ...field, waitingLimitDays, soonerRequestedAt: new Date().toISOString() };
       await this.store.putField(updated);
-      await this.generateLocked(chcId, "farmer_update", null, []);
+      const latest = await this.store.latestPlan(chcId);
+      const operatorMoves = latest?.status === "draft" ? latest.pins : [];
+      try {
+        await this.generateLocked(chcId, "farmer_update", null, operatorMoves);
+      } catch (error) {
+        if (!(error instanceof EngineError && error.code === "IMPOSSIBLE_PIN")) throw error;
+      }
       return updated;
     });
   }

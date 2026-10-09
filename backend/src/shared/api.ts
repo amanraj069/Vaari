@@ -5,8 +5,17 @@
 import { z } from "zod";
 import { reasonCodeSchema } from "./engine";
 
-export const roleSchema = z.enum(["farmer", "facilitator", "operator", "officer"]);
+/**
+ * Signed-in roles (Cognito group or the /welcome profile). Farmers are not a role: they have no
+ * account; a farmer is identified by phone number and reaches their fields through a slot link or
+ * a one-time login link sent on WhatsApp (backend/src/auth/farmer-session.ts).
+ */
+export const roleSchema = z.enum(["facilitator", "operator", "officer"]);
 export type Role = z.infer<typeof roleSchema>;
+
+/** The one-click demo personas. The farmer persona gets a phone session, not an account. */
+export const demoPersonaSchema = z.enum(["farmer", "facilitator", "operator", "officer"]);
+export type DemoPersona = z.infer<typeof demoPersonaSchema>;
 
 export const localeSchema = z.enum(["en", "pa", "hi"]);
 export type Locale = z.infer<typeof localeSchema>;
@@ -17,15 +26,42 @@ export const meSchema = z.object({
   // null until a new Google user picks a role on /welcome.
   role: roleSchema.nullable(),
   chcId: z.string().nullable(),
-  farmerId: z.string().nullable(),
   language: localeSchema,
   demo: z.boolean(),
   needsOnboarding: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 
-// Roles a new user can pick for themselves on /welcome (the ones that have pages today).
-export const selfServiceRoleSchema = z.enum(["farmer", "operator"]);
+// Roles a new user can pick for themselves on /welcome (operator only in DEMO_MODE; the API checks).
+export const selfServiceRoleSchema = z.enum(["operator"]);
+
+/**
+ * A farmer's phone number in E.164 (+<country code><number>), or null if it is not one. Indian
+ * mobile numbers may be typed the usual ways (98xxxxxxxx, 098xxxxxxxx, 9198xxxxxxxx, +91 98xxx xxxxx).
+ */
+export function toE164(input: string): string | null {
+  const compact = input.trim().replace(/[\s\-().]/g, "");
+  let candidate = compact;
+  if (/^0?[6-9]\d{9}$/.test(compact)) candidate = `+91${compact.slice(-10)}`;
+  else if (/^91[6-9]\d{9}$/.test(compact)) candidate = `+${compact}`;
+  else if (/^00[1-9]\d+$/.test(compact)) candidate = `+${compact.slice(2)}`;
+  if (!/^\+[1-9]\d{7,14}$/.test(candidate)) return null;
+  // An Indian mobile number is +91 and ten digits starting 6-9.
+  if (candidate.startsWith("+91") && !/^\+91[6-9]\d{9}$/.test(candidate)) return null;
+  return candidate;
+}
+
+export const phoneSchema = z
+  .string()
+  .max(32)
+  .transform((value, context) => {
+    const e164 = toE164(value);
+    if (!e164) {
+      context.addIssue({ code: "custom", message: "not a valid phone number" });
+      return z.NEVER;
+    }
+    return e164;
+  });
 
 export const onboardingInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -95,12 +131,19 @@ export const farmerFieldSchema = z.object({
 });
 export type FarmerField = z.infer<typeof farmerFieldSchema>;
 
+/** One field on /farmer, with the machine centre that serves it (one phone may book with several). */
+export const farmerHomeFieldSchema = farmerFieldSchema.extend({
+  chcId: z.string(),
+  chcName: z.string(),
+  operatorPhone: z.string(),
+});
+export type FarmerHomeField = z.infer<typeof farmerHomeFieldSchema>;
+
+/** /farmer behind a phone session: every field booked with that phone, newest first, read-only. */
 export const farmerHomeSchema = z.object({
   today: z.string(),
   farmerName: z.string(),
-  chcName: z.string(),
-  operatorPhone: z.string(),
-  fields: z.array(farmerFieldSchema),
+  fields: z.array(farmerHomeFieldSchema),
 });
 export type FarmerHome = z.infer<typeof farmerHomeSchema>;
 
@@ -195,6 +238,15 @@ export type PlanSummary = z.infer<typeof planSummarySchema>;
 
 const fieldRefSchema = z.object({ fieldId: z.string(), token: z.number().int(), farmerName: z.string(), villageName: z.string() });
 
+/** A farmer said "I cannot wait longer" from their slot link: the operator should look at this field. */
+export const attentionItemSchema = fieldRefSchema.extend({
+  burnDeadlineDate: z.string(),
+  requestedAt: z.string(),
+  // The farmer's held promise, unchanged until the operator publishes a plan.
+  promise: promiseViewSchema.nullable(),
+});
+export type AttentionItem = z.infer<typeof attentionItemSchema>;
+
 /** What approving a draft does (or what approving it did), field by field. */
 export const planChangesViewSchema = z.object({
   promised: z.array(fieldRefSchema.extend({ promise: promiseViewSchema })),
@@ -226,6 +278,8 @@ export const operatorBoardSchema = z.object({
   draft: planSummarySchema.extend({ changeCount: z.number().int(), brokenCount: z.number().int() }).nullable(),
   // Requested fields that no plan covers yet (booked after the latest plan was made).
   newRequests: z.number().int(),
+  // Farmers who said "I cannot wait longer" and are waiting for the operator's next published plan.
+  attention: z.array(attentionItemSchema),
   counts: z.object({
     machinesWorking: z.number().int(),
     machinesTotal: z.number().int(),
@@ -250,6 +304,7 @@ export const operatorPlanSchema = z.object({
   pins: z.array(z.object({ fieldId: z.string(), token: z.number().int(), farmerName: z.string(), machineName: z.string(), date: z.string() })),
   lanes: z.array(laneSchema),
   newRequests: z.number().int(),
+  attention: z.array(attentionItemSchema),
   moveOptions: z.object({
     machines: z.array(z.object({ id: z.string(), name: z.string(), downDates: z.array(z.string()) })),
     dates: z.array(z.string()),
@@ -296,13 +351,21 @@ export const publicSummarySchema = z.object({
 export type PublicSummary = z.infer<typeof publicSummarySchema>;
 
 /**
- * POST /fields. A farmer books for themselves; a facilitator books for a farmer who may have no
- * account and must give the farmer's name. Either way the answer carries the farmer's slot link.
+ * POST /fields. A facilitator books for a farmer (who has no account): the farmer's name, their
+ * phone number (stored as E.164; it identifies the farmer across seasons and is never shown on a
+ * slot, officer or public page) and the farmer's consent to be contacted on it, which the
+ * facilitator records. The answer carries the farmer's slot link.
  */
 export const bookingInputSchema = fieldRequestInputSchema.extend({
-  farmerName: z.string().trim().min(1).max(80).optional(),
+  farmerName: z.string().trim().min(1).max(80),
+  farmerPhone: phoneSchema,
+  // Must be true: the API answers 400 CONSENT_REQUIRED otherwise.
+  consent: z.boolean(),
 });
-export type BookingInput = z.infer<typeof bookingInputSchema>;
+/** What the web sends (the phone as typed). */
+export type BookingInput = z.input<typeof bookingInputSchema>;
+/** What the API works with (the phone in E.164). */
+export type BookingRequest = z.output<typeof bookingInputSchema>;
 
 export const slotLinkSchema = z.object({ token: z.string(), path: z.string() });
 export type SlotLink = z.infer<typeof slotLinkSchema>;

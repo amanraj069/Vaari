@@ -54,7 +54,7 @@ beforeEach(async () => {
   booked = [];
   for (const [index, name] of ["Paramjit Kaur", "Baldev Singh", "Manjit Kaur"].entries()) {
     booked.push(
-      await doomed.requestField(DEMO_CHC_ID, { farmerId: `farmer-crash-${index}`, farmerName: name, bookedBy: null }, {
+      await doomed.requestField(DEMO_CHC_ID, { farmerId: `farmer-crash-${index}`, farmerName: name, bookedBy: null, farmerPhone: null, consentAt: null, consentBy: null }, {
         villageId: chc.villageIds[index]!,
         acres: 1,
         readyDate: "2026-10-31",

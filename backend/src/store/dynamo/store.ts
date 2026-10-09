@@ -22,6 +22,7 @@ import {
   type FieldPlanUpdate,
   type FieldRecord,
   type FireCheckRecord,
+  type LoginTokenRecord,
   type MachineRecord,
   type PlanChanges,
   type PlanRecord,
@@ -131,7 +132,7 @@ export class DynamoStore implements VaariStore {
     return item ? fromFieldItem(item) : null;
   }
   async putField(field: FieldRecord) {
-    await this.put("fields", withoutNullKeys({ ...omit(field, ["id"]), fieldId: field.id }, ["bookedBy"]));
+    await this.put("fields", withoutNullKeys({ ...omit(field, ["id"]), fieldId: field.id }, ["bookedBy", "farmerPhone"]));
   }
   async setFieldPlan(chcId: string, update: FieldPlanUpdate) {
     try {
@@ -168,6 +169,34 @@ export class DynamoStore implements VaariStore {
       ExpressionAttributeValues: { ":booker": userId },
     });
     return items.map(fromFieldItem);
+  }
+  async listFieldsByPhone(phone: string) {
+    const items = await this.queryAll({
+      TableName: this.table("fields"),
+      IndexName: "phone-index",
+      KeyConditionExpression: "farmerPhone = :phone",
+      ExpressionAttributeValues: { ":phone": phone },
+    });
+    return items.map(fromFieldItem);
+  }
+  async bumpLinkVersion(chcId: string, fieldId: string) {
+    try {
+      const result = await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("fields"),
+          Key: { chcId, fieldId },
+          ConditionExpression: "attribute_exists(fieldId)",
+          // Fields written before link versions existed count as version 1.
+          UpdateExpression: "SET linkVersion = if_not_exists(linkVersion, :one) + :one",
+          ExpressionAttributeValues: { ":one": 1 },
+          ReturnValues: "ALL_NEW",
+        }),
+      );
+      return fromFieldItem(result.Attributes as Item);
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return null;
+      throw error;
+    }
   }
 
   // --- Promises ----------------------------------------------------------------------------
@@ -316,6 +345,29 @@ export class DynamoStore implements VaariStore {
   async putFarmer(farmer: FarmerRecord) {
     await this.put("farmers", { ...omit(farmer, ["id"]), farmerId: farmer.id });
   }
+  async putLoginToken(record: LoginTokenRecord) {
+    // usedAt is absent until the link is used; the conditional update below relies on that.
+    await this.put("loginTokens", omit(record, record.usedAt === null ? ["usedAt"] : []));
+  }
+  async useLoginToken(jti: string, usedAt: string) {
+    try {
+      const result = await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("loginTokens"),
+          Key: { jti },
+          ConditionExpression: "attribute_exists(jti) AND attribute_not_exists(usedAt)",
+          UpdateExpression: "SET usedAt = :at",
+          ExpressionAttributeValues: { ":at": usedAt },
+          ReturnValues: "ALL_NEW",
+        }),
+      );
+      return result.Attributes as LoginTokenRecord;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return null;
+      throw error;
+    }
+  }
+
   async getUser(userId: string) {
     const item = await this.get("users", { userId });
     return item ? fromUserItem(item) : null;
@@ -366,7 +418,17 @@ function fromMachineItem(item: Item): MachineRecord {
   return { ...omit(item, ["machineId"]), id: item.machineId } as MachineRecord;
 }
 function fromFieldItem(item: Item): FieldRecord {
-  return { ...omit(item, ["fieldId"]), id: item.fieldId, bookedBy: item.bookedBy ?? null, soonerRequestedAt: item.soonerRequestedAt ?? null } as FieldRecord;
+  return {
+    ...omit(item, ["fieldId"]),
+    id: item.fieldId,
+    bookedBy: item.bookedBy ?? null,
+    soonerRequestedAt: item.soonerRequestedAt ?? null,
+    // Fields written before phones and link versions existed have none of them.
+    farmerPhone: item.farmerPhone ?? null,
+    consentAt: item.consentAt ?? null,
+    consentBy: item.consentBy ?? null,
+    linkVersion: item.linkVersion ?? 1,
+  } as FieldRecord;
 }
 function fromPromiseItem(item: Item): PromiseRecord {
   return omit(item, ["promiseKey"]) as PromiseRecord;
@@ -385,5 +447,6 @@ function fromPlanItem(item: Item): PlanRecord {
   } as PlanRecord;
 }
 function fromUserItem(item: Item): UserRecord {
-  return { ...item, chcId: item.chcId ?? null, farmerId: item.farmerId ?? null } as UserRecord;
+  // Users written when farmers still had accounts may carry a farmerId; it is dropped.
+  return { ...omit(item, ["farmerId"]), chcId: item.chcId ?? null } as UserRecord;
 }

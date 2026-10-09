@@ -19,12 +19,18 @@ export const TABLES = {
     name: "fields",
     partitionKey: S("chcId"),
     sortKey: S("fieldId"),
-    indexes: [{ indexName: "booked-by-index", partitionKey: S("bookedBy"), sortKey: S("createdAt") }],
+    indexes: [
+      { indexName: "booked-by-index", partitionKey: S("bookedBy"), sortKey: S("createdAt") },
+      // One phone (E.164) -> all its fields, across CHCs and seasons. Fields without a phone are not in it.
+      { indexName: "phone-index", partitionKey: S("farmerPhone"), sortKey: S("createdAt") },
+    ],
   },
   promises: { name: "promises", partitionKey: S("chcId"), sortKey: S("promiseKey"), indexes: [] },
   plans: { name: "plans", partitionKey: S("chcId"), sortKey: S("planKey"), indexes: [] },
   workLogs: { name: "work-logs", partitionKey: S("chcId"), sortKey: S("logKey"), indexes: [] },
   fireChecks: { name: "fire-checks", partitionKey: S("fieldId"), sortKey: S("checkDate"), indexes: [] },
+  // One-time farmer login links, by jti (used at most once; see auth/farmer-session.ts).
+  loginTokens: { name: "login-tokens", partitionKey: S("jti"), indexes: [] },
 } satisfies Record<string, TableSpec>;
 
 export type TableKey = keyof typeof TABLES;

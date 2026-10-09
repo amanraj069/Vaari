@@ -1,9 +1,14 @@
 /**
  * HTTP routes. Each handler: authenticate, authorise with Cedar against the actual record,
  * validate input with Zod, then call the planner or a view builder.
+ *
+ * Three kinds of caller:
+ * - signed-in users (facilitator, operator, officer): bearer token from the Next proxy;
+ * - farmers: a phone session (bearer token typ "farmer-session") on /farmer/* only, read-only;
+ * - anyone holding a slot link: /slot/:token, scoped to the one field (and link version) it names.
+ * No response from a slot, officer or public route ever contains a phone number.
  */
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from "express";
-import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
@@ -11,12 +16,12 @@ import path from "node:path";
 import {
   bookingInputSchema,
   dateToDay,
+  demoPersonaSchema,
   waitingLimitInputSchema,
   localeSchema,
   moveInputSchema,
   onboardingInputSchema,
   proofResultsSchema,
-  roleSchema,
   type ChcOption,
   type Locale,
   type Me,
@@ -25,13 +30,15 @@ import {
 } from "./shared";
 import type { AppDependencies } from "./app";
 import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
-import { authorize, type Action, type Resource } from "./authz/cedar";
-import { DEMO_USERS } from "./demo/seed";
+import { exchangeFarmerLogin, mintFarmerLoginLink, verifyFarmerSession, type FarmerPhonePrincipal } from "./auth/farmer-session";
+import { assertCurrentLink, mintSlotToken, verifySlotToken } from "./auth/slot-token";
+import { authorize, fieldResource, type Action, type Resource } from "./authz/cedar";
+import { DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
 import type { FieldRecord } from "./store/types";
-import { buildBoard, buildBookedFields, buildFarmerHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
-import { mintSlotToken, verifySlotToken } from "./auth/slot-token";
+import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
 import { reasonText } from "./explain/templates";
+import { clientRateLimit } from "./http/client-ip";
 
 export class ForbiddenError extends Error {
   constructor(readonly errors: string[] = []) {
@@ -40,14 +47,15 @@ export class ForbiddenError extends Error {
 }
 
 type AuthedRequest = Request & { principal: Principal };
+type FarmerRequest = Request & { farmer: FarmerPhonePrincipal };
 
 const asyncHandler =
-  (handler: (request: AuthedRequest, response: Response) => Promise<void>): RequestHandler =>
+  <Incoming extends Request = AuthedRequest>(handler: (request: Incoming, response: Response) => Promise<void>): RequestHandler =>
   (request, response, next: NextFunction) => {
-    handler(request as AuthedRequest, response).catch(next);
+    handler(request as Incoming, response).catch(next);
   };
 
-function requireCedar(principal: Principal, action: Action, resource: Resource): void {
+function requireCedar(principal: Principal | FarmerPhonePrincipal, action: Action, resource: Resource): void {
   const decision = authorize(principal, action, resource);
   if (!decision.allowed) throw new ForbiddenError(decision.errors);
 }
@@ -57,6 +65,11 @@ function requireChc(principal: Principal): string {
   return principal.chcId;
 }
 
+const bearerOf = (request: Request): string => {
+  const header = request.headers.authorization ?? "";
+  return header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+};
+
 /** The language for server-phrased sentences (?lang=en|pa|hi; English if missing or unknown). */
 const localeOf = (request: Request): Locale => localeSchema.catch("en").parse(request.query.lang);
 
@@ -65,14 +78,30 @@ export function buildRoutes(dependencies: AppDependencies): Router {
   const { config, engine } = dependencies;
   const router = Router();
 
+  // Per-client limits (the Next proxy vouches for the browser's address; see http/client-ip.ts).
+  const slotLimiter = clientRateLimit(config, config.SLOT_RATE_LIMIT_PER_MINUTE);
+  const demoLimiter = clientRateLimit(config, 20);
+  const farmerLoginLimiter = clientRateLimit(config, 20);
+
   const authenticate: RequestHandler = (request, _response, next) => {
-    const header = request.headers.authorization ?? "";
-    const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+    const token = bearerOf(request);
     if (!token) return next(new AuthError("missing bearer token"));
     dependencies.verifier
       .verify(token)
       .then((principal) => {
         (request as AuthedRequest).principal = principal;
+        next();
+      })
+      .catch(next);
+  };
+
+  // A farmer's phone session: accepted on /farmer/* only, and nothing else accepts it.
+  const authenticateFarmer: RequestHandler = (request, _response, next) => {
+    const token = bearerOf(request);
+    if (!token) return next(new AuthError("missing farmer session"));
+    verifyFarmerSession(config, token)
+      .then((farmer) => {
+        (request as FarmerRequest).farmer = farmer;
         next();
       })
       .catch(next);
@@ -132,8 +161,9 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // Demo personas: real sessions for seeded users only, only when DEMO_MODE is on.
-  const demoLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
+  // Demo personas, only when DEMO_MODE is on. Facilitator, operator and officer get a session for
+  // their seeded user. The farmer has no account: they get a one-time phone login link, minted by
+  // the same function the WhatsApp bot will call, and the web follows it like a farmer would.
   router.post(
     "/auth/demo",
     demoLimiter,
@@ -142,20 +172,23 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         response.status(404).json({ error: "NOT_FOUND" });
         return;
       }
-      const { role } = z.object({ role: roleSchema }).parse(request.body);
-      const userId = DEMO_USERS[role];
-      const user = await dependencies.store.getUser(userId);
+      const { role: persona } = z.object({ role: demoPersonaSchema }).parse(request.body);
+      if (persona === "farmer") {
+        const link = await mintFarmerLoginLink(config, dependencies.store, DEMO_FARMER_PHONE);
+        response.json({ persona, loginPath: link.path });
+        return;
+      }
+      const user = await dependencies.store.getUser(DEMO_USERS[persona]);
       if (!user) throw new NotFoundError("demo user not seeded");
       const minted = await mintDemoToken(config, user);
-      response.json({ accessToken: minted.token, expiresIn: minted.expiresIn, role });
+      response.json({ persona, accessToken: minted.token, expiresIn: minted.expiresIn, role: persona });
     }),
   );
 
   // --- Session ------------------------------------------------------------------------------
 
-  // Onboarding is needed until the user has a role and the records that role works with.
-  const needsOnboarding = (principal: Principal) =>
-    !principal.role || (principal.role !== "officer" && !principal.chcId) || (principal.role === "farmer" && !principal.farmerId);
+  // Onboarding is needed until the user has a role and the CHC that role works with.
+  const needsOnboarding = (principal: Principal) => !principal.role || (principal.role !== "officer" && !principal.chcId);
 
   const meFor = async (principal: Principal): Promise<Me> => {
     const user = await dependencies.store.getUser(principal.userId);
@@ -164,7 +197,6 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       name: principal.name,
       role: principal.role,
       chcId: principal.chcId,
-      farmerId: principal.farmerId,
       language: user?.language ?? "en",
       demo: principal.demo,
       needsOnboarding: needsOnboarding(principal),
@@ -207,20 +239,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       }
       const chc = await dependencies.store.getChc(input.chcId);
       if (!chc) throw new NotFoundError("CHC not found");
-      const existing = await dependencies.store.getUser(principal.userId);
-      const farmerId = input.role === "farmer" ? (existing?.farmerId ?? `farmer-${principal.userId}`) : null;
-      if (farmerId) {
-        await dependencies.store.putFarmer({ id: farmerId, name: input.name, phone: "", language: input.language, facilitatorId: null });
-      }
-      await dependencies.store.putUser({
-        userId: principal.userId,
-        name: input.name,
-        role: input.role,
-        chcId: chc.id,
-        farmerId,
-        language: input.language,
-      });
-      const updated = await dependencies.verifier.verify(String(request.headers.authorization).slice("Bearer ".length));
+      await dependencies.store.putUser({ userId: principal.userId, name: input.name, role: input.role, chcId: chc.id, language: input.language });
+      const updated = await dependencies.verifier.verify(bearerOf(request));
       response.json(await meFor(updated));
     }),
   );
@@ -236,8 +256,6 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // --- Farmer -------------------------------------------------------------------------------
-
   router.get(
     "/villages",
     authenticate,
@@ -249,24 +267,47 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  router.get(
-    "/farmer/home",
-    authenticate,
-    asyncHandler(async (request, response) => {
-      const { principal } = request;
-      if (principal.role !== "farmer" || !principal.farmerId) throw new ForbiddenError(["not a farmer"]);
-      const home = await buildFarmerHome(dependencies.planner, dependencies.store, principal.farmerId, requireChc(principal), localeOf(request));
-      for (const field of home.fields) {
-        requireCedar(principal, "ViewField", { type: "Field", id: field.id, chcId: requireChc(principal), farmerId: principal.farmerId, bookedBy: null });
-      }
-      response.json(home);
+  // --- Farmer (phone session) -----------------------------------------------------------------
+
+  // The web exchanges a one-time login link (GET /farmer/login/:token on the web) for a 7-day phone
+  // session. The token travels in the body, so it never appears in a URL the API logs.
+  router.post(
+    "/farmer/login",
+    farmerLoginLimiter,
+    asyncHandler<Request>(async (request, response) => {
+      const { token } = z.object({ token: z.string().min(1).max(2048) }).parse(request.body);
+      response.json(await exchangeFarmerLogin(config, dependencies.store, token));
     }),
   );
 
-  // A booking. A farmer books for themselves; a facilitator books for a farmer who may have no
-  // account (a farmer record is created) and must give the farmer's name. The field is stored as a
+  // Every field booked with this phone, in any CHC: status, promise and history. Read-only.
+  router.get(
+    "/farmer/home",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const fields = await dependencies.store.listFieldsByPhone(request.farmer.phone);
+      for (const field of fields) requireCedar(request.farmer, "ViewField", fieldResource(field));
+      response.json(await buildFarmerPhoneHome(dependencies.planner, dependencies.store, fields, localeOf(request)));
+    }),
+  );
+
+  router.get(
+    "/farmer/fields/:chcId/:fieldId/why",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const field = await dependencies.store.getField(String(request.params.chcId), String(request.params.fieldId));
+      if (!field) throw new NotFoundError("field not found");
+      requireCedar(request.farmer, "AskWhy", fieldResource(field));
+      response.json(await explainField(field, localeOf(request)));
+    }),
+  );
+
+  // --- Booking ------------------------------------------------------------------------------
+
+  // A facilitator books for a farmer, who has no account: name, phone (stored as E.164) and the
+  // farmer's consent to be contacted on it, which the facilitator records. The field is stored as a
   // request at once; it gets a date when the operator publishes a plan. The answer carries the
-  // farmer's slot link either way.
+  // farmer's slot link (no phone in it).
   router.post(
     "/fields",
     authenticate,
@@ -275,29 +316,31 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const chcId = requireChc(principal);
       requireCedar(principal, "RequestField", { type: "Chc", id: chcId });
       const input = bookingInputSchema.parse(request.body);
+      if (input.consent !== true) {
+        response.status(400).json({ error: "CONSENT_REQUIRED" });
+        return;
+      }
       const today = dependencies.planner.today();
       const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
       if (readyDay < today - 7 || readyDay > today + 30) {
         response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
         return;
       }
-      let farmer: { farmerId: string; farmerName: string; bookedBy: string | null };
-      if (principal.role === "facilitator") {
-        if (!input.farmerName) {
-          response.status(400).json({ error: "FARMER_NAME_REQUIRED" });
-          return;
-        }
-        const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
-        await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: "", language: "pa", facilitatorId: principal.userId });
-        farmer = { farmerId, farmerName: input.farmerName, bookedBy: principal.userId };
-      } else if (principal.role === "farmer" && principal.farmerId) {
-        const record = await dependencies.store.getFarmer(principal.farmerId);
-        farmer = { farmerId: principal.farmerId, farmerName: record?.name ?? principal.name, bookedBy: null };
-      } else {
-        throw new ForbiddenError(["only farmers and facilitators book fields"]);
-      }
-      const field = await dependencies.planner.requestField(chcId, farmer, input);
-      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
+      const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
+      await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: input.farmerPhone, language: "pa", facilitatorId: principal.userId });
+      const field = await dependencies.planner.requestField(
+        chcId,
+        {
+          farmerId,
+          farmerName: input.farmerName,
+          bookedBy: principal.userId,
+          farmerPhone: input.farmerPhone,
+          consentAt: new Date().toISOString(),
+          consentBy: principal.userId,
+        },
+        input,
+      );
+      const token = await mintSlotToken(config, field);
       response.status(201).json({
         field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
         slot: { token, path: `/slot/${token}` },
@@ -305,8 +348,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // "Why this date?" from the solver's own reasons, phrased by templates. Shared by the signed-in
-  // route and the slot-link route so both say exactly the same thing.
+  // "Why this date?" from the solver's own reasons, phrased by templates. Shared by the signed-in,
+  // phone-session and slot-link routes so all say exactly the same thing.
   const explainField = async (field: FieldRecord, locale: Locale): Promise<Why> => {
     const { request: solveRequest } = await dependencies.planner.buildSolveRequest(field.chcId);
     // Unplanned: ask whether any day inside the horizon could work.
@@ -333,53 +376,68 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     };
   };
 
+  /** A field in the caller's CHC (fields are keyed by chcId + fieldId: a direct GetItem). */
+  const callerField = async (principal: Principal, fieldId: string): Promise<FieldRecord> => {
+    const field = await dependencies.store.getField(requireChc(principal), fieldId);
+    if (!field) throw new NotFoundError("field not found");
+    return field;
+  };
+
   router.get(
     "/fields/:fieldId/why",
     authenticate,
     asyncHandler(async (request, response) => {
-      const { principal } = request;
-      const locale = localeOf(request);
-      // Fields are keyed by (chcId, fieldId): the caller's CHC makes this a direct GetItem.
-      const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
-      if (!field) throw new NotFoundError("field not found");
-      requireCedar(principal, "AskWhy", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy });
-      response.json(await explainField(field, locale));
+      const field = await callerField(request.principal, String(request.params.fieldId));
+      requireCedar(request.principal, "AskWhy", fieldResource(field));
+      response.json(await explainField(field, localeOf(request)));
     }),
   );
 
-  // A shareable, read-only link to one field's turn (for a farmer without an account).
+  // The field's current slot link (copy it again from the booked list).
   router.get(
     "/fields/:fieldId/slot-link",
     authenticate,
     asyncHandler(async (request, response) => {
-      const { principal } = request;
-      const field = await dependencies.store.getField(requireChc(principal), String(request.params.fieldId));
-      if (!field) throw new NotFoundError("field not found");
-      requireCedar(principal, "ViewField", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy });
-      const token = await mintSlotToken(config, { chcId: field.chcId, fieldId: field.id });
+      const field = await callerField(request.principal, String(request.params.fieldId));
+      requireCedar(request.principal, "ViewField", fieldResource(field));
+      const token = await mintSlotToken(config, field);
       response.json({ token, path: `/slot/${token}` });
     }),
   );
 
-  const slotLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
+  // A new slot link for a field (lost or shared too widely): every older link stops working.
+  router.post(
+    "/fields/:fieldId/slot-link/reissue",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const field = await callerField(request.principal, String(request.params.fieldId));
+      requireCedar(request.principal, "ReissueLink", fieldResource(field));
+      const reissued = await dependencies.planner.reissueLink(field.chcId, field.id);
+      const token = await mintSlotToken(config, reissued);
+      response.json({ token, path: `/slot/${token}` });
+    }),
+  );
+
+  // --- Slot link (no sign-in) ------------------------------------------------------------------
+
+  // The slot token is the permission: it names exactly one field (chcId + fieldId, from the token
+  // only; nothing in the path, query or body can point elsewhere) and its current link version.
+  const fieldFromSlot = async (token: string): Promise<FieldRecord> => {
+    const claims = await verifySlotToken(config, token);
+    const field = await dependencies.store.getField(claims.chcId, claims.fieldId);
+    if (!field) throw new NotFoundError("field not found");
+    assertCurrentLink(claims, field);
+    return field;
+  };
+
   router.get(
     "/slot/:token",
     slotLimiter,
     asyncHandler(async (request, response) => {
-      const { chcId, fieldId } = await verifySlotToken(config, String(request.params.token));
-      const field = await dependencies.store.getField(chcId, fieldId);
-      if (!field) throw new NotFoundError("field not found");
+      const field = await fieldFromSlot(String(request.params.token));
       response.json(await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)));
     }),
   );
-
-  // The slot token is the permission: it names exactly one field (chcId + fieldId).
-  const fieldFromSlot = async (token: string): Promise<FieldRecord> => {
-    const { chcId, fieldId } = await verifySlotToken(config, token);
-    const field = await dependencies.store.getField(chcId, fieldId);
-    if (!field) throw new NotFoundError("field not found");
-    return field;
-  };
 
   router.get(
     "/slot/:token/why",
@@ -390,6 +448,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // "I cannot wait longer": the one change a slot link can make. Only shortens the wait; marks the
+  // field for the operator and re-plans the draft with the operator's moves kept.
   router.post(
     "/slot/:token/waiting-limit",
     slotLimiter,
@@ -411,11 +471,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const { principal } = request;
       if (principal.role !== "facilitator") throw new ForbiddenError(["not a facilitator"]);
       const booked = await dependencies.store.listFieldsBookedBy(principal.userId);
-      const visible = booked.filter(
-        (field) =>
-          authorize(principal, "ViewField", { type: "Field", id: field.id, chcId: field.chcId, farmerId: field.farmerId, bookedBy: field.bookedBy })
-            .allowed,
-      );
+      const visible = booked.filter((field) => authorize(principal, "ViewField", fieldResource(field)).allowed);
       response.json({ today: dependencies.planner.dayToIso(dependencies.planner.today()), items: await buildBookedFields(dependencies.planner, dependencies.store, visible) });
     }),
   );

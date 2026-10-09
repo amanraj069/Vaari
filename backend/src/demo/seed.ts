@@ -5,7 +5,9 @@
  * curve (data/harvest_curves.json, built from NASA FIRMS fire detections, 2024 and 2025 seasons),
  * restricted to the booking window around the demo day. Field sizes, waiting limits and the
  * booking window are ASSUMPTIONS, labelled below. A fixed seed makes every reset the same season. Seeding writes only the demo CHC's data
- * and the four demo persona users (ids start with "demo-"); real users' profiles are never touched.
+ * and the three demo persona users (ids start with "demo-"); real users' profiles are never touched.
+ * The farmer persona (Jaswinder) has no account: their field carries a phone number, and "Try as
+ * farmer" signs in with a one-time phone login link, exactly as the WhatsApp bot will.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -17,11 +19,13 @@ import type { FieldRecord, MachineRecord, UserRecord, VaariStore, VillageRecord 
 
 export const DEMO_CHC_ID = "chc-balian";
 export const DEMO_USERS = {
-  farmer: "demo-farmer-jaswinder",
   facilitator: "demo-facilitator-gurpreet",
   operator: "demo-operator-harpal",
   officer: "demo-officer-sangrur",
 } as const;
+// SIMULATED phone for the demo farmer: Ofcom reserves +44 7700 900000-900999 for fiction, so it can
+// never be a real person's number. It is never shown on any page and never messaged.
+export const DEMO_FARMER_PHONE = "+447700900017";
 const JASWINDER_FARMER_ID = "farmer-jaswinder";
 export const DEMO_OPERATOR_NAME = "Harpal Singh";
 const CLUSTER_RADIUS_KM = 6;
@@ -36,7 +40,7 @@ const FIRST_NAMES = [
 ];
 // ASSUMPTION: field sizes in acres (no per-field data; swept in the simulator later).
 const FIELD_SIZES_ACRES = [1.5, 2, 2.5, 3, 3, 3.5, 4, 4, 5, 6];
-// ASSUMPTION: days a farmer will wait after harvest before burning (CLAUDE.md: swept over 3 to 10).
+// ASSUMPTION: days a farmer will wait after harvest before burning (the simulator sweeps 3 to 10).
 const WAITING_LIMIT_MIN_DAYS = 3;
 const WAITING_LIMIT_MAX_DAYS = 10;
 // ASSUMPTION: by the demo day, the farmers who have booked are those whose fields became ready
@@ -139,18 +143,22 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
       state: "waiting",
       plannedDay: null,
       plannedMachineId: null,
+      // Seeded farmers were booked by nobody. Only the demo farmer has a phone (and simulated consent).
       bookedBy: null,
+      farmerPhone: isJaswinder ? DEMO_FARMER_PHONE : null,
+      consentAt: isJaswinder ? now : null,
+      consentBy: isJaswinder ? DEMO_USERS.facilitator : null,
+      linkVersion: 1,
       soonerRequestedAt: null,
     };
     await store.putField(field);
-    await store.putFarmer({ id: farmerId, name: farmerName, phone: "simulated", language: "pa", facilitatorId: null });
+    await store.putFarmer({ id: farmerId, name: farmerName, phone: isJaswinder ? DEMO_FARMER_PHONE : "", language: "pa", facilitatorId: null });
   }
 
   const users: UserRecord[] = [
-    { userId: DEMO_USERS.farmer, name: "Jaswinder Singh", role: "farmer", chcId: DEMO_CHC_ID, farmerId: JASWINDER_FARMER_ID, language: "en" },
-    { userId: DEMO_USERS.facilitator, name: "Gurpreet Kaur", role: "facilitator", chcId: DEMO_CHC_ID, farmerId: null, language: "en" },
-    { userId: DEMO_USERS.operator, name: DEMO_OPERATOR_NAME, role: "operator", chcId: DEMO_CHC_ID, farmerId: null, language: "en" },
-    { userId: DEMO_USERS.officer, name: "District officer (demo)", role: "officer", chcId: null, farmerId: null, language: "en" },
+    { userId: DEMO_USERS.facilitator, name: "Gurpreet Kaur", role: "facilitator", chcId: DEMO_CHC_ID, language: "en" },
+    { userId: DEMO_USERS.operator, name: DEMO_OPERATOR_NAME, role: "operator", chcId: DEMO_CHC_ID, language: "en" },
+    { userId: DEMO_USERS.officer, name: "District officer (demo)", role: "officer", chcId: null, language: "en" },
   ];
   for (const user of users) await store.putUser(user);
 }

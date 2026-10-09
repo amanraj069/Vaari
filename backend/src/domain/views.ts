@@ -7,6 +7,7 @@
 import {
   learnRate,
   minuteToClock,
+  type AttentionItem,
   type FarmerField,
   type FarmerHome,
   type FieldPromise,
@@ -175,6 +176,23 @@ function uncoveredRequests(state: ChcState, plan: PlanRecord | null): number {
   }).length;
 }
 
+/** Farmers who said "I cannot wait longer" and wait for the next published plan, earliest request first. */
+function attentionItems(planner: Planner, state: ChcState): AttentionItem[] {
+  const villages = villageNames(planner);
+  return state.fields
+    .filter((field) => field.state !== "done" && field.soonerRequestedAt !== null)
+    .sort((left, right) => (left.soonerRequestedAt! < right.soonerRequestedAt! ? -1 : 1))
+    .map((field) => ({
+      fieldId: field.id,
+      token: field.token,
+      farmerName: field.farmerName,
+      villageName: villages.get(field.villageId)?.name ?? field.villageId,
+      burnDeadlineDate: planner.dayToIso(field.readyDay + field.waitingLimitDays),
+      requestedAt: field.soonerRequestedAt!,
+      promise: promiseView(planner, state.heldByField.get(field.id)?.promise ?? null),
+    }));
+}
+
 export async function buildQueue(planner: Planner, store: VaariStore, chcId: string): Promise<QueueItem[]> {
   await planner.finishPendingPublish(chcId);
   const state = await loadChcState(planner, store, chcId);
@@ -229,6 +247,7 @@ export async function buildBoard(planner: Planner, store: VaariStore, chcId: str
       ? { ...planSummary(planner, draft, state.machines), changeCount: countChanges(draft.changes), brokenCount: draft.changes.broken.length }
       : null,
     newRequests: uncoveredRequests(state, latest),
+    attention: attentionItems(planner, state),
     counts: {
       machinesWorking: lanes.filter((lane) => !lane.down).length,
       machinesTotal: lanes.length,
@@ -266,6 +285,7 @@ export async function buildPlanView(planner: Planner, store: VaariStore, chcId: 
     })),
     lanes: lanesFor(planner, state, plan?.solve ?? null, plan?.planDay ?? planDays[0]!),
     newRequests: uncoveredRequests(state, plan),
+    attention: attentionItems(planner, state),
     moveOptions: {
       machines: state.machines.map((machine) => ({
         id: machine.id,
@@ -399,21 +419,30 @@ export async function buildOneFarmerField(planner: Planner, store: VaariStore, f
   return buildFarmerField(planner, context, field, history);
 }
 
-export async function buildFarmerHome(planner: Planner, store: VaariStore, farmerId: string, chcId: string, locale: Locale): Promise<FarmerHome> {
-  const [farmer, context, myFields, promiseRecords] = await Promise.all([
-    store.getFarmer(farmerId),
-    farmerFieldContext(planner, store, chcId, locale),
-    store.listFieldsByFarmer(chcId, farmerId),
-    store.listPromises(chcId),
-  ]);
-  const historyByField = groupPromises(promiseRecords);
-  myFields.sort((left, right) => left.requestOrder - right.requestOrder);
+/**
+ * /farmer behind a phone session: the given fields (all booked with one phone, found through
+ * phone-index and each already allowed by Cedar), newest first, each with its machine centre. The
+ * phone itself is not in the answer: the farmer knows it, and the page never needs it.
+ */
+export async function buildFarmerPhoneHome(planner: Planner, store: VaariStore, fields: FieldRecord[], locale: Locale): Promise<FarmerHome> {
+  const contexts = new Map<string, { context: FarmerFieldContext; historyByField: Map<string, PromiseRecord[]> }>();
+  for (const chcId of new Set(fields.map((field) => field.chcId))) {
+    const [context, promiseRecords] = await Promise.all([farmerFieldContext(planner, store, chcId, locale), store.listPromises(chcId)]);
+    contexts.set(chcId, { context, historyByField: groupPromises(promiseRecords) });
+  }
+  const newestFirst = [...fields].sort((left, right) => (left.createdAt < right.createdAt ? 1 : left.createdAt > right.createdAt ? -1 : 0));
   return {
     today: planner.dayToIso(planner.today()),
-    farmerName: farmer?.name ?? "",
-    chcName: context.chc.name,
-    operatorPhone: context.chc.operatorPhone,
-    fields: myFields.map((field) => buildFarmerField(planner, context, field, historyByField.get(field.id) ?? [])),
+    farmerName: newestFirst[0]?.farmerName ?? "",
+    fields: newestFirst.map((field) => {
+      const { context, historyByField } = contexts.get(field.chcId)!;
+      return {
+        ...buildFarmerField(planner, context, field, historyByField.get(field.id) ?? []),
+        chcId: field.chcId,
+        chcName: context.chc.name,
+        operatorPhone: context.chc.operatorPhone,
+      };
+    }),
   };
 }
 

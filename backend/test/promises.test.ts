@@ -20,8 +20,8 @@ const record = (version: number, state: PromiseRecord["state"], promise: Promise
 
 const field = (id: string, overrides: Partial<FieldRecord> = {}): FieldRecord => ({
   chcId: "c", id, token: 1, farmerId: "farmer", farmerName: "F", villageId: "v", acres: 2, readyDay: 30, waitingLimitDays: 8,
-  requestOrder: 0, createdAt: "x", state: "waiting", plannedDay: null, plannedMachineId: null, bookedBy: null, soonerRequestedAt: null,
-  ...overrides,
+  requestOrder: 0, createdAt: "x", state: "waiting", plannedDay: null, plannedMachineId: null, bookedBy: null, farmerPhone: null,
+  consentAt: null, consentBy: null, linkVersion: 1, soonerRequestedAt: null, ...overrides,
 });
 
 function solve(fieldDays: Record<string, number>, promises: SolveResponse["promises"], unserved: string[] = []): SolveResponse {

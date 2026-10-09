@@ -5,6 +5,8 @@
  *   client id, expiry, token use). The role is the user's Cognito group.
  * - Demo sessions (DEMO_MODE=true), short-lived and signed here, so judges get one-click personas
  *   and the product runs with no AWS account. Both can be on at the same time.
+ * Farmers are not principals here: they have no account and use a phone session
+ * (auth/farmer-session.ts), which only the /farmer routes accept.
  */
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 import { SignJWT, decodeJwt, jwtVerify } from "jose";
@@ -18,9 +20,11 @@ export type Principal = {
   // null: signed in with Google but not onboarded yet (no Cognito group and no stored profile).
   role: Role | null;
   chcId: string | null;
-  farmerId: string | null;
   demo: boolean;
 };
+
+/** A stored role that is no longer a role (e.g. "farmer", from when farmers had accounts) counts as none. */
+const knownRole = (role: unknown): Role | null => roleSchema.safeParse(role).data ?? null;
 
 const DEMO_ISSUER = "vaari-demo";
 const DEMO_AUDIENCE = "vaari-api";
@@ -60,7 +64,7 @@ export function createTokenVerifier(config: Config, store: VaariStore): TokenVer
       // Role and CHC come from the stored user record, never from client-supplied claims.
       const user = payload.sub ? await store.getUser(payload.sub) : null;
       if (!user) throw new AuthError("unknown user");
-      return { ...user, demo: true };
+      return { userId: user.userId, name: user.name, role: knownRole(user.role), chcId: user.chcId, demo: true };
     } catch (error) {
       throw new AuthError(error instanceof Error ? error.message : "invalid token");
     }
@@ -80,9 +84,8 @@ export function createTokenVerifier(config: Config, store: VaariStore): TokenVer
     return {
       userId: payload.sub,
       name: user?.name ?? payload.username?.toString() ?? "",
-      role: groupRole ?? user?.role ?? null,
+      role: groupRole ?? knownRole(user?.role),
       chcId: user?.chcId ?? null,
-      farmerId: user?.farmerId ?? null,
       demo: false,
     };
   }

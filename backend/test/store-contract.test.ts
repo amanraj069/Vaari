@@ -40,7 +40,7 @@ function field(chcId: string, id: string, overrides: Partial<FieldRecord> = {}):
   return {
     chcId, id, token: 1, farmerId: "farmer-a", farmerName: "A", villageId: "v1", acres: 2, readyDay: 30, waitingLimitDays: 5,
     requestOrder: 0, createdAt: "2026-10-08T00:00:00.000Z", state: "waiting", plannedDay: null, plannedMachineId: null, bookedBy: null,
-    soonerRequestedAt: null, ...overrides,
+    farmerPhone: null, consentAt: null, consentBy: null, linkVersion: 1, soonerRequestedAt: null, ...overrides,
   };
 }
 
@@ -85,6 +85,37 @@ for (const { name, make } of stores) {
       expect((await store.listFieldsBookedBy(facilitator)).map((item) => item.id)).toEqual(["b1", "b2"]);
       // A field with no booker round-trips with bookedBy null (the attribute is simply absent in DynamoDB).
       expect((await store.getField(chcId, "f1"))?.bookedBy).toBeNull();
+    });
+
+    it("finds every field booked with one phone through phone-index, in any CHC, oldest first", async () => {
+      // A per-run phone (E.164) from Ofcom's range reserved for fiction (+44 7700 900000-900999),
+      // so DynamoDB runs rarely share one and no test number can belong to a real person.
+      const phone = `+447700900${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
+      const otherChc = `${chcId}-other`;
+      await store.putField(field(chcId, "ph2", { farmerPhone: phone, createdAt: "2026-10-09T10:00:00.000Z" }));
+      await store.putField(field(otherChc, "ph1", { farmerPhone: phone, createdAt: "2025-10-20T10:00:00.000Z" }));
+      await store.putField(field(chcId, "ph3", { farmerPhone: phone === "+447700900999" ? "+447700900998" : "+447700900999" }));
+      const found = await store.listFieldsByPhone(phone);
+      expect(found.map((item) => `${item.chcId}/${item.id}`)).toEqual([`${otherChc}/ph1`, `${chcId}/ph2`]);
+      // A field without a phone round-trips with null (absent from the index in DynamoDB).
+      expect((await store.getField(chcId, "f1"))?.farmerPhone).toBeNull();
+      await store.clearChcData(otherChc);
+    });
+
+    it("bumps a field's link version, and not for a missing field", async () => {
+      await store.putField(field(chcId, "lv1"));
+      expect((await store.bumpLinkVersion(chcId, "lv1"))?.linkVersion).toBe(2);
+      expect((await store.bumpLinkVersion(chcId, "lv1"))?.linkVersion).toBe(3);
+      expect((await store.getField(chcId, "lv1"))?.linkVersion).toBe(3);
+      expect(await store.bumpLinkVersion(chcId, "missing")).toBeNull();
+    });
+
+    it("uses a login token once, and never an unknown one", async () => {
+      const jti = `jti-${run}`;
+      await store.putLoginToken({ jti, phone: "+447700900017", expiresAt: "2026-10-31T00:15:00.000Z", usedAt: null });
+      expect(await store.useLoginToken(jti, "2026-10-31T00:01:00.000Z")).toMatchObject({ jti, phone: "+447700900017", usedAt: "2026-10-31T00:01:00.000Z" });
+      expect(await store.useLoginToken(jti, "2026-10-31T00:02:00.000Z")).toBeNull();
+      expect(await store.useLoginToken(`never-${run}`, "2026-10-31T00:02:00.000Z")).toBeNull();
     });
 
     it("keeps promise history in version order, including past version 9", async () => {
@@ -155,15 +186,15 @@ for (const { name, make } of stores) {
 
     it("stores users (with and without a CHC) and lists a CHC's users by role", async () => {
       const operator = `user-op-${run}`;
-      const farmer = `user-farmer-${run}`;
+      const facilitator = `user-facilitator-${run}`;
       const officer = `user-officer-${run}`;
-      userIds.push(operator, farmer, officer);
-      await store.putUser({ userId: operator, name: "O", role: "operator", chcId, farmerId: null, language: "en" });
-      await store.putUser({ userId: farmer, name: "F", role: "farmer", chcId, farmerId: `farmer-${run}`, language: "pa" });
-      await store.putUser({ userId: officer, name: "D", role: "officer", chcId: null, farmerId: null, language: "en" });
-      expect(await store.getUser(officer)).toEqual({ userId: officer, name: "D", role: "officer", chcId: null, farmerId: null, language: "en" });
-      expect((await store.listUsersByChc(chcId)).map((user) => user.role)).toEqual(["farmer", "operator"]);
-      await store.putFarmer({ id: `farmer-${run}`, name: "F", phone: "", language: "pa", facilitatorId: null });
+      userIds.push(operator, facilitator, officer);
+      await store.putUser({ userId: operator, name: "O", role: "operator", chcId, language: "en" });
+      await store.putUser({ userId: facilitator, name: "G", role: "facilitator", chcId, language: "pa" });
+      await store.putUser({ userId: officer, name: "D", role: "officer", chcId: null, language: "en" });
+      expect(await store.getUser(officer)).toEqual({ userId: officer, name: "D", role: "officer", chcId: null, language: "en" });
+      expect((await store.listUsersByChc(chcId)).map((user) => user.role)).toEqual(["facilitator", "operator"]);
+      await store.putFarmer({ id: `farmer-${run}`, name: "F", phone: "+447700900017", language: "pa", facilitatorId: facilitator });
       expect((await store.getFarmer(`farmer-${run}`))?.name).toBe("F");
     });
 

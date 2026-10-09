@@ -54,8 +54,18 @@ export type FieldRecord = {
   plannedMachineId: string | null;
   // The facilitator (user id) who booked this field for a farmer, if any.
   bookedBy: string | null;
-  // Set when the farmer says "I cannot wait longer": the next published plan may give them an
-  // earlier promise (never a later one). Cleared when a plan covering the field is published.
+  // The farmer's phone in E.164: their identity (no account), the key of phone-index, so one phone
+  // finds all its fields across CHCs and seasons. Null for simulated demo fields. Never sent to a
+  // slot, officer or public page.
+  farmerPhone: string | null;
+  // The farmer agreed to be contacted on that phone; recorded by the facilitator who booked.
+  consentAt: string | null;
+  consentBy: string | null;
+  // Slot links carry this number; reissuing a link bumps it, so every older link stops working.
+  linkVersion: number;
+  // Set when the farmer says "I cannot wait longer": the operator sees the field under "needs
+  // attention", and the next published plan may give an earlier promise (never a later one).
+  // Cleared when a plan covering the field is published.
   soonerRequestedAt: string | null;
 };
 
@@ -150,14 +160,20 @@ export type FireCheckRecord = {
 
 export type FarmerRecord = { id: string; name: string; phone: string; language: Locale; facilitatorId: string | null };
 
+/** A signed-in person (facilitator, operator, officer). Farmers have no user record. */
 export type UserRecord = {
   userId: string;
   name: string;
   role: Role;
   chcId: string | null;
-  farmerId: string | null;
   language: Locale;
 };
+
+/**
+ * A one-time farmer login link (typ "farmer-login"): stored by its jti so it can be used once.
+ * The phone is kept only to check the exchange; the record expires with the link.
+ */
+export type LoginTokenRecord = { jti: string; phone: string; expiresAt: string; usedAt: string | null };
 
 /** Thrown when a conditional write loses: e.g. approving a plan that is no longer a draft. */
 export class StoreConflictError extends Error {}
@@ -181,6 +197,13 @@ export interface VaariStore {
   listFieldsByFarmer(chcId: string, farmerId: string): Promise<FieldRecord[]>;
   /** Fields a facilitator booked, oldest first (booked-by-index). */
   listFieldsBookedBy(userId: string): Promise<FieldRecord[]>;
+  /** Every field booked with this phone (E.164), in any CHC and season, oldest first (phone-index). */
+  listFieldsByPhone(phone: string): Promise<FieldRecord[]>;
+  /**
+   * Reissuing a slot link: linkVersion + 1 (a conditional update, so two reissues never hand out
+   * the same version). Returns the updated field, or null if it does not exist.
+   */
+  bumpLinkVersion(chcId: string, fieldId: string): Promise<FieldRecord | null>;
 
   /** Every promise record in a CHC, ordered by field then version. */
   listPromises(chcId: string): Promise<PromiseRecord[]>;
@@ -219,6 +242,14 @@ export interface VaariStore {
 
   getFarmer(farmerId: string): Promise<FarmerRecord | null>;
   putFarmer(farmer: FarmerRecord): Promise<void>;
+
+  /** A farmer login link is stored when minted ... */
+  putLoginToken(record: LoginTokenRecord): Promise<void>;
+  /**
+   * ... and used at most once: marks it used and returns it, or returns null if it is unknown or
+   * was already used (a conditional write, so two simultaneous exchanges cannot both succeed).
+   */
+  useLoginToken(jti: string, usedAt: string): Promise<LoginTokenRecord | null>;
 
   getUser(userId: string): Promise<UserRecord | null>;
   putUser(user: UserRecord): Promise<void>;
