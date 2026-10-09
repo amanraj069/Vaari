@@ -40,6 +40,18 @@ export default function BookPage() {
     }
   }
 
+  // A new link for a lost or over-shared one: the old link stops working at once. A failed reissue
+  // reaches the dialog; once it has succeeded, a failed copy must not look like a failed reissue.
+  async function reissueLink(item: QueueItem) {
+    const link = await api(`fields/${item.fieldId}/slot-link/reissue`, slotLinkSchema, { method: "POST", body: "{}" });
+    queryClient.invalidateQueries({ queryKey: ["facilitator-fields"] });
+    const copied = await copyText(`${window.location.origin}${link.path}`).then(
+      () => true,
+      () => false,
+    );
+    toast(copied ? t("reissued") : t("reissuedNotCopied"));
+  }
+
   return (
     <>
       <TopBar />
@@ -60,7 +72,7 @@ export default function BookPage() {
             }}
           />
           <div className="lg:sticky lg:top-6">
-            <BookedList state={listState} onCopyLink={copyLink} />
+            <BookedList state={listState} onCopyLink={copyLink} onReissueLink={reissueLink} />
           </div>
         </div>
       </PageMain>

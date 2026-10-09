@@ -28,6 +28,12 @@ export function DemoButton({
     setState("working");
     try {
       const home = await signInAsDemo(role);
+      // The demo farmer gets a one-time login link (a route handler that sets the phone session):
+      // load it as a page, the way a farmer opens it from WhatsApp.
+      if (home.startsWith("/farmer/login/")) {
+        window.location.assign(home);
+        return;
+      }
       await refreshSession();
       router.push(home);
     } catch (error) {

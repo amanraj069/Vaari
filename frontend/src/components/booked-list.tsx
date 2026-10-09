@@ -2,14 +2,17 @@
 
 /**
  * BookedList: the fields this facilitator booked, newest status first. Each row shows the farmer,
- * the promise (only a promised date, never a planned one), status badges with icon + word, and a
- * button to copy the farmer's slot link again.
+ * the promise (only a promised date, never a planned one), status badges with icon + word, a
+ * button to copy the farmer's slot link again, and one to give the farmer a new link (after a
+ * confirmation: the old link stops working at once).
  */
-import { Copy } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import type { QueueItem } from "@/shared";
 import { useDates } from "@/lib/dates";
-import { Button, Pill, Skeleton, StateMessage } from "./ui";
+import { Dialog } from "./dialog";
+import { Button, Pill, Skeleton, Spinner, StateMessage } from "./ui";
 
 export type BookedListState = { kind: "loading" } | { kind: "error"; onRetry: () => void } | { kind: "ready"; items: QueueItem[] };
 
@@ -35,9 +38,33 @@ export function StatusBadges({ item }: { item: QueueItem }) {
   );
 }
 
-export function BookedList({ state, onCopyLink }: { state: BookedListState; onCopyLink: (item: QueueItem) => void }) {
+export function BookedList({
+  state,
+  onCopyLink,
+  onReissueLink,
+}: {
+  state: BookedListState;
+  onCopyLink: (item: QueueItem) => void;
+  /** Makes a new slot link (the old one stops working). Resolves when the new link is copied. */
+  onReissueLink?: (item: QueueItem) => Promise<void>;
+}) {
   const t = useTranslations("book");
   const tc = useTranslations("common");
+  const [reissuing, setReissuing] = useState<QueueItem | null>(null);
+  const [reissueState, setReissueState] = useState<"idle" | "working" | "failed">("idle");
+
+  async function confirmReissue() {
+    if (!reissuing || !onReissueLink) return;
+    setReissueState("working");
+    try {
+      await onReissueLink(reissuing);
+      setReissueState("idle");
+      setReissuing(null);
+    } catch {
+      setReissueState("failed");
+    }
+  }
+
   return (
     <section aria-labelledby="booked-title">
       <h2 id="booked-title" className="font-display text-2xl">{t("listTitle")}</h2>
@@ -77,10 +104,41 @@ export function BookedList({ state, onCopyLink }: { state: BookedListState; onCo
               >
                 <Copy aria-hidden className="size-5" strokeWidth={1.75} />
               </button>
+              {onReissueLink ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReissueState("idle");
+                    setReissuing(item);
+                  }}
+                  aria-label={t("reissueFor", { name: item.farmerName })}
+                  className="grid size-11 shrink-0 place-items-center rounded-control border border-line-strong text-ink hover:border-ink/50"
+                >
+                  <RefreshCw aria-hidden className="size-5" strokeWidth={1.75} />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
+      <Dialog
+        open={reissuing !== null}
+        onClose={() => setReissuing(null)}
+        title={t("reissueTitle", { name: reissuing?.farmerName ?? "" })}
+        description={t("reissueBody")}
+        closeLabel={tc("close")}
+        footer={
+          <Button variant="accent" className="min-h-12" disabled={reissueState === "working"} onClick={confirmReissue}>
+            {reissueState === "working" ? <Spinner label={t("reissueConfirm")} /> : t("reissueConfirm")}
+          </Button>
+        }
+      >
+        {reissueState === "failed" ? (
+          <p role="alert" className="text-ember-deep">
+            {t("reissueFailed")}
+          </p>
+        ) : null}
+      </Dialog>
     </section>
   );
 }

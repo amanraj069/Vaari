@@ -3,7 +3,9 @@
  *   a facilitator books a field on /book and gets the farmer's slot link -> the link says
  *   "Requested" (no date until a plan is published) -> the operator sees the new request on
  *   /operator, makes tomorrow's plan on /operator/plan, reads that this farmer gets a first date,
- *   and approves -> the farmer opens the link with no account and sees a firm date.
+ *   and approves -> the farmer opens the link with no account and sees a firm date -> the helper
+ *   reissues the link from the booked list and the old one stops working.
+ * The booking carries the farmer's phone and consent; the phone never appears on the slot page.
  * The field is 1 acre and ready tomorrow, so it fits tomorrow's capacity and the first promise is
  * firm (a date within two days is promised firm; later dates start as a window). axe checks the
  * slot page in both states and the plan page.
@@ -35,6 +37,10 @@ test("facilitator books, operator generates and approves, the slot link shows a 
   const next = () => facilitator.getByRole("button", { name: "Next", exact: true }).click();
   await facilitator.getByRole("textbox", { name: /Farmer's name/ }).fill("Paramjit Kaur");
   await next();
+  // A placeholder number from Ofcom's range reserved for fiction: never a real person.
+  await facilitator.getByRole("textbox", { name: /mobile number/ }).fill("+44 7700 900123");
+  await facilitator.getByText(/Paramjit Kaur agrees to get messages/).click();
+  await next();
   await facilitator.getByRole("button", { name: "Balian", exact: true }).click();
   await next();
   for (let click = 0; click < 4; click += 1) await facilitator.getByRole("button", { name: "Less" }).click();
@@ -54,8 +60,15 @@ test("facilitator books, operator generates and approves, the slot link shows a 
 
   // 2. Until a plan is published, the farmer's link says "Requested" and promises nothing.
   const farmer = await (await browser.newContext()).newPage();
-  await farmer.goto(slotUrl);
+  const opened = await farmer.goto(slotUrl);
+  // A slot link is private: no indexing, no referrer, as headers and as page metadata.
+  expect(opened?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+  expect(opened?.headers()["referrer-policy"]).toBe("no-referrer");
+  expect(await farmer.locator('meta[name="robots"]').getAttribute("content")).toContain("noindex");
+  expect(await farmer.locator('meta[name="referrer"]').getAttribute("content")).toBe("no-referrer");
   await expect(farmer.getByText("Your request is in")).toBeVisible();
+  await expect(farmer.getByRole("link", { name: "See all my fields" })).toHaveAttribute("href", "https://wa.me/910000000000?text=my%20fields");
+  expect(await farmer.locator("body").innerText()).not.toMatch(/7700\s?900\s?123/);
   await expect(farmer.getByText("Requested").first()).toBeVisible();
   await expect(farmer.getByText("Firm date")).toHaveCount(0);
   await expect(farmer.getByRole("list", { name: "Progress of this turn" }).locator('[aria-current="step"]')).toContainText("Booked");
@@ -84,7 +97,7 @@ test("facilitator books, operator generates and approves, the slot link shows a 
   // 4. The farmer's link now shows a firm date: exactly the date the backend promised.
   await farmer.reload();
   await expect(farmer.getByText("The machine comes on")).toBeVisible();
-  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { status: string; promise: { kind: string; date?: string } | null };
+  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { id: string; status: string; promise: { kind: string; date?: string } | null };
   expect(slot.status).toBe("firm");
   expect(slot.promise?.kind).toBe("firm");
   const promised = new Date(`${slot.promise!.date}T00:00:00Z`);
@@ -106,4 +119,16 @@ test("facilitator books, operator generates and approves, the slot link shows a 
   // (Next.js also renders an empty route-announcer alert; pick ours by its text.)
   await expect(farmer.getByRole("alert").filter({ hasText: "This link does not work" })).toBeVisible();
   expect(new URL(farmer.url()).pathname).toMatch(/^\/slot\//);
+
+  // 5. The helper gives the farmer a new link: the old one stops working, the new one opens.
+  await facilitator.goto("/book");
+  await facilitator.getByRole("button", { name: "New link for Paramjit Kaur" }).first().click();
+  await facilitator.getByRole("button", { name: "Make a new link and copy it" }).click();
+  // (Copied, or made but not copied when the headless clipboard refuses: either way the old link is dead.)
+  await expect(facilitator.getByText(/New link (copied|made)/)).toBeVisible();
+  await farmer.goto(slotUrl);
+  await expect(farmer.getByRole("alert").filter({ hasText: "This link does not work" })).toBeVisible();
+  const reissued = (await (await facilitator.request.get(`/api/proxy/fields/${slot.id}/slot-link`)).json()) as { path: string };
+  await farmer.goto(reissued.path);
+  await expect(farmer.getByText("The machine comes on")).toBeVisible();
 });

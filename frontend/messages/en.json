@@ -26,7 +26,11 @@
     "notFoundBody": "The link may be old or mistyped.",
     "goHome": "Go to the home page",
     "crashTitle": "Something went wrong",
-    "crashBody": "Please try again. If it keeps happening, come back in a little while; your promises are safe."
+    "crashBody": "Please try again. If it keeps happening, come back in a little while; your promises are safe.",
+    "brandHome": "Vaari home",
+    "githubLabel": "Vaari on GitHub",
+    "contactLabel": "Write to the Vaari team",
+    "copyright": "© {year} Vaari. All rights reserved."
   },
   "landing": {
     "eyebrow": "Clean fields · Clearer air · Stronger Punjab",
@@ -93,7 +97,8 @@
     "closingTitle": "Clean air starts with a date.",
     "closingBody": "Walk through the simulated season as a farmer or as the operator. One click, no sign-up.",
     "footerPhotos": "Photos on this page are AI-generated illustrations, not the demo's farmers or fields.",
-    "footerCredits": "Fire data: NASA FIRMS. Villages: © OpenStreetMap contributors. Sowing window and yield loss: PAU Package of Practices."
+    "footerCredits": "Fire data: NASA FIRMS. Villages: © OpenStreetMap contributors. Sowing window and yield loss: PAU Package of Practices.",
+    "stat1SourceUrl": "https://www.tribuneindia.com/news/punjab/team-of-22-scientists-to-check-farm-fires"
   },
   "signin": {
     "title": "Sign in to Vaari",
@@ -124,8 +129,6 @@
     "body": "Tell us who you are, so Vaari can show you the right page.",
     "nameLabel": "Your name",
     "roleLabel": "I am a",
-    "roleFarmer": "Farmer",
-    "roleFarmerBody": "I want a date for the machine on my field.",
     "roleOperator": "CHC operator",
     "roleOperatorBody": "I run the machines and approve the daily plan.",
     "operatorDemoNote": "In this demo anyone may pick operator. In real use, operator access is granted by the CHC.",
@@ -136,7 +139,8 @@
     "continue": "Continue",
     "saving": "Saving…",
     "failed": "Could not save. Please try again.",
-    "comingSoon": "Agriculture officer and village helper accounts arrive with their pages."
+    "comingSoon": "Agriculture officer and village helper accounts arrive with their pages.",
+    "farmersNoAccount": "Farmers do not sign up: a helper books for them with their phone number, and they open their dates from a link."
   },
   "farmer": {
     "asideHowTitle": "How your date works",
@@ -173,12 +177,19 @@
     "stateBroken": "replaced",
     "callOperator": "Call the operator",
     "addField": "Ask for a date",
-    "addAnother": "Another field",
     "brokenNotice": "Your date had to change. Here is your new date and the reason.",
     "firmedNotice": "Your window is now a fixed date.",
     "emptyTitle": "No fields yet",
     "emptyBody": "Tell Vaari where your field is and when your paddy will be harvested. You get a date for the machine.",
-    "acresInVillage": "{acres} in {village}"
+    "acresInVillage": "{acres} in {village}",
+    "allFieldsTitle": "Your fields",
+    "readOnlyNote": "Every field booked with your phone number. To change one, use that field's own link, or talk to the helper who booked it.",
+    "noSessionTitle": "Open your link from WhatsApp",
+    "noSessionBody": "Your fields open from a link Vaari sends you on WhatsApp. Write \"my fields\" to Vaari and you get a new link.",
+    "linkExpiredTitle": "This link has already been used or has expired",
+    "linkExpiredBody": "For your safety, each link opens once and only for 15 minutes. Write \"my fields\" to Vaari on WhatsApp for a new one.",
+    "noFieldsTitle": "No fields booked with this number yet",
+    "noFieldsBody": "When a helper books a field for you with this phone number, it shows up here."
   },
   "request": {
     "title": "Ask for a machine date",
@@ -275,7 +286,11 @@
     "newRequestsAction": "Make tomorrow's plan to give them a date.",
     "kpiRequested": "Waiting for a date",
     "stopAtRisk": "After the farmer's last waiting day",
-    "stopTight": "Close to the farmer's last waiting day"
+    "stopTight": "Close to the farmer's last waiting day",
+    "attentionTitle": "{count, plural, one {# farmer cannot wait longer} other {# farmers cannot wait longer}}",
+    "attentionBody": "They shortened their wait from their link. Their current date stands until you publish a plan; the next plan you publish gives them an earlier date if one exists, never a later one.",
+    "attentionItem": "{name}, {village}: can wait until {date} (now: {promise})",
+    "attentionNoPromise": "no date yet"
   },
   "queue": {
     "title": "Every field, by burn risk",
@@ -449,7 +464,12 @@
     "metric_daysWithoutDate": "Days a farmer waits without a date (average)",
     "unavailableTitle": "Results are not available right now",
     "unavailableBody": "We are preparing the season results. Please check back in a little while.",
-    "retryLabel": "Try again"
+    "retryLabel": "Try again",
+    "shortfallTitle": "Where Vaari cannot save everyone",
+    "shortfallBody": "The same simulated seasons with half the machines ({machines} instead of {baseMachines}) and the same farmers. There are too few machines for the acres booked, so every way of working leaves farmers without a sowing before their last waiting day.",
+    "shortfallBase": "All machines ({machines})",
+    "shortfallHalf": "Half the machines ({machines})",
+    "shortfallNote": "Median of {runs} simulated seasons, with the 10th to 90th percentile below."
   },
   "roles": {
     "farmer": "Farmer",
@@ -470,7 +490,6 @@
     "plan": "Plan",
     "queue": "Queue",
     "myFields": "My fields",
-    "askDate": "Ask for a date",
     "proof": "See the proof",
     "signIn": "Sign in",
     "mainNav": "Main",
@@ -482,7 +501,10 @@
     "book": "Book a field",
     "problem": "The problem",
     "how": "How it works",
-    "today": "Today"
+    "today": "Today",
+    "footerFarmers": "For farmers and helpers",
+    "footerOperators": "For operators",
+    "footerResources": "Resources"
   },
   "slot": {
     "title": "Your turn for the machine",
@@ -519,7 +541,9 @@
     "visitLine": "{machine}, stop {stop} of {stops} that day",
     "queuePosition": "Number {position} in the queue",
     "soonerTitle": "You asked for an earlier date",
-    "soonerBody": "You can now wait until {date}. Your operator decides in the next plan. Until then the date below stands, and it will never move later."
+    "soonerBody": "You can now wait until {date}. Your operator decides in the next plan. Until then the date below stands, and it will never move later.",
+    "seeAllMyFields": "See all my fields",
+    "seeAllMyFieldsHelp": "Opens WhatsApp with Vaari. Send the message and you get a link to every field booked with your number."
   },
   "book": {
     "title": "Book a field for a farmer",
@@ -554,14 +578,35 @@
     "listEmptyBody": "Book a field and it appears here with its status.",
     "copyLinkFor": "Copy link for {name}",
     "linkFailed": "Could not get the link. Please try again.",
-    "listError": "Could not load your bookings."
+    "listError": "Could not load your bookings.",
+    "stepPhone": "Phone",
+    "phoneQuestion": "{name}'s mobile number",
+    "phoneHelp": "Vaari sends the farmer their date on WhatsApp at this number. It is never shown on the farmer's link or to anyone else.",
+    "phoneInvalid": "Type a 10-digit mobile number, or the full number with the country code.",
+    "consentLabel": "{name} agrees to get messages about this booking from Vaari on this number.",
+    "consentRequired": "Ask the farmer first: Vaari cannot book without their agreement.",
+    "reissueFor": "New link for {name}",
+    "reissueTitle": "Give {name} a new link?",
+    "reissueBody": "The old link stops working at once. Use this when the link was lost or shared with someone it should not have been.",
+    "reissueConfirm": "Make a new link and copy it",
+    "reissued": "New link copied. The old one no longer works.",
+    "reissueFailed": "Could not make a new link. Try again.",
+    "reissuedNotCopied": "New link made; the old one no longer works. Copy it with the copy button."
   },
   "design": {
     "title": "Design system",
     "note": "Hidden page for the team: every component in every state, in all three languages.",
     "openDialog": "Open dialog",
     "showToast": "Show toast",
-    "toastExample": "Link copied"
+    "toastExample": "Link copied",
+    "sampleFirmRoute": "Super Seeder 2 comes to Balian on Sunday, 1 November. Your field is stop 2 of 3 that day.",
+    "sampleWindow": "Your turn is between Tuesday, 3 November and Wednesday, 4 November. Vaari fixes the exact day two days before, when that day's routes are set.",
+    "sampleRequested": "Your request is with Balian Cooperative Society. The operator plans the machines each evening; your date appears here as soon as they publish a plan that includes your field.",
+    "sampleUnplaced": "Every machine is full for the next 10 days. Your operator sees your field marked at risk and is looking for room.",
+    "sampleKept": "The machine has sown this field. Your promise was kept.",
+    "sampleMoved": "Your date had to move because a machine broke down. The date above is the earliest Vaari could find.",
+    "sampleWhyFull": "Sunday 1 November: every working machine is already full.",
+    "sampleWhyBefore": "Your date is 3 days before the last day you said you can wait."
   },
   "dates": {
     "source": "Month and weekday names from Unicode CLDR via Node 76.1 ICU (en-IN)",

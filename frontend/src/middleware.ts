@@ -1,13 +1,16 @@
-/** Routes each signed-in role to its pages. A hint only: the API checks every request with Cedar. */
+/**
+ * Routes each signed-in role to its pages. A hint only: the API checks every request with Cedar.
+ * Farmers are not signed in: /farmer (a phone session) and /slot (a link) are not gated here; the
+ * API decides what they may read.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 
 const ROLE_PREFIX: Record<string, string[]> = {
-  farmer: ["/farmer"],
   facilitator: ["/book"],
   operator: ["/operator"],
   officer: [],
 };
-const HOME: Record<string, string> = { farmer: "/farmer", facilitator: "/book", operator: "/operator", officer: "/proof" };
+const HOME: Record<string, string> = { facilitator: "/book", operator: "/operator", officer: "/proof" };
 
 export function middleware(request: NextRequest) {
   const role = request.cookies.get("vaari_role")?.value;
@@ -29,4 +32,4 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/farmer/:path*", "/operator/:path*", "/book/:path*", "/book", "/welcome"] };
+export const config = { matcher: ["/operator/:path*", "/book/:path*", "/book", "/welcome"] };

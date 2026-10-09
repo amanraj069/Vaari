@@ -19,6 +19,7 @@ import { SimulatedBadge } from "./simulated-badge";
 import { Slider } from "./slider";
 import { Timeline, type TimelineStep } from "./timeline";
 import { Button, Pill, Skeleton, Spinner } from "./ui";
+import { SeeAllMyFields } from "./whatsapp-link";
 
 export type WhyState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; reasons: string[] } | { kind: "none" };
 
@@ -124,7 +125,7 @@ function CannotWait({ field, onCannotWait }: { field: FarmerField; onCannotWait:
   );
 }
 
-export function SlotView({ state }: { state: SlotState }) {
+export function SlotView({ state, whatsappNumber = null }: { state: SlotState; whatsappNumber?: string | null }) {
   const t = useTranslations("slot");
   const tf = useTranslations("farmer");
   const tc = useTranslations("common");
@@ -140,7 +141,16 @@ export function SlotView({ state }: { state: SlotState }) {
       </div>
     );
   }
-  if (state.kind === "invalid") return <Problem icon={<LinkIcon className="size-7" strokeWidth={1.75} />} title={t("invalidTitle")} body={t("invalidBody")} />;
+  // A link that was reissued or has expired: the farmer can ask Vaari on WhatsApp for their fields.
+  if (state.kind === "invalid")
+    return (
+      <Problem
+        icon={<LinkIcon className="size-7" strokeWidth={1.75} />}
+        title={t("invalidTitle")}
+        body={t("invalidBody")}
+        action={whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : undefined}
+      />
+    );
   if (state.kind === "forbidden") return <Problem icon={<ShieldAlert className="size-7" strokeWidth={1.75} />} title={t("forbiddenTitle")} body={t("forbiddenBody")} />;
   if (state.kind === "notFound") return <Problem icon={<LinkIcon className="size-7" strokeWidth={1.75} />} title={t("notFoundTitle")} body={t("notFoundBody")} />;
   if (state.kind === "unavailable") {
@@ -315,6 +325,8 @@ export function SlotView({ state }: { state: SlotState }) {
             <CannotWait field={field} onCannotWait={state.onCannotWait} />
           </div>
         ) : null}
+
+        {whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : null}
 
         <div className="flex justify-center pt-2 lg:justify-start">
           <SimulatedBadge />

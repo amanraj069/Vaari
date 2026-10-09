@@ -1,7 +1,12 @@
 "use client";
 
-/** Onboarding form: name, role (farmer or operator), CHC, language. Big targets, one question per block. */
-import { Check, Sprout, Tractor } from "lucide-react";
+/**
+ * Onboarding form: name, role, CHC, language. Big targets, one question per block. Farmers do not
+ * sign up (they have no account; their phone number is their identity), so the only role a person
+ * can pick for themselves is operator, and only in DEMO_MODE (the API checks); facilitators and
+ * officers come from their Cognito group.
+ */
+import { Check, Tractor } from "lucide-react";
 import { PAGE_TITLE } from "./page-shell";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -29,16 +34,13 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
   const router = useRouter();
   const refreshSession = useRefreshSession();
   const [name, setName] = useState(suggestedName);
-  const [role, setRole] = useState<"farmer" | "operator">(currentRole === "operator" ? "operator" : "farmer");
+  const [role, setRole] = useState<"operator">("operator");
   const [chcId, setChcId] = useState(chcs.length === 1 ? chcs[0]!.id : "");
   const [language, setLanguage] = useState<Locale>(locale);
   const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
   const operatorAllowed = operatorSelfService || currentRole === "operator";
 
-  const roles = [
-    { value: "farmer" as const, label: t("roleFarmer"), body: t("roleFarmerBody"), Icon: Sprout, allowed: true },
-    { value: "operator" as const, label: t("roleOperator"), body: t("roleOperatorBody"), Icon: Tractor, allowed: operatorAllowed },
-  ];
+  const roles = [{ value: "operator" as const, label: t("roleOperator"), body: t("roleOperatorBody"), Icon: Tractor, allowed: operatorAllowed }];
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -97,7 +99,9 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
           ))}
         </div>
         <p className="mt-2 text-sm text-ink-muted">
-          {operatorAllowed ? (role === "operator" && operatorSelfService ? t("operatorDemoNote") : t("comingSoon")) : t("operatorLocked")}
+          {operatorAllowed ? (operatorSelfService ? t("operatorDemoNote") : t("comingSoon")) : t("operatorLocked")}
+        </p>
+        <p className="mt-2 text-sm text-ink-muted">{t("farmersNoAccount")}
         </p>
       </fieldset>
 
@@ -143,7 +147,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
       </fieldset>
 
       {state === "failed" ? <p role="alert" className="text-ember-deep">{t("failed")}</p> : null}
-      <Button type="submit" variant="accent" className="min-h-12 w-full text-lg" disabled={!name.trim() || !chcId || state === "saving"}>
+      <Button type="submit" variant="accent" className="min-h-12 w-full text-lg" disabled={!name.trim() || !chcId || !operatorAllowed || state === "saving"}>
         {state === "saving" ? t("saving") : t("continue")}
       </Button>
     </form>

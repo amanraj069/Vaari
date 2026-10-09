@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { operatorBoardSchema, operatorPlanSchema, type Lane, type OperatorBoard } from "@/shared";
 import { FuseBar } from "@/components/fuse-bar";
+import { AttentionList } from "@/components/attention-list";
 import { MachineDownDialog } from "@/components/machine-down-dialog";
 import { MachineLane } from "@/components/machine-lane";
 import { SimulatedBadge } from "@/components/simulated-badge";
@@ -172,6 +173,7 @@ export default function OperatorPage() {
             </div>
 
             <WaitingBanner board={board.data} />
+            <AttentionList items={board.data.attention} />
 
             {!board.data.published ? (
               <div className="mt-6">

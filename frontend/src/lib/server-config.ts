@@ -12,11 +12,17 @@ export const serverConfig = {
   cognitoClientId: process.env.COGNITO_CLIENT_ID ?? "",
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "http://localhost:3000",
   secureCookies: (process.env.PUBLIC_BASE_URL ?? "").startsWith("https://"),
+  // Shared with the API: proves the client address we forward is ours (rate limits per farmer).
+  proxySharedSecret: process.env.PROXY_SHARED_SECRET ?? "",
+  // The WhatsApp Business number farmers message "my fields" (digits with country code). Empty: no button.
+  whatsappBusinessNumber: (process.env.WHATSAPP_BUSINESS_NUMBER ?? "").replace(/\D/g, ""),
 };
 
 export const COOKIE = {
   accessToken: "vaari_at",
   refreshToken: "vaari_rt",
+  // A farmer's phone session (no account): read-only access to the fields booked with one phone.
+  farmerSession: "vaari_farmer",
   // Role is only a routing hint for middleware; the API verifies the token on every call.
   role: "vaari_role",
   oauthState: "vaari_oauth",
@@ -26,7 +32,6 @@ export const COOKIE = {
 } as const;
 
 export const ROLE_HOME: Record<string, string> = {
-  farmer: "/farmer",
   facilitator: "/book",
   operator: "/operator",
   officer: "/proof",

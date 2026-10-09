@@ -5,11 +5,12 @@
 import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/session";
 
-const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields", "operator/", "public/", "facilitator/", "slot/"];
+const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "public/", "facilitator/", "slot/"];
 
 async function forward(request: Request, path: string[]) {
   const joined = path.join("/");
-  if (!ALLOWED_PREFIXES.some((prefix) => joined === prefix || joined.startsWith(prefix))) {
+  // "fields" alone is the booking route; everything else must match a prefix ending in "/".
+  if (!(joined === "fields" || ALLOWED_PREFIXES.some((prefix) => joined === prefix || joined.startsWith(prefix)))) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
   const search = new URL(request.url).search;

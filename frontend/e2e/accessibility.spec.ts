@@ -1,6 +1,6 @@
 /**
- * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered), the operator's
- * /operator and /operator/plan, /proof, and /design:
+ * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered), /farmer (the
+ * demo farmer's phone session), the operator's /operator and /operator/plan, /proof, and /design:
  * English, Punjabi, Hindi x light, dark x 360px, 1280px. Each combination must have zero axe
  * WCAG 2.1 A/AA violations, no sideways scroll, a single-row header, and 44px touch targets.
  * Plus keyboard use of the "I cannot wait longer" dialog and the reduced-motion setting.
@@ -22,6 +22,9 @@ async function context(browser: Browser, options: { width: number; locale: strin
     const login = await browser.newContext();
     const response = await login.request.post("http://localhost:3100/api/auth/demo", { data: { role: options.role } });
     expect(response.ok()).toBe(true);
+    // The farmer has no account: the answer is a one-time login link; following it sets the phone session.
+    const { home } = (await response.json()) as { home: string };
+    if (home.startsWith("/farmer/login/")) expect((await login.request.get(`http://localhost:3100${home}`)).ok()).toBe(true);
     sessions.set(options.role, await login.storageState());
     await login.close();
   }
@@ -43,7 +46,7 @@ test.beforeAll(async ({ browser }) => {
   const facilitator = await context(browser, { width: 1280, locale: "en", theme: "light", role: "facilitator" });
   const villages = (await (await facilitator.request.get("http://localhost:3100/api/proxy/villages")).json()) as { id: string }[];
   const booking = await facilitator.request.post("http://localhost:3100/api/proxy/fields", {
-    data: { farmerName: "Manjit Kaur", villageId: villages[0]!.id, acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 },
+    data: { farmerName: "Manjit Kaur", farmerPhone: "+447700900124", consent: true, villageId: villages[0]!.id, acres: 2, readyDate: "2026-11-02", waitingLimitDays: 6 },
   });
   expect(booking.status()).toBe(201);
   slotPath = ((await booking.json()) as { slot: { path: string } }).slot.path;
@@ -55,6 +58,8 @@ const PAGES = [
   { name: "book", role: "facilitator", path: () => "/book", ready: "main section" },
   { name: "slot", role: undefined, path: () => slotPath, ready: "text=/#\\d{3}/" },
   { name: "slot-tampered", role: undefined, path: () => `${slotPath.slice(0, -4)}AAAA`, ready: '[role="alert"] h1' },
+  // A farmer's own fields, read-only, behind the demo farmer's phone session.
+  { name: "farmer", role: "farmer", path: () => "/farmer", ready: "main h1" },
   // Operators work on laptops in the office and tablets in the field: the same bar applies.
   { name: "operator", role: "operator", path: () => "/operator", ready: "main h1" },
   { name: "operator-plan", role: "operator", path: () => "/operator/plan", ready: "main h1" },

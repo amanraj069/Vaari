@@ -2,7 +2,8 @@
 
 /**
  * One top bar for every page. Left: the mark and the links for whoever is signed in (operator:
- * Plan, Queue; farmer: My fields, Ask for a date; visitors: See the proof). Right: three
+ * Plan, Queue; facilitator: Book; visitors: See the proof). Farmers are not signed in: their
+ * pages (/slot, /farmer) have their own small header. Right: three
  * same-size controls, language, theme and the account menu (or Sign in). On phones the links
  * drop to a second row so nothing is squeezed. With `overlay` (the landing page) it sits
  * transparent on top of the hero photo and visitors get section links.
@@ -47,11 +48,6 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
   } else if (me?.role === "facilitator" && !me.needsOnboarding) {
     // Facilitators book for farmers; no operator or officer pages.
     links = [{ href: "/book", label: t("book") }];
-  } else if (me?.role === "farmer" && !me.needsOnboarding) {
-    links = [
-      { href: "/farmer", label: t("myFields") },
-      { href: "/farmer/request", label: t("askDate") },
-    ];
   } else if (!me && !session.isPending && !session.isError) {
     links = overlay
       ? [

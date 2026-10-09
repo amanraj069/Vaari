@@ -1,76 +1,15 @@
-"use client";
+/**
+ * /farmer: all of one farmer's fields, read-only, behind the phone session that a one-time login
+ * link (/farmer/login/<token>) leaves. This server wrapper reads ?link= (a used or expired link) and
+ * the WhatsApp Business number, then renders the client view.
+ */
+import { serverConfig } from "@/lib/server-config";
+import { FarmerHomeView, type LinkProblem } from "@/components/farmer-home";
 
-/** Farmer home: one idea per screen, answer first. Each field is a TokenCard with its date. */
-import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { farmerHomeSchema } from "@/shared";
-import { SimulatedBadge } from "@/components/simulated-badge";
-import { TokenCard } from "@/components/token-card";
-import { DateGuide, MachineCentre } from "@/components/farmer-aside";
-import { PageColumns, PageHeader, PageMain } from "@/components/page-shell";
-import { TopBar } from "@/components/top-bar";
-import { Button, ButtonLink, Skeleton, StateMessage } from "@/components/ui";
-import { api } from "@/lib/api";
-import { useDates } from "@/lib/dates";
+export const dynamic = "force-dynamic";
 
-export default function FarmerHomePage() {
-  const t = useTranslations("farmer");
-  const tc = useTranslations("common");
-  const locale = useLocale();
-  const dates = useDates();
-  // Polling keeps the date fresh when the operator re-plans (no websockets by design).
-  const home = useQuery({ queryKey: ["farmer-home", locale], queryFn: () => api(`farmer/home?lang=${locale}`, farmerHomeSchema), refetchInterval: 5_000 });
-
-  return (
-    <>
-      <TopBar />
-      <PageMain className="text-lg">
-        {home.isPending ? (
-          <div className="space-y-4">
-            <Skeleton className="h-9 w-2/3 max-w-sm" />
-            <Skeleton className="h-96 max-w-2xl" />
-          </div>
-        ) : home.isError ? (
-          <StateMessage tone="error" title={tc("errorTitle")} body={tc("errorBody")} action={<Button onClick={() => home.refetch()}>{tc("retry")}</Button>} />
-        ) : (
-          <>
-            <PageHeader className="mb-6" badge={<SimulatedBadge demoDate={dates.short(home.data.today)} />} title={t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" })} />
-            <PageColumns
-              main={
-                home.data.fields.length === 0 ? (
-                  <StateMessage
-                    title={t("emptyTitle")}
-                    body={t("emptyBody")}
-                    action={
-                      <ButtonLink href="/farmer/request" variant="accent" className="min-h-12 text-lg">
-                        <Plus aria-hidden className="size-5" strokeWidth={1.75} />
-                        {t("addField")}
-                      </ButtonLink>
-                    }
-                  />
-                ) : (
-                  <div className="space-y-5">
-                    {home.data.fields.map((field) => (
-                      <TokenCard key={field.id} field={field} today={home.data.today} operatorPhone={home.data.operatorPhone} />
-                    ))}
-                    <ButtonLink href="/farmer/request" variant="secondary" className="min-h-12 w-full text-lg">
-                      <Plus aria-hidden className="size-5" strokeWidth={1.75} />
-                      {t("addAnother")}
-                    </ButtonLink>
-                  </div>
-                )
-              }
-              aside={
-                <>
-                  <DateGuide />
-                  <MachineCentre chcName={home.data.chcName} operatorPhone={home.data.operatorPhone} />
-                </>
-              }
-            />
-          </>
-        )}
-      </PageMain>
-    </>
-  );
+export default async function FarmerPage({ searchParams }: { searchParams: Promise<{ link?: string }> }) {
+  const { link } = await searchParams;
+  const linkProblem: LinkProblem = link === "expired" || link === "unavailable" ? link : null;
+  return <FarmerHomeView whatsappNumber={serverConfig.whatsappBusinessNumber || null} linkProblem={linkProblem} />;
 }

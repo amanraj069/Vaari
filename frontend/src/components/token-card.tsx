@@ -25,7 +25,18 @@ const HISTORY_LABEL = {
   kept: "historyKept",
 } as const;
 
-export function TokenCard({ field, today, operatorPhone }: { field: FarmerField; today: string; operatorPhone?: string }) {
+export function TokenCard({
+  field,
+  today,
+  operatorPhone,
+  whyPath = `fields/${field.id}/why`,
+}: {
+  field: FarmerField;
+  today: string;
+  operatorPhone?: string;
+  /** Where "why this date?" is asked: a signed-in route by default, the farmer's phone-session route on /farmer. */
+  whyPath?: string;
+}) {
   const t = useTranslations("farmer");
   const ts = useTranslations("slot");
   const tc = useTranslations("common");
@@ -34,7 +45,7 @@ export function TokenCard({ field, today, operatorPhone }: { field: FarmerField;
   const [whyOpen, setWhyOpen] = useState(false);
   const why = useQuery({
     queryKey: ["why", field.id, field.plannedDate, locale],
-    queryFn: () => api(`fields/${field.id}/why?lang=${locale}`, whySchema),
+    queryFn: () => api(`${whyPath}?lang=${locale}`, whySchema, {}, { redirectOn401: false }),
     enabled: whyOpen,
   });
   const promise = field.promise;

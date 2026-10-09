@@ -12,6 +12,7 @@ import { LayoutGroup } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { operatorPlanSchema, type Lane, type LaneStop, type OperatorPlan } from "@/shared";
+import { AttentionList } from "@/components/attention-list";
 import { MachineDownDialog } from "@/components/machine-down-dialog";
 import { MachineLane } from "@/components/machine-lane";
 import { MoveFieldDialog } from "@/components/move-field-dialog";
@@ -157,6 +158,7 @@ export default function OperatorPlanPage() {
             </Button>
           </section>
         ) : null}
+        <AttentionList items={view.attention} />
 
         {!current ? (
           <div className="mt-6">

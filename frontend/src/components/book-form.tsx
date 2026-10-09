@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * BookForm: a facilitator books a field for a farmer in six short steps (farmer, village, acres,
- * harvest-ready day, waiting limit 3-10 days, check), then gets the farmer's slot link to copy or
- * share. One question per step, large targets, works with keyboard and screen readers.
+ * BookForm: a facilitator books a field for a farmer in seven short steps (farmer, phone and
+ * consent, village, acres, harvest-ready day, waiting limit 3-10 days, check), then gets the
+ * farmer's slot link to copy or share. The phone is the farmer's identity (they have no account);
+ * it is checked here and again by the API, which stores it as E.164 with the consent. One question
+ * per step, large targets, works with keyboard and screen readers.
  */
 import { ArrowLeft, ArrowRight, Check, Copy, Minus, Plus, Search, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import type { Booking, BookingInput, VillageOption } from "@/shared";
+import { toE164, type Booking, type BookingInput, type VillageOption } from "@/shared";
 import { copyText } from "@/lib/api";
 import { useDates } from "@/lib/dates";
 import { Slider } from "./slider";
@@ -27,7 +29,7 @@ function addDays(iso: string, days: number): string {
 type Props = {
   villages: VillageOption[] | null;
   today: string | null;
-  onSubmit: (input: BookingInput & { farmerName: string }) => Promise<Booking>;
+  onSubmit: (input: BookingInput) => Promise<Booking>;
   /** Base for the shareable link; defaults to this site's origin. */
   origin?: string;
 };
@@ -38,9 +40,11 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
   const tc = useTranslations("common");
   const dates = useDates();
   const toast = useToast();
-  const steps = [t("stepFarmer"), t("stepVillage"), t("stepAcres"), t("stepReady"), t("stepWait"), t("stepCheck")];
+  const steps = [t("stepFarmer"), t("stepPhone"), t("stepVillage"), t("stepAcres"), t("stepReady"), t("stepWait"), t("stepCheck")];
   const [step, setStep] = useState(0);
   const [farmerName, setFarmerName] = useState("");
+  const [farmerPhone, setFarmerPhone] = useState("");
+  const [consent, setConsent] = useState(false);
   const [villageId, setVillageId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [acres, setAcres] = useState(3);
@@ -52,14 +56,17 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
   const readyOptions = useMemo(() => (today ? Array.from({ length: READY_CHOICES }, (_, index) => addDays(today, index)) : []), [today]);
   const village = villages?.find((item) => item.id === villageId);
   const filtered = (villages ?? []).filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase()));
-  const canContinue = [farmerName.trim().length > 0, Boolean(villageId), acres > 0, Boolean(readyDate), true, true][step];
+  const phoneE164 = toE164(farmerPhone);
+  // Say the number is wrong only once something has been typed.
+  const phoneInvalid = farmerPhone.trim().length > 0 && phoneE164 === null;
+  const canContinue = [farmerName.trim().length > 0, phoneE164 !== null && consent, Boolean(villageId), acres > 0, Boolean(readyDate), true, true][step];
   const link = booking ? `${origin ?? (typeof window !== "undefined" ? window.location.origin : "")}${booking.slot.path}` : "";
 
   async function submit() {
-    if (!villageId || !readyDate) return;
+    if (!villageId || !readyDate || !phoneE164 || !consent) return;
     setState("saving");
     try {
-      setBooking(await onSubmit({ farmerName: farmerName.trim(), villageId, acres, readyDate, waitingLimitDays: waitDays }));
+      setBooking(await onSubmit({ farmerName: farmerName.trim(), farmerPhone: phoneE164, consent, villageId, acres, readyDate, waitingLimitDays: waitDays }));
       setState("idle");
     } catch {
       setState("failed");
@@ -70,6 +77,8 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
     setBooking(null);
     setStep(0);
     setFarmerName("");
+    setFarmerPhone("");
+    setConsent(false);
     setVillageId(null);
     setSearch("");
     setAcres(3);
@@ -137,6 +146,35 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             <span className="mt-2 block text-base text-ink-muted">{t("farmerHelp")}</span>
           </label>
         ) : step === 1 ? (
+          <div className="space-y-5">
+            <label className="block">
+              <span className="font-display text-2xl">{t("phoneQuestion", { name: farmerName.trim() })}</span>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={farmerPhone}
+                onChange={(event) => setFarmerPhone(event.target.value)}
+                maxLength={32}
+                autoComplete="off"
+                aria-invalid={phoneInvalid}
+                aria-describedby="book-phone-help"
+                className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-paper px-3 tabular"
+              />
+              <span id="book-phone-help" className={`mt-2 block text-base ${phoneInvalid ? "text-ember-deep" : "text-ink-muted"}`}>
+                {phoneInvalid ? t("phoneInvalid") : t("phoneHelp")}
+              </span>
+            </label>
+            {/* The whole row is the target (at least 48px); the native checkbox stays for keyboards and screen readers. */}
+            <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-control border border-line bg-paper p-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink">
+              <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="peer sr-only" />
+              <span aria-hidden className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md border-2 border-ink-muted peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper">
+                {consent ? <Check className="size-4" strokeWidth={3} /> : null}
+              </span>
+              <span className="text-base">{t("consentLabel", { name: farmerName.trim() })}</span>
+            </label>
+            {!consent && phoneE164 ? <p className="text-sm text-ink-muted">{t("consentRequired")}</p> : null}
+          </div>
+        ) : step === 2 ? (
           <fieldset>
             <legend className="font-display text-2xl">{tr("villageQuestion")}</legend>
             <label className="relative mt-3 block">
@@ -162,7 +200,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
               </div>
             )}
           </fieldset>
-        ) : step === 2 ? (
+        ) : step === 3 ? (
           <fieldset>
             <legend className="font-display text-2xl">{tr("acresQuestion")}</legend>
             <div className="mt-6 flex items-center justify-center gap-6">
@@ -177,7 +215,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             <p className="mt-2 text-center text-ink-muted">{tc("acres", { acres })}</p>
             <p className="mt-4 text-base text-ink-muted">{tr("acresHelp")}</p>
           </fieldset>
-        ) : step === 3 ? (
+        ) : step === 4 ? (
           <fieldset>
             <legend className="font-display text-2xl">{tr("readyQuestion")}</legend>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -196,7 +234,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             </div>
             <p className="mt-3 text-base text-ink-muted">{tr("readyHelp")}</p>
           </fieldset>
-        ) : step === 4 ? (
+        ) : step === 5 ? (
           <div>
             <p className="font-display text-2xl">{t("waitQuestion")}</p>
             <div className="mt-4">
@@ -219,6 +257,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             <dl className="mt-4 divide-y divide-line rounded-card border border-line bg-paper">
               {[
                 [t("stepFarmer"), farmerName.trim()],
+                [t("stepPhone"), phoneE164 ?? ""],
                 [t("stepVillage"), village?.name ?? ""],
                 [t("stepAcres"), tc("acres", { acres })],
                 [t("stepReady"), readyDate ? dates.full(readyDate) : ""],

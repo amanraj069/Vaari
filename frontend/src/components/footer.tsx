@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Github, Twitter, Mail } from "lucide-react";
+import { Github, Mail } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { PAGE_FRAME } from "./page-shell";
 
 export function GlobalFooter() {
   const t = useTranslations("nav");
-  // We'll reuse the landing translations for the credits, 
-  // since they were originally in the landing footer.
-  const tl = useTranslations("landing"); 
+  const tc = useTranslations("common");
+  // The credits were first written for the landing page's footer.
+  const tl = useTranslations("landing");
 
   return (
     <footer className="footer-weave mt-auto pb-8">
@@ -24,10 +24,10 @@ export function GlobalFooter() {
             {tl("heroMeaning")}
           </p>
           <div className="flex items-center gap-4 mt-2 text-ink-muted">
-            <a href="https://github.com/amanraj069/Vaari" aria-label="GitHub" className="hover:text-ink transition-colors">
+            <a href="https://github.com/amanraj069/Vaari" aria-label={tc("githubLabel")} className="hover:text-ink transition-colors">
               <Github className="size-5" strokeWidth={1.5} />
             </a>
-            <a href="mailto:amanraj3567@gmail.com" aria-label="Contact" className="hover:text-ink transition-colors">
+            <a href="mailto:amanraj3567@gmail.com" aria-label={tc("contactLabel")} className="hover:text-ink transition-colors">
               <Mail className="size-5" strokeWidth={1.5} />
             </a>
           </div>
@@ -35,18 +35,18 @@ export function GlobalFooter() {
 
         {/* Expanded Navigation Links */}
         <div className="grid grid-cols-2 md:flex md:justify-between gap-8 lg:col-span-3 mt-4 lg:mt-0">
-          {/* For Farmers */}
+          {/* For farmers (no account: their fields open from a WhatsApp link) and for the helpers who book */}
           <div>
-            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">For Farmers</h3>
+            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">{t("footerFarmers")}</h3>
             <ul className="flex flex-col gap-3 text-sm text-ink-muted">
               <li><Link href="/farmer" className="hover:text-ink transition-colors">{t("myFields")}</Link></li>
-              <li><Link href="/book" className="hover:text-ink transition-colors">{t("askDate")}</Link></li>
+              <li><Link href="/book" className="hover:text-ink transition-colors">{t("book")}</Link></li>
             </ul>
           </div>
-          
+
           {/* For Operators */}
           <div>
-            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">For Operators</h3>
+            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">{t("footerOperators")}</h3>
             <ul className="flex flex-col gap-3 text-sm text-ink-muted">
               <li><Link href="/operator" className="hover:text-ink transition-colors">{t("plan")}</Link></li>
               <li><Link href="/operator/queue" className="hover:text-ink transition-colors">{t("queue")}</Link></li>
@@ -55,7 +55,7 @@ export function GlobalFooter() {
 
           {/* Resources */}
           <div>
-            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">Resources</h3>
+            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">{t("footerResources")}</h3>
             <ul className="flex flex-col gap-3 text-sm text-ink-muted">
               <li><Link href="/#problem" className="hover:text-ink transition-colors">{t("problem")}</Link></li>
               <li><Link href="/#how" className="hover:text-ink transition-colors">{t("how")}</Link></li>
@@ -63,14 +63,6 @@ export function GlobalFooter() {
             </ul>
           </div>
 
-          {/* Legal */}
-          <div>
-            <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">Legal</h3>
-            <ul className="flex flex-col gap-3 text-sm text-ink-muted">
-              <li><a href="#" className="hover:text-ink transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-ink transition-colors">Terms of Service</a></li>
-            </ul>
-          </div>
         </div>
       </div>
 
@@ -80,7 +72,7 @@ export function GlobalFooter() {
           <p>{tl("footerCredits")}</p>
         </div>
         <p className="sm:text-right">
-          &copy; {new Date().getFullYear()} Vaari. All rights reserved.
+          {tc("copyright", { year: new Date().getFullYear() })}
         </p>
       </div>
     </footer>
