@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter, Noto_Sans_Devanagari, Noto_Sans_Gurmukhi, Noto_Serif_Devanagari, Noto_Serif_Gurmukhi } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono, Inter, Noto_Sans_Devanagari, Noto_Sans_Gurmukhi, Noto_Serif_Devanagari, Noto_Serif_Gurmukhi } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/providers";
@@ -10,6 +10,10 @@ import "./globals.css";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", axes: ["opsz"], display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+// The dashboard's face (.dashboard-ui in globals.css): Geist for text and headings, Geist Mono for
+// token numbers and clock times. Public pages keep Fraunces and Inter.
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 const gurmukhi = Noto_Sans_Gurmukhi({ subsets: ["gurmukhi"], variable: "--font-gurmukhi", display: "swap" });
 const devanagari = Noto_Sans_Devanagari({ subsets: ["devanagari"], variable: "--font-devanagari", display: "swap" });
 // Fraunces has only Latin subsets, so Punjabi and Hindi headings would fall back to an OS serif.
@@ -46,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
   return (
     // suppressHydrationWarning: the boot script sets the theme class before React hydrates.
-    <html lang={locale} className={`${fraunces.variable} ${inter.variable} ${gurmukhi.variable} ${devanagari.variable} ${serifGurmukhi.variable} ${serifDevanagari.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${fraunces.variable} ${inter.variable} ${geist.variable} ${geistMono.variable} ${gurmukhi.variable} ${devanagari.variable} ${serifGurmukhi.variable} ${serifDevanagari.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>

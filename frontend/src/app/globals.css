@@ -22,6 +22,10 @@
   --color-wheat-deep: #805810; /* 4.9:1 on wheat-soft pills, 5.6:1 on paper (was #8a5f12: 4.39 on wheat-soft) */
   /* Text on a wheat fill stays dark in both themes (wheat is light in both). */
   --color-on-wheat: #1b1a17;
+  /* The main action (Approve, Book, Plan): a deeper amber that carries white text. White on it is
+     5.75:1 here and 4.73:1 on the dark theme's step below; both pass WCAG AA. */
+  --color-action: #8a5d0e;
+  --color-on-action: #ffffff;
   --color-field: #2f6b3f;
   --color-field-soft: #dcebdc;
   --color-ember: #c8452b;
@@ -77,6 +81,8 @@ html.dark {
   --color-wheat: #e2ae45;
   --color-wheat-soft: #3a2e14;
   --color-wheat-deep: #ecc068;
+  /* Lighter than the light theme's action, so the button still stands off the dark page (3.6:1). */
+  --color-action: #9a6a10;
   --color-field: #72b886;
   --color-field-soft: #1d2d21;
   --color-ember: #e5694c;
@@ -95,6 +101,29 @@ html.dark {
   --color-season-ontime: #30a07a;
   --color-season-late: #ae8c16;
   --color-season-burned: #c43a52;
+}
+
+/*
+ * The dashboard (DashboardShell adds .dashboard-ui): a working tool, so one sans face throughout.
+ * Geist for text and headings, Geist Mono for token numbers and times; Noto Sans Gurmukhi and
+ * Devanagari behind it for Punjabi and Hindi. Headings are set semibold and, for Latin only,
+ * slightly tightened (letter-spacing breaks the joined Gurmukhi and Devanagari scripts).
+ */
+.dashboard-ui {
+  --font-sans: var(--font-geist), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
+  --font-display: var(--font-geist), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  font-family: var(--font-sans);
+}
+html:lang(hi) .dashboard-ui {
+  --font-sans: var(--font-geist), var(--font-devanagari), var(--font-gurmukhi), system-ui, sans-serif;
+  --font-display: var(--font-geist), var(--font-devanagari), var(--font-gurmukhi), system-ui, sans-serif;
+}
+.dashboard-ui :where(.font-display, h1, h2, h3) {
+  font-weight: 600;
+}
+html:lang(en) .dashboard-ui :where(.font-display, h1, h2) {
+  letter-spacing: -0.018em;
 }
 
 /* Hindi pages: try Devanagari before Gurmukhi, so shared marks like the danda (।) come from the
