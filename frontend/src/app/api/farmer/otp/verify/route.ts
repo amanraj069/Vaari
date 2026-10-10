@@ -4,6 +4,7 @@
  * A refusal (wrong, used or expired code) passes through as the API phrased it, without a token.
  */
 import { NextResponse } from "next/server";
+import { isSameOrigin } from "@/lib/same-origin";
 import { z } from "zod";
 import { apiFetch, setFarmerSession } from "@/lib/session";
 
@@ -11,8 +12,7 @@ const sessionSchema = z.object({ sessionToken: z.string().min(1), expiresIn: z.n
 
 export async function POST(request: Request) {
   // Same-origin pages only (CSRF guard on top of SameSite cookies), like the proxy.
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   const response = await apiFetch("/farmer/otp/verify", { method: "POST", body: await request.text() }).catch(() => null);
   if (!response) return NextResponse.json({ error: "API_UNAVAILABLE" }, { status: 503 });
   const body: unknown = await response.json().catch(() => null);

@@ -11,6 +11,7 @@
  * own pages may call it (Origin check), and it is off unless AUTH_MODE=cognito.
  */
 import { NextResponse } from "next/server";
+import { isSameOrigin } from "@/lib/same-origin";
 import { z } from "zod";
 import { cognito, emailSignInAvailable, isStaffPick, refusalCode, rememberRolePick, signInWithPassword } from "@/lib/cognito";
 
@@ -27,8 +28,7 @@ const stepSchema = z.discriminatedUnion("step", [
 ]);
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   if (!emailSignInAvailable()) return NextResponse.json({ error: "OFF" }, { status: 404 });
   const parsed = stepSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID" }, { status: 400 });

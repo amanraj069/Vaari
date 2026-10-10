@@ -3,6 +3,7 @@
  * token and forwards to the private API. Only known path prefixes are forwarded.
  */
 import { NextResponse } from "next/server";
+import { isSameOrigin } from "@/lib/same-origin";
 import { apiFetch } from "@/lib/session";
 
 const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "public/", "facilitator/", "slot/"];
@@ -36,9 +37,6 @@ export async function GET(request: Request, context: Context) {
 
 export async function POST(request: Request, context: Context) {
   // State-changing calls must come from our own pages (CSRF guard on top of SameSite cookies).
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
-    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
-  }
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   return forward(request, (await context.params).path);
 }

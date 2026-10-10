@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const session = vi.hoisted(() => ({ apiFetch: vi.fn(), setFarmerSession: vi.fn() }));
 vi.mock("@/lib/session", () => session);
+vi.mock("server-only", () => ({}));
 
 import { POST as proxyPost } from "@/app/api/proxy/[...path]/route";
 import { POST as verifyPost } from "@/app/api/farmer/otp/verify/route";
