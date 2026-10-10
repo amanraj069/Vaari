@@ -1,0 +1,71 @@
+# The backend on one host: api (public, behind CloudFront), engine (private), worker (WhatsApp
+# SQS consumer, only with COMPOSE_PROFILES=worker). Run from backend/:
+#   docker compose up -d --build        build from source and start (laptop or EC2)
+#   ./deploy/deploy.sh [IMAGE_TAG]       what the pipeline runs on EC2 (checks, pulls, starts, verifies)
+#
+# Environment: every variable in backend/.env reaches the api and the worker unchanged (env_file).
+# Compose sets only the values that must differ inside containers (the engine is a service, the
+# data is in the image, the API listens on 4000 inside). The host port is .env's PORT, so
+# CloudFront's origin port does not change when moving from `npm start` to Docker.
+# A value containing "$" must be single-quoted in .env, or Compose reads it as a variable.
+name: vaari
+
+x-backend: &backend
+  image: ${IMAGE_REGISTRY:-vaari}/vaari-api:${IMAGE_TAG:-local}
+  build:
+    context: ..
+    dockerfile: backend/Dockerfile
+  env_file: .env
+  environment:
+    NODE_ENV: ${NODE_ENV:-production}
+    PORT: "4000"
+    ENGINE_MODE: http
+    ENGINE_URL: http://engine:8000
+    DATA_DIR: /app/data
+    ENGINE_SHARED_SECRET: ${ENGINE_SHARED_SECRET:?set ENGINE_SHARED_SECRET in backend/.env}
+  restart: unless-stopped
+  depends_on:
+    engine:
+      condition: service_healthy
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "5"
+
+services:
+  api:
+    <<: *backend
+    ports:
+      - "${PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  worker:
+    <<: *backend
+    command: ["node", "dist/worker.js"]
+    profiles: ["worker"]
+
+  engine:
+    image: ${IMAGE_REGISTRY:-vaari}/vaari-engine:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: backend/engine/Dockerfile
+    environment:
+      ENGINE_SHARED_SECRET: ${ENGINE_SHARED_SECRET:?set ENGINE_SHARED_SECRET in backend/.env}
+      DATA_DIR: /app/data
+    # No published port: only the api and worker reach it, on the Compose network.
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
