@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ProofPage from "@/app/proof/page";
-import { bestPolicy, countOutcomes, formatNumber, outcomeOf, rankPolicies, reductionVsQueue, sweepValueLabel } from "@/lib/proof";
+import { bestPolicy, countOutcomes, formatNumber, outcomeOf, rankPolicies, reductionVsQueue, shortSource, sweepValueLabel } from "@/lib/proof";
 import { proofResultsSchema, type ProofResults } from "@/shared";
 import { renderWithIntl } from "./render";
 
@@ -93,6 +93,9 @@ describe("/proof", () => {
       expect(pm25Row).toHaveTextContent(`${formatNumber(RESULTS.scenarios.base.results.pm25Kg[policy]!.median, "kg")} kg`);
     }
     expect(within(table).queryByRole("row", { name: /Kilometres driven/ })).not.toBeInTheDocument();
+    // Acres sown after 15 November rewards burning (a burned field is sown the next day), so it is not shown.
+    expect(within(table).queryByRole("row", { name: /sown after 15 November/ })).not.toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /Wheat lost/ })).toBeInTheDocument();
     // The best median in a row is named for screen readers, not only coloured.
     const best = bestPolicy(RESULTS, "pm25Kg", RESULTS.scenarios.base.results.pm25Kg)!;
     expect(within(pm25Row).getAllByRole("cell")[["phone_queue", "nearest", "vaari"].indexOf(best)]).toHaveTextContent(/, Best/);
@@ -113,10 +116,11 @@ describe("/proof", () => {
       expect(counts.onTime + counts.late + counts.burned).toBe(RESULTS.replay.fields.length);
       expect(screen.getByRole("img", { name: new RegExp(`^${name}: ${formatNumber(counts.onTime, "fields")} fields sown by .*, ${formatNumber(counts.late, "fields")} sown after it, ${counts.burned} burned$`) })).toBeInTheDocument();
     }
-    expect(screen.getByText(`cd backend && ${RESULTS.generatedBy}`)).toBeInTheDocument();
+    // A page for farmers and operators: no developer command anywhere.
+    expect(screen.queryByText(new RegExp(RESULTS.generatedBy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).not.toBeInTheDocument();
   });
 
-  it("measures the base season only, switches sweeps, and every value shown comes from the file", async () => {
+  it("measures the base season only, shows every sweep at once, and every value shown comes from the file", async () => {
     serve({ status: 200, body: RESULTS });
     renderPage();
     const table = await screen.findByRole("table", { name: new RegExp(`Median over ${RESULTS.runs} simulated seasons`) });
@@ -130,24 +134,66 @@ describe("/proof", () => {
     const lateRow = within(table).getByRole("row", { name: /Farmers not reached by their last waiting day/ });
     expect(lateRow).toHaveTextContent(formatNumber(base.results.fieldsLate.phone_queue!.median, "fields"));
 
-    // The sweep starts on the first sweep in the file; the toggle switches it, and the table follows.
-    const [first, second] = RESULTS.sweeps;
-    expect(screen.getByRole("button", { name: "How busy the season is" })).toHaveAttribute("aria-pressed", "true");
-    expect(first!.parameter).toBe("acresPerMachine");
-    fireEvent.click(screen.getByRole("button", { name: "How long farmers wait" }));
-    expect(second!.parameter).toBe("waitingLimitDays");
-    const numbers = screen.getByRole("region", { name: "Show the numbers: How long farmers wait" });
-    const lastPoint = second!.points.at(-1)!;
+    // Every sweep is on screen at once (a 2 x 2 grid), each with its own titled chart and table.
+    expect(screen.queryByRole("button", { name: "How busy the season is" })).not.toBeInTheDocument();
+    for (const sweep of RESULTS.sweeps) {
+      const title = { acresPerMachine: "How busy the season is", waitingLimitDays: "How long farmers wait", daysSoonerWithoutDate: "Farmers without a date give up sooner", phoneQueueLateReturnChance: "Rentals that come back late" }[sweep.parameter];
+      expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: title })).toBeInTheDocument();
+    }
+    // Each card's data is on its back: hidden until "Show data" flips it, and "Show chart" flips it back.
+    const second = RESULTS.sweeps[1]!;
+    expect(second.parameter).toBe("waitingLimitDays");
+    expect(screen.queryByRole("region", { name: "Data: How long farmers wait" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show data: How long farmers wait" }));
+    const numbers = screen.getByRole("region", { name: "Data: How long farmers wait" });
+    const lastPoint = second.points.at(-1)!;
     const vaari = lastPoint.results.fieldsLatePct.vaari!;
-    expect(within(numbers).getByRole("row", { name: new RegExp(`^${sweepValueLabel(second!.parameter, lastPoint.value)} `) })).toHaveTextContent(`${formatNumber(vaari.median, "percent")}%`);
+    expect(within(numbers).getByRole("row", { name: new RegExp(`^${sweepValueLabel(second.parameter, lastPoint.value)} `) })).toHaveTextContent(`${formatNumber(vaari.median, "percent")}%`);
+    // The chart side is hidden while the data shows; flipping back restores it.
+    expect(screen.queryByRole("img", { name: "How long farmers wait" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show chart: How long farmers wait" }));
+    expect(screen.getByRole("img", { name: "How long farmers wait" })).toBeInTheDocument();
     // Shares are shown as percentages on the late-returns sweep.
-    fireEvent.click(screen.getByRole("button", { name: "Rentals that come back late" }));
-    expect(screen.getByRole("region", { name: "Show the numbers: Rentals that come back late" })).toHaveTextContent("50%");
+    fireEvent.click(screen.getByRole("button", { name: "Show data: Rentals that come back late" }));
+    expect(screen.getByRole("region", { name: "Data: Rentals that come back late" })).toHaveTextContent("50%");
 
     // Inputs: the field-size mean is computed from the file's list, not typed.
     const sizes = (RESULTS.assumptions.inputs.fieldAcres!.values ?? []) as number[];
     const mean = Math.round((sizes.reduce((sum, item) => sum + item, 0) / sizes.length) * 10) / 10;
     expect(screen.getByText(new RegExp(`Each farmer books ${Math.min(...sizes)}–${Math.max(...sizes)} acres, ${mean} on average`))).toBeInTheDocument();
+  });
+
+  it("keeps the method and sources closed until asked, then shows every input and conversion beside its source", async () => {
+    serve({ status: 200, body: RESULTS });
+    renderPage();
+    const toggle = await screen.findByRole("button", { name: "Method and sources" });
+    const details = document.getElementById("method-details")!;
+    // Closed: a one-line summary; the ledgers are in the page but inert.
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls", "method-details");
+    expect(details.firstElementChild).toHaveAttribute("inert");
+    const inputs = Object.keys(RESULTS.assumptions.inputs).length;
+    const conversions = Object.keys(RESULTS.assumptions.constants).length;
+    expect(screen.queryByText(/one command to check it/)).not.toBeInTheDocument();
+    expect(screen.getByText("Show the method")).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(details.firstElementChild).not.toHaveAttribute("inert");
+    const inputsLedger = within(details).getByRole("region", { name: "What went in" });
+    const conversionsLedger = within(details).getByRole("region", { name: "Conversions" });
+    expect(within(inputsLedger).getAllByRole("listitem")).toHaveLength(inputs);
+    expect(within(conversionsLedger).getAllByRole("listitem")).toHaveLength(conversions);
+    expect(within(details).queryByRole("region", { name: "Check it yourself" })).not.toBeInTheDocument();
+    // Open, the toggle says how to close it; sources show by short name, the full citation one hover away.
+    expect(screen.getByText("Hide the method")).toBeInTheDocument();
+    const firms = within(inputsLedger).getByRole("link", { name: /NASA FIRMS VIIRS/ });
+    expect(firms).toHaveTextContent(/^NASA FIRMS/);
+    expect(firms).toHaveAttribute("title", expect.stringContaining("standard-processing"));
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
   it.each(["pa", "hi"] as const)("renders the full page in %s with no missing text", async (locale) => {
@@ -189,6 +235,20 @@ describe("proof helpers", () => {
     // No promises made is worst: the farmer gets no date at all.
     expect(rankPolicies(results, "promisesKeptPct", { phone_queue: null, nearest: null, vaari: cell(90) })).toEqual({ phone_queue: "worst", nearest: "worst", vaari: "best" });
     expect(rankPolicies(results, "worstDelayVsQueueDays", { phone_queue: cell(0), nearest: cell(8), vaari: cell(8) })).toEqual(none);
+  });
+
+  it("names each source briefly, one name per cited work", () => {
+    expect(shortSource("CEEW, Custom Hiring Centres for Better Crop Residue Management: Insights from Punjab (2025)")).toEqual(["CEEW CHC study, 2025"]);
+    expect(shortSource("CEEW, Why paddy stubble burning continues in Punjab (2024); Shyamsundar et al., Science 365 (2019)")).toEqual(["CEEW farmer study, 2024", "Shyamsundar et al., 2019"]);
+    // A ";" inside one citation's own wording is not a second source.
+    expect(shortSource("NASA FIRMS VIIRS detections, shifted 3 days (the shift is assumed; see data/README.md). NOAA-21 is left out")).toEqual(["NASA FIRMS"]);
+    expect(shortSource("IPCC 2006 Guidelines, as used for Punjab by Bhadauriya et al.")).toEqual(["IPCC 2006 guidelines"]);
+    // Unknown citations fall back to their first phrase and year.
+    expect(shortSource("District office report, Jalandhar (2019)")).toEqual(["District office report, 2019"]);
+    // Every source the committed results cite has a short name shorter than the citation.
+    for (const item of [...Object.values(RESULTS.assumptions.inputs), ...Object.values(RESULTS.assumptions.constants)]) {
+      if (item.source) for (const name of shortSource(item.source)) expect(name.length).toBeLessThan(40);
+    }
   });
 
   it("formats numbers in Indian grouping", () => {

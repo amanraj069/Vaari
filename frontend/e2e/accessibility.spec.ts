@@ -122,6 +122,40 @@ for (const pageSpec of PAGES) {
   }
 }
 
+test("proof: the method and sources card opens and closes, and opened it passes axe, overflow and touch targets", async ({ browser }) => {
+  for (const locale of LOCALES) {
+    for (const width of WIDTHS) {
+      const created = await context(browser, { width, locale, theme: "light" });
+      const page = await created.newPage();
+      await page.goto("/proof");
+      const toggle = page.locator("#method-title");
+      await toggle.waitFor();
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect(page.locator("#conversions-title")).toBeHidden();
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator("#conversions-title")).toBeVisible();
+      // Let the opening fade finish: text mid-fade has no fixed contrast to measure.
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity));
+      const label = `proof method ${locale} ${width}px`;
+      const axe = await new AxeBuilder({ page }).include("#method-details").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+      expect(axe.violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`), `${label}: axe`).toEqual([]);
+      const layout = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        small: [...document.querySelectorAll("#method-details a, #method-title")]
+          .map((element) => element.getBoundingClientRect())
+          .filter((box) => box.width > 0 && (box.height < 44 || box.width < 44)).length,
+      }));
+      expect(layout.overflow, `${label}: sideways scroll`).toBeLessThanOrEqual(0);
+      expect(layout.small, `${label}: touch targets under 44px`).toBe(0);
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect(page.locator("#conversions-title")).toBeHidden();
+      await created.close();
+    }
+  }
+});
+
 test("design page renders every state in three languages with no axe violations", async ({ browser }) => {
   const created = await context(browser, { width: 1600, locale: "en", theme: "light" });
   const page = await created.newPage();

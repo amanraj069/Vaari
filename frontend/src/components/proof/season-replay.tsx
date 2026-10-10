@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import type { PolicyKey, Replay } from "@/shared";
 import { useDates } from "@/lib/dates";
 import { POLICY_COLOUR, POLICY_ORDER, countOutcomes, dayToIso, districtLayout, formatNumber, outcomeOf, type Outcome } from "@/lib/proof";
+import { Rise, SectionHeader } from "@/components/proof/section-header";
 
 // The district is taller than it is wide; the inset of Punjab sits in the top-right corner.
 const WIDTH = 380;
@@ -70,7 +71,7 @@ function PolicyMap({ replay, policy, optimumDate, seasonStartDate }: { replay: R
   const summary = { onTime: formatNumber(counts.onTime, "fields"), late: formatNumber(counts.late, "fields"), burned: counts.burned, date: optimumDate };
   const clipId = `district-clip-${policy}`;
   return (
-    <figure className="flex min-w-0 flex-col rounded-card border border-line bg-surface p-5">
+    <figure className="flex w-full min-w-0 flex-col rounded-card border border-line bg-surface p-5">
       <figcaption className="flex items-center gap-2 font-display text-lg">
         <span aria-hidden className="h-0.5 w-5 rounded-full" style={{ background: POLICY_COLOUR[policy] }} />
         {t(`policy_${policy}`)}
@@ -138,18 +139,14 @@ export function SeasonReplay({ replay, runs, seasonStartDate }: { replay: Replay
   const dates = useDates();
   const optimumDate = dates.dayMonth(dayToIso(seasonStartDate, replay.optimumLastDay));
   return (
-    <section aria-labelledby="replay-title" className="mt-14">
-      {/* Title on the left, the colour key on the right (stacked on a phone). */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="replay-title" className="font-display text-2xl">
-          {t("replayTitle")}
-        </h2>
-        <Legend optimumDate={optimumDate} />
-      </div>
-      <p className="mt-2 max-w-3xl text-sm text-ink-muted">{t("replayBody", { runs })}</p>
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {POLICY_ORDER.map((policy) => (
-          <PolicyMap key={policy} replay={replay} policy={policy} optimumDate={optimumDate} seasonStartDate={seasonStartDate} />
+    <section aria-labelledby="replay-title" className="mt-20">
+      <SectionHeader id="replay-title" title={t("replayTitle")} body={t("replayBody", { runs })} aside={<Legend optimumDate={optimumDate} />} />
+      {/* The three maps rise one after another, a beat apart. */}
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {POLICY_ORDER.map((policy, index) => (
+          <Rise key={policy} delay={index * 0.1} className="flex min-w-0">
+            <PolicyMap replay={replay} policy={policy} optimumDate={optimumDate} seasonStartDate={seasonStartDate} />
+          </Rise>
         ))}
       </div>
     </section>

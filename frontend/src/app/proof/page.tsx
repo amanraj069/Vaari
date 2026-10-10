@@ -64,7 +64,7 @@ export default function ProofPage() {
         ) : (
           <>
             <ProofHero results={proof.data} />
-            <div className="mt-12">
+            <div className="mt-20">
               <ResultsTable results={proof.data} />
             </div>
             <SeasonReplay replay={proof.data.replay} runs={proof.data.runs} seasonStartDate={proof.data.seasonStartDate} />

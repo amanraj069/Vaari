@@ -155,3 +155,41 @@ export function reductionVsQueue(totals: Record<PolicyKey, number>, policy: Poli
 export function sweepValueLabel(parameter: string, value: number): string {
   return parameter.endsWith("Chance") ? `${Math.round(value * 100)}%` : String(value);
 }
+
+// Short names for the sources the results file cites, in the order they are tested (a citation that
+// names several works, such as "IPCC ... as used by Bhadauriya ...", takes the first match).
+const SOURCE_SHORT: [RegExp, string][] = [
+  [/NASA FIRMS/, "NASA FIRMS"],
+  [/OpenStreetMap/, "OpenStreetMap"],
+  [/CEEW operator interviews/, "CEEW interviews · district office"],
+  [/CEEW, Custom Hiring Centres/, "CEEW CHC study, 2025"],
+  [/CEEW CHC publication and annexure/, "CEEW CHC study and annexure"],
+  [/CEEW CHC publication/, "CEEW CHC study, 2025"],
+  [/CEEW, Why paddy stubble burning/, "CEEW farmer study, 2024"],
+  [/PAU Package of Practices/, "PAU Package of Practices"],
+  [/Pollution Control Board/, "Punjab PCB to the NGT, 2023"],
+  [/IPCC 2006/, "IPCC 2006 guidelines"],
+  [/Gadde et al\./, "Gadde et al., 2009"],
+  [/Shyamsundar et al\./, "Shyamsundar et al., 2019"],
+];
+
+/**
+ * A citation as short names a reader recognises at a glance ("CEEW CHC study, 2025"), one per work
+ * (parts separated by ";"). Unknown citations fall back to their first phrase and year. The full
+ * citation stays available to the page (tooltip, screen readers).
+ */
+export function shortSource(source: string): string[] {
+  // A ";" can also sit inside one citation's own wording, so only a part naming a known work counts
+  // as a further source; anything else belongs to the first.
+  const parts = source.split(";").map((part) => part.trim()).filter(Boolean);
+  const known = (part: string) => SOURCE_SHORT.find(([pattern]) => pattern.test(part))?.[1];
+  const first = parts[0] ?? source;
+  const year = first.match(/\b(19|20)\d{2}\b/)?.[0];
+  const head = first.split(/[,:(]/)[0]!.trim();
+  const names = [known(first) ?? (year && !head.includes(year) ? `${head}, ${year}` : head)];
+  for (const part of parts.slice(1)) {
+    const name = known(part);
+    if (name && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
