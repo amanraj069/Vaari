@@ -7,6 +7,7 @@ import request from "supertest";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { DEMO_CHC_ID } from "../src/demo/seed";
 import { bookingSchema, operatorPlanSchema } from "../src/shared";
+import { verifySlotToken } from "../src/auth/slot-token";
 import { createNotifier } from "../src/whatsapp/notices";
 import { RecordingSender } from "../src/whatsapp/sender";
 import { bookingInput } from "./helpers";
@@ -61,6 +62,31 @@ describe("outbound notices", () => {
     const parameters = notice?.type === "template" ? notice.parameters : [];
     expect(parameters).toHaveLength(2);
     expect(parameters.every((text) => text.length > 0)).toBe(true);
+  });
+
+  it("carry the field's own slot link in the template's URL button, and the link opens that field", async () => {
+    const [notice] = templatesTo(ALLOWED);
+    const suffix = notice?.type === "template" ? notice.urlButtonSuffix : null;
+    expect(suffix).toBeTruthy();
+    const claims = await verifySlotToken(runtime.runtime.dependencies.config, suffix!);
+    expect(claims).toMatchObject({ chcId: DEMO_CHC_ID, fieldId: fieldIds[ALLOWED] });
+    await request(runtime.app).get(`/slot/${suffix}`).expect(200);
+  });
+
+  it("with WHATSAPP_TEMPLATE_SLOT_BUTTON=false, templates go out without the button parameter", async () => {
+    const { dependencies } = runtime.runtime;
+    const sender = new RecordingSender();
+    const notifier = createNotifier({ ...dependencies, config: { ...dependencies.config, WHATSAPP_TEMPLATE_SLOT_BUTTON: false }, sender });
+    notifier.planPublished(DEMO_CHC_ID, {
+      promised: [{ fieldId: fieldIds[ALLOWED]!, promise: { kind: "firm" as const, day: 31 } }],
+      firmed: [],
+      moved: [],
+      broken: [],
+      rePromised: [],
+      unplaced: [],
+    });
+    await notifier.idle();
+    expect(sender.sent).toEqual([expect.objectContaining({ type: "template", urlButtonSuffix: null })]);
   });
 
   it("record each send with the last 4 digits only, and follow delivery statuses forward in time", async () => {

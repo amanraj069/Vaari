@@ -15,7 +15,8 @@ export interface WhatsAppSender {
   text(to: string, body: string, options?: { previewUrl?: boolean }): Promise<string>;
   buttons(to: string, body: string, buttons: Button[]): Promise<string>;
   list(to: string, body: string, buttonLabel: string, rows: ListRow[]): Promise<string>;
-  template(to: string, name: string, language: string, parameters: string[]): Promise<string>;
+  /** `urlButtonSuffix` fills the {{1}} of the template's first button, a dynamic "Visit website" URL. */
+  template(to: string, name: string, language: string, parameters: string[], urlButtonSuffix?: string): Promise<string>;
   /** An authentication template: the code in the body and in its copy-code button. */
   authCode(to: string, name: string, language: string, code: string): Promise<string>;
 }
@@ -76,11 +77,10 @@ export class GraphSender implements WhatsAppSender {
     });
   }
 
-  template(to: string, name: string, language: string, parameters: string[]) {
-    return this.post(to, {
-      type: "template",
-      template: { name, language: { code: language }, components: [{ type: "body", parameters: parameters.map((text) => ({ type: "text", text: clip(text, 1024) })) }] },
-    });
+  template(to: string, name: string, language: string, parameters: string[], urlButtonSuffix?: string) {
+    const components: Record<string, unknown>[] = [{ type: "body", parameters: parameters.map((text) => ({ type: "text", text: clip(text, 1024) })) }];
+    if (urlButtonSuffix) components.push({ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: urlButtonSuffix }] });
+    return this.post(to, { type: "template", template: { name, language: { code: language }, components } });
   }
 
   authCode(to: string, name: string, language: string, code: string) {
@@ -103,7 +103,7 @@ export type SentMessage =
   | { type: "text"; to: string; body: string; previewUrl: boolean; id: string }
   | { type: "buttons"; to: string; body: string; buttons: Button[]; id: string }
   | { type: "list"; to: string; body: string; buttonLabel: string; rows: ListRow[]; id: string }
-  | { type: "template"; to: string; name: string; language: string; parameters: string[]; id: string }
+  | { type: "template"; to: string; name: string; language: string; parameters: string[]; urlButtonSuffix: string | null; id: string }
   | { type: "authCode"; to: string; name: string; language: string; code: string; id: string };
 
 type WithoutId<Message> = Message extends unknown ? Omit<Message, "id"> : never;
@@ -129,8 +129,8 @@ export class RecordingSender implements WhatsAppSender {
   async list(to: string, body: string, buttonLabel: string, rows: ListRow[]) {
     return this.record({ type: "list", to, body, buttonLabel, rows });
   }
-  async template(to: string, name: string, language: string, parameters: string[]) {
-    return this.record({ type: "template", to, name, language, parameters });
+  async template(to: string, name: string, language: string, parameters: string[], urlButtonSuffix?: string) {
+    return this.record({ type: "template", to, name, language, parameters, urlButtonSuffix: urlButtonSuffix ?? null });
   }
   async authCode(to: string, name: string, language: string, code: string) {
     return this.record({ type: "authCode", to, name, language, code });

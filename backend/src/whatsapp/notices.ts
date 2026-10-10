@@ -3,13 +3,15 @@
  * hears about it: a first date (new_date), a window that became a firm date (firm_date), a promise
  * that had to move or break, or a sooner date after "I cannot wait longer" (date_changed). Each is a
  * utility template (names from env) with two parameters: the date in words and the slot page's own
- * sentence (explain/slot-reasons.ts), in the farmer's language.
+ * sentence (explain/slot-reasons.ts), in the farmer's language; and, with
+ * WHATSAPP_TEMPLATE_SLOT_BUTTON, a "My slot" button that opens the field's signed slot link.
  *
  * Sent only to a field with a phone AND consent; in DEMO_MODE only to WHATSAPP_ALLOWED_TEST_NUMBERS;
  * nothing at all unless WHATSAPP_ENABLED. Each send is recorded with its delivery status (updated by
  * status webhooks); only the phone's last 4 digits are kept.
  */
 import { randomUUID } from "node:crypto";
+import { mintSlotToken } from "../auth/slot-token";
 import { allowedTestNumbers } from "../config";
 import { buildOneFarmerField } from "../domain/views";
 import { logger } from "../logger";
@@ -46,7 +48,10 @@ export function createNotifier(deps: NotifierDeps) {
     const sentAt = new Date().toISOString();
     const base = { phoneLast4: phone.slice(-4), kind, chcId, fieldId, sentAt, statusAt: sentAt };
     try {
-      const messageId = await sender.template(phone, template, language, [promiseWords(view.promise, language), view.reason.text]);
+      // The button opens this field's own slot page (the signed link, current version), so the
+      // farmer who booked on WhatsApp gets their slot link with the date.
+      const slotToken = config.WHATSAPP_TEMPLATE_SLOT_BUTTON ? await mintSlotToken(config, field) : undefined;
+      const messageId = await sender.template(phone, template, language, [promiseWords(view.promise, language), view.reason.text], slotToken);
       await store.putOutboundNotice({ ...base, messageId, status: "accepted", error: null });
     } catch (error) {
       logger.warn({ phone: maskPhone(phone), kind }, "whatsapp notice failed");

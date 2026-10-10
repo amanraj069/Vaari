@@ -68,6 +68,9 @@ const configSchema = z.object({
   WHATSAPP_TEMPLATE_NEW_DATE: z.string().default(""),
   WHATSAPP_TEMPLATE_FIRM_DATE: z.string().default(""),
   WHATSAPP_TEMPLATE_DATE_CHANGED: z.string().default(""),
+  // The three notice templates end with a "Visit website" button whose URL is `<web>/slot/{{1}}`;
+  // each notice fills {{1}} with the field's slot token. false: templates without that button.
+  WHATSAPP_TEMPLATE_SLOT_BUTTON: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   // Authentication template (copy-code button) for farmer sign-in codes, in en, pa and hi.
   WHATSAPP_TEMPLATE_OTP: z.string().default(""),
   // In DEMO_MODE, notices go only to these numbers (comma-separated, E.164).
