@@ -1,0 +1,21 @@
+# Build context for the backend images (backend/Dockerfile, backend/engine/Dockerfile) is the repo
+# root, so both can copy data/. Allow-list: only what the images need goes in; never .env files,
+# node_modules, virtualenvs or raw downloads.
+*
+!backend/package.json
+!backend/package-lock.json
+!backend/tsconfig.json
+!backend/src
+!backend/policies
+!backend/engine/pyproject.toml
+!backend/engine/uv.lock
+!backend/engine/vaari_engine
+!data
+
+data/raw
+**/.env
+**/.env.*
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.test.ts

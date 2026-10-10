@@ -16,6 +16,8 @@ type Words = {
   offTopic: string;
   agentUnavailable: string;
   voiceNotSupported: string;
+  heard: (text: string) => string;
+  voiceNotUnderstood: string;
   menuBody: string;
   menuButton: string;
   menuDate: string;
@@ -57,6 +59,8 @@ const WORDS: Record<Locale, Words> = {
     offTopic: "Sorry, I can only help with your machine dates. Tap the menu to choose.",
     agentUnavailable: "I cannot answer in words right now. Tap the menu to choose.",
     voiceNotSupported: "I cannot listen to voice notes yet. Please type, or tap the menu.",
+    heard: (text) => `I heard: "${text}"`,
+    voiceNotUnderstood: "I could not make out that voice note. Please say it again, type it, or tap the menu.",
     menuBody: "What would you like to know about your machine date?",
     menuButton: "Menu",
     menuDate: "My date",
@@ -100,6 +104,8 @@ const WORDS: Record<Locale, Words> = {
     offTopic: "ਮਾਫ਼ ਕਰਨਾ, ਮੈਂ ਸਿਰਫ਼ ਤੁਹਾਡੀਆਂ ਮਸ਼ੀਨ ਦੀਆਂ ਤਰੀਕਾਂ ਬਾਰੇ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     agentUnavailable: "ਮੈਂ ਹੁਣ ਸ਼ਬਦਾਂ ਵਿੱਚ ਜਵਾਬ ਨਹੀਂ ਦੇ ਸਕਦਾ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     voiceNotSupported: "ਮੈਂ ਅਜੇ ਆਵਾਜ਼ ਵਾਲੇ ਸੁਨੇਹੇ ਨਹੀਂ ਸੁਣ ਸਕਦਾ। ਕਿਰਪਾ ਕਰਕੇ ਲਿਖੋ, ਜਾਂ ਮੀਨੂ ਦਬਾਓ।",
+    heard: (text) => `ਮੈਂ ਸੁਣਿਆ: "${text}"`,
+    voiceNotUnderstood: "ਮੈਂ ਇਹ ਆਵਾਜ਼ ਵਾਲਾ ਸੁਨੇਹਾ ਸਮਝ ਨਹੀਂ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਫਿਰ ਬੋਲੋ, ਲਿਖੋ, ਜਾਂ ਮੀਨੂ ਦਬਾਓ।",
     menuBody: "ਤੁਸੀਂ ਆਪਣੀ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਬਾਰੇ ਕੀ ਜਾਣਨਾ ਚਾਹੁੰਦੇ ਹੋ?",
     menuButton: "ਮੀਨੂ",
     menuDate: "ਮੇਰੀ ਤਰੀਕ",
@@ -143,6 +149,8 @@ const WORDS: Record<Locale, Words> = {
     offTopic: "माफ़ कीजिए, मैं सिर्फ़ आपकी मशीन की तारीख़ों में मदद कर सकता हूँ। चुनने के लिए मेन्यू दबाएँ।",
     agentUnavailable: "मैं अभी शब्दों में जवाब नहीं दे सकता। चुनने के लिए मेन्यू दबाएँ।",
     voiceNotSupported: "मैं अभी आवाज़ वाले संदेश नहीं सुन सकता। कृपया लिखें, या मेन्यू दबाएँ।",
+    heard: (text) => `मैंने सुना: "${text}"`,
+    voiceNotUnderstood: "मैं यह आवाज़ वाला संदेश समझ नहीं सका। कृपया फिर से बोलें, लिखें, या मेन्यू दबाएँ।",
     menuBody: "आप अपनी मशीन की तारीख़ के बारे में क्या जानना चाहते हैं?",
     menuButton: "मेन्यू",
     menuDate: "मेरी तारीख़",

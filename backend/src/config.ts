@@ -88,6 +88,22 @@ const configSchema = z.object({
   BEDROCK_MODEL_ID: z.string().default("global.amazon.nova-2-lite-v1:0"),
   BEDROCK_REGION: z.string().optional(),
   AGENT_TIMEOUT_SECONDS: z.coerce.number().positive().default(20),
+  // Voice notes (needs the agent too). Off by default: a voice note gets "please type or tap the menu".
+  // On: Amazon Transcribe hears the note and names its language (pa-IN, hi-IN or en-IN), the agent
+  // answers as for typed text, and Amazon Polly reads that answer back as a voice note.
+  VOICE_ENABLED: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  // Transcribe reads media only from S3: each note is put here for its job and deleted after it.
+  VOICE_S3_BUCKET: z.string().default(""),
+  VOICE_S3_PREFIX: z.string().default("whatsapp-voice/"),
+  // Larger notes are not downloaded (a farmer's question fits well inside this).
+  VOICE_MAX_BYTES: z.coerce.number().int().positive().default(1_000_000),
+  VOICE_TRANSCRIBE_TIMEOUT_SECONDS: z.coerce.number().positive().default(60),
+  // Polly has no Punjabi voice; Kajal (neural) speaks Hindi and Indian English.
+  VOICE_POLLY_VOICE: z.string().default("Kajal"),
+  VOICE_POLLY_ENGINE: z.enum(["standard", "neural", "generative"]).default("neural"),
+  // true: a Punjabi reply is written in Devanagari letters and read by the Hindi voice (Punjabi words,
+  // Hindi accent). false: Punjabi replies are text only.
+  VOICE_PUNJABI_AUDIO: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   // How a farmer's sign-in code reaches them. whatsapp: the WHATSAPP_TEMPLATE_OTP template. off:
   // sign-in by code is closed. Unset: whatsapp when WhatsApp and that template are set up, else off.
   // The demo farmers' phones always see their code on screen (demo accounts, labelled as such).

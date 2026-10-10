@@ -1,0 +1,19 @@
+# Optional: send container logs to CloudWatch Logs (group /vaari/backend, one stream per service).
+# Turn on with COMPOSE_FILE=docker-compose.yml:docker-compose.cloudwatch.yml in backend/.env.
+# The Docker daemon uses the EC2 instance role: it needs logs:CreateLogGroup, logs:CreateLogStream
+# and logs:PutLogEvents. `docker compose logs` keeps working (Docker's local log cache).
+x-cloudwatch: &cloudwatch
+  driver: awslogs
+  options:
+    awslogs-region: ${AWS_REGION:?set AWS_REGION in backend/.env}
+    awslogs-group: /vaari/backend
+    awslogs-create-group: "true"
+    tag: "{{.Name}}"
+
+services:
+  api:
+    logging: *cloudwatch
+  worker:
+    logging: *cloudwatch
+  engine:
+    logging: *cloudwatch
