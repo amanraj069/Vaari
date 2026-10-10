@@ -33,8 +33,11 @@ export function fireSeasonFacts() {
   };
 }
 
-/** framed=false drops the card border and fill, for use inside another card (the landing's evidence panel). */
-export function FireSeasonChart({ framed = true }: { framed?: boolean }) {
+/**
+ * framed=false drops the card border and fill, for use inside another card (the landing's evidence
+ * panel); compact sets the heading and lead at the dashboard's panel sizes (the officer's page).
+ */
+export function FireSeasonChart({ framed = true, compact = false }: { framed?: boolean; compact?: boolean }) {
   const t = useTranslations("landing");
   const td = useTranslations("dates");
   const monthsShort = td.raw("monthsShort") as string[];
@@ -50,10 +53,10 @@ export function FireSeasonChart({ framed = true }: { framed?: boolean }) {
   const percent = (day: number) => `${((day - FIRST_DAY) / span) * 100}%`;
 
   return (
-    <figure className={framed ? "rounded-card border border-line bg-surface/80 p-5 sm:p-6" : "p-5 sm:p-8"}>
+    <figure className={framed ? `rounded-card border border-line ${compact ? "bg-surface p-5" : "bg-surface/80 p-5 sm:p-6"}` : "p-5 sm:p-8"}>
       <figcaption>
-        <h3 className="font-display text-2xl">{t("chartTitle")}</h3>
-        <p className="mt-1 text-ink-muted">{t("chartBody")}</p>
+        <h3 className={compact ? "text-base font-semibold" : "font-display text-2xl"}>{t("chartTitle")}</h3>
+        <p className={compact ? "mt-0.5 text-sm text-ink-muted" : "mt-1 text-ink-muted"}>{t("chartBody")}</p>
       </figcaption>
       <div className="relative mt-6">
         <div
@@ -96,7 +99,7 @@ export function FireSeasonChart({ framed = true }: { framed?: boolean }) {
           {t("chartLegendOptimum")}
         </span>
       </div>
-      <p className="mt-4 text-sm text-ink-muted">{t("chartSource")}</p>
+      <p className={`mt-4 text-ink-muted ${compact ? "text-xs" : "text-sm"}`}>{t("chartSource")}</p>
     </figure>
   );
 }
