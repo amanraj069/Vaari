@@ -27,11 +27,13 @@ describe("the sender's number", () => {
 });
 
 describe("the reply language", () => {
-  it("is the stored language, else the script the farmer wrote in, else English", () => {
+  it("is the script the farmer just wrote in, else the stored language, else English", () => {
     expect(scriptLocale("ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
     expect(scriptLocale("मेरी तारीख़")).toBe("hi");
     expect(scriptLocale("my date")).toBeNull();
-    expect(chooseLocale("hi", "ਮੇਰੀ ਤਰੀਕ")).toBe("hi");
+    expect(chooseLocale("hi", "ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
+    expect(chooseLocale("pa", "मेरी तारीख़")).toBe("hi");
+    expect(chooseLocale("pa", "my date")).toBe("pa");
     expect(chooseLocale(null, "ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
     expect(chooseLocale(null, "मेरी तारीख़")).toBe("hi");
     expect(chooseLocale(null, "my date")).toBe("en");
