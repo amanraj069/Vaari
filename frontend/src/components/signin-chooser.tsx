@@ -39,12 +39,10 @@ function Eyebrow({ id, children }: { id: string; children: string }) {
 
 export function SignInChooser({
   people,
-  demoMode,
   googleOn,
   initialPick = null,
 }: {
   people: DemoPerson[];
-  demoMode: boolean;
   googleOn: boolean;
   initialPick?: StaffRole | null;
 }) {
@@ -92,8 +90,7 @@ export function SignInChooser({
             </div>
           </section>
 
-          {demoMode ? (
-            <button
+                      <button
               type="button"
               onClick={() => setView("demo")}
               className={`group mt-6 flex min-h-14 w-full items-center gap-3 text-left transition-colors duration-150 hover:border-ink/50 lg:mt-auto ${SECTION}`}
@@ -112,7 +109,7 @@ export function SignInChooser({
                 strokeWidth={1.75}
               />
             </button>
-          ) : null}
+          
         </motion.div>
       ) : (
         <motion.section

@@ -34,7 +34,7 @@ describe("a farmer's new booking", () => {
     await userEvent.click(screen.getByRole("button", { name: "Book this field" }));
     expect(onSubmit).toHaveBeenCalledWith({ villageId: "v-ubhawal", acres: 3, readyDate: SAMPLE_TODAY, waitingLimitDays: 6 });
     expect(await screen.findByText("Your turn is booked")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See my fields" })).toHaveAttribute("href", "/farmer");
+    expect(screen.getByRole("link", { name: "See my fields" })).toHaveAttribute("href", "/dashboard");
   });
 
   it("explains the 10-field limit and a missing registration", async () => {

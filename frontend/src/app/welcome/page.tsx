@@ -10,7 +10,7 @@ import { chcOptionSchema, localeSchema, meSchema } from "@/shared";
 import { PageMain } from "@/components/page-shell";
 import { TopBar } from "@/components/top-bar";
 import { WelcomeForm } from "@/components/welcome-form";
-import { COOKIE, serverConfig } from "@/lib/server-config";
+import { COOKIE } from "@/lib/server-config";
 import { apiFetch } from "@/lib/session";
 
 export default async function WelcomePage() {
@@ -36,7 +36,6 @@ export default async function WelcomePage() {
           suggestedName={suggestedName}
           currentRole={me.data.role}
           locale={localeSchema.catch("en").parse(await getLocale())}
-          operatorSelfService={serverConfig.demoMode}
           pickedRole={picked === "helper" || picked === "officer" ? picked : null}
         />
       </PageMain>

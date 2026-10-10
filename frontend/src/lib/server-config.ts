@@ -7,7 +7,6 @@ import "server-only";
 export const serverConfig = {
   apiUrl: process.env.API_URL ?? "http://localhost:4000",
   authMode: (process.env.AUTH_MODE ?? "demo") as "demo" | "cognito",
-  demoMode: (process.env.DEMO_MODE ?? "true") === "true",
   cognitoDomain: process.env.COGNITO_DOMAIN ?? "",
   cognitoClientId: process.env.COGNITO_CLIENT_ID ?? "",
   // The user pool's region, for email sign-in (Cognito's own API). Empty: read from COGNITO_DOMAIN
@@ -40,8 +39,9 @@ export const COOKIE = {
   locale: "NEXT_LOCALE",
 } as const;
 
+// Every role's home is its dashboard (lib/dashboard-routes.ts decides what each role sees there).
 export const ROLE_HOME: Record<string, string> = {
-  facilitator: "/book",
-  operator: "/operator",
-  officer: "/proof",
+  facilitator: "/dashboard",
+  operator: "/dashboard",
+  officer: "/dashboard",
 };

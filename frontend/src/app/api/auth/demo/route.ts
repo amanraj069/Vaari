@@ -1,6 +1,6 @@
 /**
- * "Try as farmer / facilitator / operator": real sessions for seeded demo users (the API refuses
- * unless DEMO_MODE). The farmer has no account: the API answers with a one-time phone login link,
+ * "Try as farmer / facilitator / operator": real sessions for seeded demo accounts, for anyone who
+ * wants to try Vaari (rate-limited by the API). The farmer has no account: the API answers with a one-time phone login link,
  * and the browser follows it (/farmer/login/<token>) exactly as a farmer taps it on WhatsApp.
  */
 import { NextResponse } from "next/server";

@@ -3,7 +3,7 @@
 /**
  * Onboarding form: name, role, CHC, language. Big targets, one question per block. Farmers do not
  * sign up (they have no account; their phone number is their identity), so the only role a person
- * can pick for themselves is operator, and only in DEMO_MODE (the API checks); facilitators and
+ * can pick is operator, and only when their Cognito group grants it (the API checks); facilitators and
  * officers come from their Cognito group.
  */
 import { Check, Tractor } from "lucide-react";
@@ -26,12 +26,11 @@ type Props = {
   suggestedName: string;
   currentRole: Role | null;
   locale: Locale;
-  operatorSelfService: boolean;
   /** Picked on /signin as a village helper or officer: their access comes from their office. */
   pickedRole?: "helper" | "officer" | null;
 };
 
-export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operatorSelfService, pickedRole = null }: Props) {
+export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRole = null }: Props) {
   const t = useTranslations("welcome");
   const router = useRouter();
   const refreshSession = useRefreshSession();
@@ -40,7 +39,8 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
   const [chcId, setChcId] = useState(chcs.length === 1 ? chcs[0]!.id : "");
   const [language, setLanguage] = useState<Locale>(locale);
   const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
-  const operatorAllowed = operatorSelfService || currentRole === "operator";
+  // Operator access comes only from the Cognito "operator" group (the API checks too).
+  const operatorAllowed = currentRole === "operator";
 
   const roles = [{ value: "operator" as const, label: t("roleOperator"), body: t("roleOperatorBody"), Icon: Tractor, allowed: operatorAllowed }];
 
@@ -106,7 +106,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
           ))}
         </div>
         <p className="mt-2 text-sm text-ink-muted">
-          {operatorAllowed ? (operatorSelfService ? t("operatorDemoNote") : t("comingSoon")) : t("operatorLocked")}
+          {operatorAllowed ? t("comingSoon") : t("operatorLocked")}
         </p>
         <p className="mt-2 text-sm text-ink-muted">{t("farmersNoAccount")}
         </p>

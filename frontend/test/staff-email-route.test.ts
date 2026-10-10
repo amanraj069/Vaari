@@ -60,7 +60,7 @@ describe("/api/auth/email", () => {
     const response = await post({ step: "signIn", email: " Harpal@Example.org ", password: "Secret-123", pick: "operator" });
     expect(response.status).toBe(200);
     const text = await response.text();
-    expect(JSON.parse(text)).toEqual({ next: "/operator" });
+    expect(JSON.parse(text)).toEqual({ next: "/dashboard" });
     expect(text).not.toContain("access-token");
     expect(cognitoCalls).toEqual([{ target: "InitiateAuth", body: { ClientId: "client-123", AuthFlow: "USER_PASSWORD_AUTH", AuthParameters: { USERNAME: "harpal@example.org", PASSWORD: "Secret-123" } } }]);
     expect(session.setSession).toHaveBeenCalledWith("access-token", 3600, "pending", "refresh-token");
