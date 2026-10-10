@@ -70,3 +70,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Backend deploy state on the EC2 host (backend/deploy/deploy.sh)
+backend/deploy/.deployed-release

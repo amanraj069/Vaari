@@ -1,6 +1,6 @@
 # Vaari. Each folder is a normal npm project; this file only saves typing.
 # `make test` and `make dev` run on any laptop with no AWS account.
-.PHONY: setup dev test plan simulate simulate-check data
+.PHONY: setup dev test plan simulate simulate-check data docker
 
 setup:            ## Install backend (npm + Python engine via uv) and frontend (npm)
 	cd backend && npm install && npm run engine:setup
@@ -23,3 +23,6 @@ simulate-check:   ## Fast reproducibility check: --runs 5 --centres 3 twice, fil
 
 data:             ## Villages from OpenStreetMap (network), then harvest curves from the FIRMS CSVs (offline)
 	cd backend && npm run data:villages && npm run data:prepare
+
+docker:           ## Backend in Docker (api + engine; + worker when WHATSAPP_QUEUE=sqs): build, check backend/.env, start, wait until healthy
+	cd backend && ./deploy/deploy.sh
