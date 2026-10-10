@@ -1,33 +1,35 @@
 "use client";
 
 /**
- * /farmer: every field booked with the farmer's phone number, read-only. A farmer has no account:
- * they arrive from a one-time link (WhatsApp, or "Try as farmer"), which leaves a 7-day phone
- * session. Each field is a TokenCard with its date, status and history; nothing here changes a
- * booking (that is the field's own slot link, or the helper who booked it). With no session (or a
- * used or expired link) the page says how to get a new link: write "my fields" to Vaari on WhatsApp.
+ * /farmer: every field booked with the farmer's phone number, with "Book a new field" beside them.
+ * A farmer arrives signed in with a code on WhatsApp (/farmer/signin) or from a one-time link
+ * (WhatsApp, or "Try as farmer"); both leave a 7-day phone session. Each field is a TokenCard with
+ * its date, status and history; changing a booking is that field's own slot link, or the helper
+ * who booked it. With no session (or a used or expired link) the page offers phone sign-in and
+ * "my fields" on WhatsApp. Beside the list: everything also works on WhatsApp, starting with "hey".
  */
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, LinkIcon, LogOut, Sprout } from "lucide-react";
+import { KeyRound, LinkIcon, Plus, Sprout } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { ApiError, api } from "@/lib/api";
 import { useDates } from "@/lib/dates";
-import { BrandMark } from "./brand-mark";
 import { DateGuide } from "./farmer-aside";
-import { LanguageMenu } from "./language-menu";
+import { FarmerHeader } from "./farmer-header";
+import { FarmerNameForm } from "./farmer-name-form";
 import { PAGE_FRAME, PageColumns, PageHeader } from "./page-shell";
 import { SimulatedBadge } from "./simulated-badge";
-import { ThemeToggle } from "./theme-toggle";
 import { TokenCard } from "./token-card";
-import { Button, Skeleton, StateMessage } from "./ui";
+import { Button, ButtonLink, Skeleton, StateMessage } from "./ui";
 import { SeeAllMyFields } from "./whatsapp-link";
+import { WhatsAppStart } from "./whatsapp-start";
 
 export type LinkProblem = "expired" | "unavailable" | null;
 
 export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber: string | null; linkProblem: LinkProblem }) {
   const t = useTranslations("farmer");
   const tc = useTranslations("common");
+  const ts = useTranslations("farmerSignin");
   const locale = useLocale();
   const dates = useDates();
   // Polling keeps the dates fresh when the operator publishes a plan (no websockets by design).
@@ -38,30 +40,17 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
     retry: (count, error) => !(error instanceof ApiError && error.status === 401) && count < 2,
   });
   const noSession = home.isError && home.error instanceof ApiError && home.error.status === 401;
-
-  async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.assign("/");
-  }
+  const newBooking = (
+    <ButtonLink href="/farmer/new" variant="accent" className="min-h-12">
+      <Plus aria-hidden className="size-5" strokeWidth={2} />
+      {t("newBooking")}
+    </ButtonLink>
+  );
 
   return (
     <>
-      <header className="border-b border-line bg-paper/95">
-        <div className={`flex items-center gap-3 py-3 sm:py-4 ${PAGE_FRAME}`}>
-          <BrandMark />
-          <div className="ml-auto flex items-center gap-1">
-            <LanguageMenu />
-            <ThemeToggle />
-            {home.isSuccess ? (
-              <Button variant="quiet" className="min-h-11" onClick={signOut}>
-                <LogOut aria-hidden className="size-4" strokeWidth={1.75} />
-                {tc("signOut")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </header>
-      <main className={`pb-16 pt-6 text-lg ${PAGE_FRAME}`}>
+      <FarmerHeader signedIn={home.isSuccess} />
+      <main className={`pb-16 pt-8 sm:pt-10 text-lg ${PAGE_FRAME}`}>
         {home.isPending ? (
           <div className="space-y-4" aria-busy="true">
             <span className="sr-only" role="status">{tc("loading")}</span>
@@ -74,11 +63,28 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
               icon={linkProblem === "expired" ? LinkIcon : KeyRound}
               title={linkProblem === "expired" ? t("linkExpiredTitle") : t("noSessionTitle")}
               body={linkProblem === "expired" ? t("linkExpiredBody") : t("noSessionBody")}
-              action={whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : undefined}
+              action={
+                <div className="grid gap-4">
+                  <ButtonLink href="/farmer/signin" variant="accent" className="min-h-12 w-full">
+                    <KeyRound aria-hidden className="size-5" strokeWidth={1.75} />
+                    {t("signInAction")}
+                  </ButtonLink>
+                  {whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : null}
+                </div>
+              }
             />
           </div>
         ) : home.isError ? (
           <StateMessage tone="error" title={tc("errorTitle")} body={tc("errorBody")} action={<Button onClick={() => home.refetch()}>{tc("retry")}</Button>} />
+        ) : !home.data.registered ? (
+          // Signed in with a code but left before giving a name: finish here, then see the page.
+          <section aria-labelledby="finish-title" className="mx-auto max-w-xl rounded-card border border-line bg-surface p-5 sm:p-6">
+            <h1 id="finish-title" className="font-display text-3xl leading-tight">
+              {t("finishTitle")}
+            </h1>
+            <p className="mb-5 mt-2 text-ink-muted">{ts("nameBody")}</p>
+            <FarmerNameForm onDone={() => home.refetch()} />
+          </section>
         ) : (
           <>
             <PageHeader
@@ -86,11 +92,12 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
               badge={<SimulatedBadge demoDate={dates.short(home.data.today)} />}
               title={home.data.farmerName ? t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" }) : t("allFieldsTitle")}
               description={t("readOnlyNote")}
+              actions={newBooking}
             />
             <PageColumns
               main={
                 home.data.fields.length === 0 ? (
-                  <StateMessage icon={Sprout} title={t("noFieldsTitle")} body={t("noFieldsBody")} />
+                  <StateMessage icon={Sprout} title={t("noFieldsTitle")} body={t("noFieldsBody")} action={newBooking} />
                 ) : (
                   <ul className="space-y-5" aria-label={t("allFieldsTitle")}>
                     {home.data.fields.map((field) => (
@@ -102,7 +109,12 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
                   </ul>
                 )
               }
-              aside={<DateGuide />}
+              aside={
+                <div className="space-y-5">
+                  <WhatsAppStart number={whatsappNumber} />
+                  <DateGuide />
+                </div>
+              }
             />
           </>
         )}

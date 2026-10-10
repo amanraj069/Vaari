@@ -1,0 +1,44 @@
+/**
+ * /farmer/signin, in AuthSplitLayout: on the left the other way in (do it all on WhatsApp, an
+ * example chat); on the right the sign-in itself (mobile number and consent, the code, then the
+ * name if the number is new). On phones the form comes first, then the WhatsApp card (the phone
+ * picture hidden) with its "Open WhatsApp" button. Staff sign in on /signin. `next` may only send the farmer to their pages.
+ */
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { AuthSplitLayout } from "@/components/auth-split-layout";
+import { BackButton } from "@/components/back-button";
+import { FarmerHeader } from "@/components/farmer-header";
+import { FarmerSigninForm } from "@/components/farmer-signin-form";
+import { PAGE_FRAME, PageHeader } from "@/components/page-shell";
+import { WhatsAppStart } from "@/components/whatsapp-start";
+import { serverConfig } from "@/lib/server-config";
+
+export const dynamic = "force-dynamic";
+
+const NEXT_PAGES = new Set(["/farmer", "/farmer/new"]);
+
+export default async function FarmerSignInPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const t = await getTranslations("farmerSignin");
+  const { next } = await searchParams;
+  return (
+    <>
+      <FarmerHeader />
+      <main className={`pb-16 pt-8 sm:pt-10 ${PAGE_FRAME}`}>
+        <AuthSplitLayout visual={<WhatsAppStart number={serverConfig.whatsappBusinessNumber || null} fill />} visualBelow>
+          <div className="mx-auto w-full max-w-md">
+            <PageHeader back={<BackButton fallback="/" />} title={t("title")} description={t("subtitle")} />
+            <div className="mt-5">
+              <FarmerSigninForm next={next && NEXT_PAGES.has(next) ? next : "/farmer"} />
+            </div>
+            <p className="mt-4 border-t border-line pt-3 text-center">
+              <Link href="/signin" className="inline-flex min-h-11 items-center text-sm font-medium text-wheat-deep underline decoration-wheat-deep/40 underline-offset-4 hover:decoration-wheat-deep">
+                {t("staffLink")}
+              </Link>
+            </p>
+          </div>
+        </AuthSplitLayout>
+      </main>
+    </>
+  );
+}

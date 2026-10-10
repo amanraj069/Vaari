@@ -24,10 +24,26 @@ export function PageMain({ children, measure = "full", className = "" }: { child
   );
 }
 
-/** The one page-title pattern: context line and simulated badge above, serif title, optional lead and actions. */
+/** The one page-title pattern: context line and simulated badge above, serif title (with an optional back chevron to its left), optional lead and actions. */
 export const PAGE_TITLE = "font-display text-3xl leading-tight tracking-tight sm:text-4xl";
 
-export function PageHeader({ title, context, badge, description, actions, className = "" }: { title: ReactNode; context?: ReactNode; badge?: ReactNode; description?: ReactNode; actions?: ReactNode; className?: string }) {
+export function PageHeader({
+  title,
+  context,
+  badge,
+  description,
+  actions,
+  back,
+  className = "",
+}: {
+  title: ReactNode;
+  context?: ReactNode;
+  badge?: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  back?: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`flex flex-wrap items-end justify-between gap-4 ${className}`}>
       <div className="min-w-0">
@@ -37,7 +53,14 @@ export function PageHeader({ title, context, badge, description, actions, classN
             {badge}
           </div>
         ) : null}
-        <h1 className={PAGE_TITLE}>{title}</h1>
+        {back ? (
+          <div className="flex items-center gap-1">
+            {back}
+            <h1 className={`min-w-0 ${PAGE_TITLE}`}>{title}</h1>
+          </div>
+        ) : (
+          <h1 className={PAGE_TITLE}>{title}</h1>
+        )}
         {description ? <p className="mt-2 max-w-2xl text-ink-muted">{description}</p> : null}
       </div>
       {actions}

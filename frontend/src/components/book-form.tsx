@@ -7,24 +7,16 @@
  * it is checked here and again by the API, which stores it as E.164 with the consent. One question
  * per step, large targets, works with keyboard and screen readers.
  */
-import { ArrowLeft, ArrowRight, Check, Copy, Minus, Plus, Search, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Copy, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { toE164, type Booking, type BookingInput, type VillageOption } from "@/shared";
 import { copyText } from "@/lib/api";
 import { useDates } from "@/lib/dates";
-import { Slider } from "./slider";
+import { AcresStep, ReadyStep, VillageStep, WaitStep, addDays, readyChoices } from "./field-steps";
 import { StepProgress } from "./step-progress";
 import { useToast } from "./toast";
-import { Button, Skeleton } from "./ui";
-
-const WAIT_MIN = 3;
-const WAIT_MAX = 10;
-const READY_CHOICES = 8;
-
-function addDays(iso: string, days: number): string {
-  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
-}
+import { Button } from "./ui";
 
 type Props = {
   villages: VillageOption[] | null;
@@ -53,9 +45,8 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
   const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
   const [booking, setBooking] = useState<Booking | null>(null);
 
-  const readyOptions = useMemo(() => (today ? Array.from({ length: READY_CHOICES }, (_, index) => addDays(today, index)) : []), [today]);
+  const readyOptions = useMemo(() => readyChoices(today), [today]);
   const village = villages?.find((item) => item.id === villageId);
-  const filtered = (villages ?? []).filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase()));
   const phoneE164 = toE164(farmerPhone);
   // Say the number is wrong only once something has been typed.
   const phoneInvalid = farmerPhone.trim().length > 0 && phoneE164 === null;
@@ -175,82 +166,13 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             {!consent && phoneE164 ? <p className="text-sm text-ink-muted">{t("consentRequired")}</p> : null}
           </div>
         ) : step === 2 ? (
-          <fieldset>
-            <legend className="font-display text-2xl">{tr("villageQuestion")}</legend>
-            <label className="relative mt-3 block">
-              <span className="sr-only">{tr("villageSearch")}</span>
-              <Search aria-hidden className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-ink-muted" strokeWidth={1.75} />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tr("villageSearch")} className="min-h-12 w-full rounded-control border border-line-strong bg-paper pl-10 pr-3" />
-            </label>
-            {villages === null ? (
-              <Skeleton className="mt-3 h-40" />
-            ) : (
-              <div className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
-                {filtered.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={villageId === item.id}
-                    onClick={() => setVillageId(item.id)}
-                    className={`min-h-12 rounded-control border px-3 text-left ${villageId === item.id ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </fieldset>
+          <VillageStep villages={villages} villageId={villageId} onPick={setVillageId} search={search} onSearch={setSearch} />
         ) : step === 3 ? (
-          <fieldset>
-            <legend className="font-display text-2xl">{tr("acresQuestion")}</legend>
-            <div className="mt-6 flex items-center justify-center gap-6">
-              <button type="button" aria-label={tr("decrease")} onClick={() => setAcres((value) => Math.max(0.5, value - 0.5))} className="grid size-14 place-items-center rounded-full border border-line-strong bg-paper">
-                <Minus aria-hidden className="size-6" strokeWidth={1.75} />
-              </button>
-              <output aria-live="polite" className="min-w-24 text-center font-display text-6xl tabular">{acres}</output>
-              <button type="button" aria-label={tr("increase")} onClick={() => setAcres((value) => Math.min(50, value + 0.5))} className="grid size-14 place-items-center rounded-full border border-line-strong bg-paper">
-                <Plus aria-hidden className="size-6" strokeWidth={1.75} />
-              </button>
-            </div>
-            <p className="mt-2 text-center text-ink-muted">{tc("acres", { acres })}</p>
-            <p className="mt-4 text-base text-ink-muted">{tr("acresHelp")}</p>
-          </fieldset>
+          <AcresStep acres={acres} onChange={setAcres} />
         ) : step === 4 ? (
-          <fieldset>
-            <legend className="font-display text-2xl">{tr("readyQuestion")}</legend>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {readyOptions.map((iso, index) => (
-                <button
-                  key={iso}
-                  type="button"
-                  aria-pressed={readyDate === iso}
-                  onClick={() => setReadyDate(iso)}
-                  className={`min-h-14 rounded-control border px-3 text-left ${readyDate === iso ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
-                >
-                  <span className="block text-sm opacity-80">{index === 0 ? tr("today") : index === 1 ? tr("tomorrow") : dates.weekday(iso)}</span>
-                  <span className="block tabular">{dates.dayMonth(iso)}</span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 text-base text-ink-muted">{tr("readyHelp")}</p>
-          </fieldset>
+          <ReadyStep options={readyOptions} readyDate={readyDate} onPick={setReadyDate} />
         ) : step === 5 ? (
-          <div>
-            <p className="font-display text-2xl">{t("waitQuestion")}</p>
-            <div className="mt-4">
-              <Slider
-                label={t("stepWait")}
-                min={WAIT_MIN}
-                max={WAIT_MAX}
-                value={waitDays}
-                onChange={setWaitDays}
-                valueText={t("waitValue", { count: waitDays, date: readyDate ? dates.short(addDays(readyDate, waitDays)) : "" })}
-                minLabel={t("waitMin")}
-                maxLabel={t("waitMax")}
-              />
-            </div>
-            <p className="mt-3 text-base text-ink-muted">{t("waitHelp")}</p>
-          </div>
+          <WaitStep question={t("waitQuestion")} help={t("waitHelp")} waitDays={waitDays} onChange={setWaitDays} readyDate={readyDate} />
         ) : (
           <div>
             <h3 className="font-display text-2xl">{t("reviewTitle")}</h3>

@@ -6,9 +6,13 @@ import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/session";
 
 const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "public/", "facilitator/", "slot/"];
+// These answer with a farmer's session token: only their own route handlers call them, and keep the
+// token in the httpOnly cookie (/farmer/login/<token>, /api/farmer/otp/verify).
+const NEVER_FORWARDED = ["farmer/login", "farmer/otp/verify"];
 
 async function forward(request: Request, path: string[]) {
   const joined = path.join("/");
+  if (NEVER_FORWARDED.includes(joined.replace(/\/+$/, ""))) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   // "fields" alone is the booking route; everything else must match a prefix ending in "/".
   if (!(joined === "fields" || ALLOWED_PREFIXES.some((prefix) => joined === prefix || joined.startsWith(prefix)))) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });

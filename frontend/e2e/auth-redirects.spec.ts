@@ -62,9 +62,10 @@ test("the demo farmer opens /farmer from a one-time login link, which then stops
   await context.close();
 });
 
-test("/farmer without a phone session says how to get a link, never 'sign in'", async ({ page }) => {
+test("/farmer without a phone session offers phone sign-in, never the staff sign-in page", async ({ page }) => {
   await page.goto("/farmer");
-  await expect(page.getByText("Open your link from WhatsApp")).toBeVisible();
+  await expect(page.getByText("Sign in to see your fields")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in with your phone" })).toHaveAttribute("href", "/farmer/signin");
   await expect(page).toHaveURL(`${BASE}/farmer`);
   expect(await page.locator('meta[name="robots"]').getAttribute("content")).toContain("noindex");
 });
