@@ -48,6 +48,15 @@ npm run db:create   # creates any missing tables and indexes, waits until ACTIVE
 npm run db:status   # tables, indexes and item counts
 ```
 
+**Backend in Docker** (how it runs on EC2): the API, the engine (its own private service) and the WhatsApp worker, from `backend/docker-compose.yml`. `backend/.env` is the containers' environment.
+
+```bash
+cd backend
+./deploy/deploy.sh    # builds both images, checks .env inside the new image, starts them, waits until healthy
+```
+
+Pushes to `main` are tested, built into ECR images and deployed to EC2 by `.github/workflows/backend.yml`. One-time setup and everyday commands: [`backend/deploy/README.md`](backend/deploy/README.md).
+
 ## The evidence (`/proof`)
 
 `npm run simulate -- --runs 50 --seed 1` (in `backend/`, or `make simulate`) plays 50 simulated seasons of the whole of Sangrur district (its real OpenStreetMap outline, 409 villages, 25 machine centres, 100 Super Seeders, about 2,400 farmers) under three policies (a phone queue, nearest village next, and Vaari), in two scenarios (base; the same seasons with half the machines, where no policy can save everyone) and four sweeps (acres per machine, how long farmers wait, how much sooner a farmer with no date gives up, how often a phone-queue rental comes back late), and writes `data/sim/results.json`. The phone queue is modelled as CEEW finds most CHCs run it, a rental desk with the machine back at the centre between farmers; farm and season sizes come from CEEW's CHC study. Burned acres become tonnes of straw and kg of PM2.5 with sourced conversions (Punjab's report to the NGT, IPCC, Gadde et al.), and every policy is also compared with the phone queue season by season. The same seed always writes the same file. The `/proof` page shows only numbers read from that file; without it, the page says the simulation has not been run. Every input is in `data/sim/assumptions.json`, labelled "assumed" or "real range". Seasons are simulated: farmers, fields, machines, breakdowns and rain are invented; village positions (OpenStreetMap) and harvest timing (NASA FIRMS) are real. A full run uses half the cores by default (any worker count writes the same file; it took about 14 minutes on 6 workers before the half-machines scenario was added, which adds a second set of district seasons; not re-timed). `npm run simulate:check` (or `make simulate-check`) is the fast reproducibility check: it plays `--runs 5 --centres 3` twice and compares the two files byte for byte (about 1.5 minutes; it never touches `results.json`). Harvest timing uses both S-NPP and NOAA-20. The headline assumes farmers without a promised date give up 2 days sooner (no study measures this; the page says so and sweeps 0-3).
