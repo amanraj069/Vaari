@@ -38,20 +38,21 @@ beforeAll(async () => {
 });
 
 describe("tools are bound to the sender's phone", () => {
-  it("no tool accepts a phone number, farmer id or field id: only fieldRef and days", () => {
+  it("no tool accepts a phone number, farmer id or field id: only fieldRef, days and a booking's own words", () => {
     const session = new FarmerSession(runtime.runtime.dependencies, { kind: "farmerPhone", phone: DEMO_FARMER_PHONE }, "en");
     const tools = session.tools();
-    expect(tools.map((item) => item.name)).toEqual(["list_my_fields", "get_slot", "why_this_day", "cannot_wait_longer", "send_my_fields_page"]);
-    const identity = /phone|number|mobile|farmer|field_?id|fieldid|^id$|chc|user|token|wa_?id/i;
+    expect(tools.map((item) => item.name)).toEqual(["list_my_fields", "get_slot", "why_this_day", "cannot_wait_longer", "book_field", "send_my_fields_page"]);
+    const allowed = ["fieldRef", "days", "village", "acres", "lastDayYouCanWait", "moreDaysYouCanWait", "harvestReady"];
+    const identity = /phone|number|mobile|farmer|field_?id|fieldid|^id$|chc|centre|user|token|wa_?id/i;
     for (const item of tools) {
       const properties = Object.keys((z.toJSONSchema(item.inputSchema) as { properties?: object }).properties ?? {});
-      expect(properties.every((name) => ["fieldRef", "days"].includes(name)), `${item.name}: ${properties.join(", ")}`).toBe(true);
+      expect(properties.every((name) => allowed.includes(name)), `${item.name}: ${properties.join(", ")}`).toBe(true);
       expect(properties.some((name) => identity.test(name))).toBe(false);
     }
     // And exactly as the model sees them.
     for (const spec of modelToolSpecs(tools)) {
       const properties = Object.keys((spec.inputSchema as { properties?: object }).properties ?? {});
-      expect(properties.every((name) => ["fieldRef", "days"].includes(name)), `${spec.name}: ${properties.join(", ")}`).toBe(true);
+      expect(properties.every((name) => allowed.includes(name)), `${spec.name}: ${properties.join(", ")}`).toBe(true);
     }
   });
 

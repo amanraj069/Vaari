@@ -3,20 +3,25 @@
  *   - delivery statuses (sent, delivered, read, failed) update our outbound notices, nothing else;
  *   - each inbound message is handled once (claimed by its WhatsApp id, a conditional write);
  *   - the sender's number (Meta signed the payload) is the identity: normalised to E.164 and looked
- *     up on phone-index. Unknown: one fixed reply, no data, no model;
+ *     up on phone-index and farmer-accounts. Unknown (no booking, no account): one fixed reply with
+ *     the registration link, no data, no model. A registered farmer with no field yet can book one;
  *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language, then
  *       a button or list reply -> the tools directly (no model),
  *       text -> the agent when AGENT_ENABLED (its reply checked against this turn's tool results,
  *               else the template reply), otherwise the menu,
  *       a voice note -> "please type or tap the menu" (transcription is not built).
- * A change needs a tap: cannot_wait_longer drafts; only a Confirm button reply naming that draft,
- * from the same phone, within 15 minutes, calls planner.shortenWaitingLimit. Typed words never do.
+ * A change needs a tap: cannot_wait_longer and book_field draft; only a Confirm button reply naming
+ * that draft, from the same phone, within 15 minutes, calls planner.shortenWaitingLimit or books the
+ * field (the same checks as /farmer/new). Typed words never do. A booked field waits for the
+ * operator's next published plan (their board counts it as a new request); the notice after that
+ * approval carries the field's slot link (notices.ts).
  * Logs carry the phone's last 4 digits only, never message text, never tokens.
  */
 import type { Locale } from "../shared";
 import type { FarmerPhonePrincipal } from "../auth/farmer-session";
 import { mintFarmerLoginLink } from "../auth/farmer-session";
 import { authorize, fieldResource } from "../authz/cedar";
+import { bookFieldForPhone } from "../domain/farmer-booking";
 import { ConflictError } from "../domain/planner";
 import { formatDate } from "../explain/templates";
 import { logger } from "../logger";
@@ -27,7 +32,7 @@ import { MENU_ACTIONS, promiseWords, words, type MenuAction } from "./messages";
 import { parseWebhook, type InboundMessage } from "./payload";
 import { fromWhatsAppNumber, maskPhone } from "./phone";
 import type { WhatsAppSender } from "./sender";
-import { FarmerSession, type FarmerToolDeps, type ToolCall } from "./tools";
+import { FarmerSession, type BookingDetails, type FarmerToolDeps, type ToolCall } from "./tools";
 
 const DEDUPE_DAYS = 3;
 
@@ -54,20 +59,34 @@ export function createWorker(deps: WorkerDeps) {
   const limiter = new PhoneRateLimiter(deps.config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR);
   const { sender, store, config } = deps;
 
-  async function storedLanguage(session: FarmerSession): Promise<Locale | null> {
+  async function storedLanguage(session: FarmerSession, accountLanguage: Locale | null): Promise<Locale | null> {
     const newest = (await session.fields())[0];
-    return newest ? ((await store.getFarmer(newest.field.farmerId))?.language ?? null) : null;
+    return (newest ? ((await store.getFarmer(newest.field.farmerId))?.language ?? null) : null) ?? accountLanguage;
   }
 
-  async function sendMenu(phone: string, locale: Locale, lead?: string) {
-    const said = words(locale);
-    await sender.list(phone, lead ? `${lead}\n\n${said.menuBody}` : said.menuBody, said.menuButton, [
-      { id: "menu:date", title: said.menuDate },
-      { id: "menu:why", title: said.menuWhy },
-      { id: "menu:wait", title: said.menuWait },
-      { id: "menu:page", title: said.menuPage },
-    ]);
+  /** The menu: everything for a farmer with fields; only "Book a field" for one without. */
+  async function sendMenu(session: FarmerSession, lead?: string) {
+    const said = words(session.locale);
+    const hasFields = (await session.fields()).length > 0;
+    const book = { id: "menu:book", title: said.menuBook };
+    const rows = hasFields
+      ? [{ id: "menu:date", title: said.menuDate }, { id: "menu:why", title: said.menuWhy }, { id: "menu:wait", title: said.menuWait }, book, { id: "menu:page", title: said.menuPage }]
+      : [book];
+    await sender.list(session.principal.phone, lead ? `${lead}\n\n${said.menuBody}` : said.menuBody, said.menuButton, rows);
   }
+
+  /** "Book a field" from the menu: ask for the details when the model can read them, else the web form. */
+  async function askForBooking(session: FarmerSession) {
+    const said = words(session.locale);
+    const phone = session.principal.phone;
+    if (config.AGENT_ENABLED && deps.runner) return sender.text(phone, said.bookAsk);
+    const link = await mintFarmerLoginLink(config, store, phone);
+    // Link previews off: a preview fetch would use up the one-time link.
+    return sender.text(phone, said.bookOnWeb(`${config.WEB_BASE_URL.replace(/\/$/, "")}${link.path}`), { previewUrl: false });
+  }
+
+  /** A booking's dates in words, for the Confirm and "booked" messages. */
+  const bookingWords = (booking: BookingDetails, locale: Locale) => ({ ...booking, readyDate: formatDate(booking.readyDate, locale), lastDay: formatDate(booking.lastDay, locale) });
 
   /** The reply built only from this turn's tool results, with the en/pa/hi sentences in explain/. */
   function templateReply(calls: ToolCall[], locale: Locale): string {
@@ -76,7 +95,7 @@ export function createWorker(deps: WorkerDeps) {
     for (const call of calls) {
       const output = call.output;
       if (typeof output.error === "string") {
-        parts.push(said.cannotShorten);
+        parts.push(call.tool === "book_field" ? said.bookFailed : said.cannotShorten);
       } else if (call.tool === "list_my_fields") {
         const fields = output.fields as { token: number; village: string; promise: Parameters<typeof promiseWords>[0] }[];
         parts.push(fields.map((field) => `#${String(field.token).padStart(3, "0")} ${field.village}: ${promiseWords(field.promise, locale)}`).join("\n"));
@@ -102,6 +121,11 @@ export function createWorker(deps: WorkerDeps) {
           { id: `confirm:${action.draftId}`, title: said.confirm },
           { id: `cancel:${action.draftId}`, title: said.cancel },
         ]);
+      } else if (action.kind === "confirmBooking") {
+        await sender.buttons(phone, said.bookConfirmBody(bookingWords(action.booking, session.locale)), [
+          { id: `confirm:${action.draftId}`, title: said.confirm },
+          { id: `cancel:${action.draftId}`, title: said.cancel },
+        ]);
       } else {
         const link = await mintFarmerLoginLink(config, store, phone);
         // Link previews off: a preview fetch would use up the one-time link.
@@ -118,8 +142,9 @@ export function createWorker(deps: WorkerDeps) {
   }
 
   /** A field picker (list message) for an action, or the action at once when there is one field. */
-  async function forEachField(session: FarmerSession, action: Exclude<MenuAction, "page">) {
+  async function forEachField(session: FarmerSession, action: Exclude<MenuAction, "page" | "book">) {
     const entries = await session.fields();
+    if (entries.length === 0) return sendMenu(session);
     if (entries.length === 1) return runAction(session, action, entries[0]!.key);
     const said = words(session.locale);
     const listed = (await session.tool("list_my_fields").run({})).fields as { fieldRef: number; token: number; village: string; promise: Parameters<typeof promiseWords>[0] }[];
@@ -135,10 +160,10 @@ export function createWorker(deps: WorkerDeps) {
     await sender.list(session.principal.phone, said.pickField, said.pickFieldButton, rows);
   }
 
-  async function runAction(session: FarmerSession, action: Exclude<MenuAction, "page">, key: string) {
+  async function runAction(session: FarmerSession, action: Exclude<MenuAction, "page" | "book">, key: string) {
     const entry = await session.resolveKey(key);
     const said = words(session.locale);
-    if (!entry) return sendMenu(session.principal.phone, session.locale, said.listOutOfDate);
+    if (!entry) return sendMenu(session, said.listOutOfDate);
     if (action === "date") {
       await session.tool("get_slot").run({ fieldRef: entry.ref });
       return sendCalls(session);
@@ -168,18 +193,35 @@ export function createWorker(deps: WorkerDeps) {
         await session.tool("send_my_fields_page").run({});
         return sendCalls(session);
       }
-      return forEachField(session, first as Exclude<MenuAction, "page">);
+      if (first === "book") return askForBooking(session);
+      return forEachField(session, first as Exclude<MenuAction, "page" | "book">);
     }
     if (kind === "act" && (first === "date" || first === "why" || first === "wait") && second) return runAction(session, first, second);
     if (kind === "wait" && first && second && /^\d+$/.test(second)) {
       const entry = await session.resolveKey(first);
-      if (!entry) return sendMenu(phone, session.locale, said.listOutOfDate);
+      if (!entry) return sendMenu(session, said.listOutOfDate);
       await session.tool("cannot_wait_longer").run({ fieldRef: entry.ref, days: Number(second) });
       return sendCalls(session);
     }
     if (kind === "confirm" && first) {
       const draft = await store.useWhatsAppDraft(first, phone, now().toISOString());
       if (!draft) return sender.text(phone, said.expired);
+      if (draft.booking) {
+        // Every check again (another field may have been booked since the draft), then the booking.
+        const booked = await bookFieldForPhone(deps, session.principal, draft.booking, session.locale);
+        if (!booked.ok) return sender.text(phone, said.bookFailed);
+        const village = deps.planner.villages().find((item) => item.id === booked.field.villageId);
+        const villageName = session.locale === "pa" && village?.namePa ? village.namePa : (village?.name ?? booked.field.villageId);
+        const lastDay = deps.planner.dayToIso(booked.field.readyDay + booked.field.waitingLimitDays);
+        logger.info({ phone: maskPhone(phone), chcId: booked.chc.id }, "whatsapp booking made");
+        return sender.text(
+          phone,
+          said.booked({
+            ...bookingWords({ village: villageName, centre: booked.chc.name, acres: booked.field.acres, readyDate: draft.booking.readyDate, lastDay }, session.locale),
+            token: `#${String(booked.field.token).padStart(3, "0")}`,
+          }),
+        );
+      }
       const field = await store.getField(draft.chcId, draft.fieldId);
       // The draft names a field; this phone must still be allowed to change it.
       if (!field || !authorize(session.principal, "RequestSooner", fieldResource(field)).allowed) return sender.text(phone, said.cannotShorten);
@@ -195,10 +237,11 @@ export function createWorker(deps: WorkerDeps) {
       await store.useWhatsAppDraft(first, phone, now().toISOString());
       return sender.text(phone, said.cancelled);
     }
-    return sendMenu(phone, session.locale);
+    return sendMenu(session);
   }
 
-  async function agentTurn(session: FarmerSession, text: string) {
+  /** `noFieldsLead`: what a registered farmer with no field yet reads above the menu. */
+  async function agentTurn(session: FarmerSession, text: string, noFieldsLead: string | null) {
     const phone = session.principal.phone;
     const said = words(session.locale);
     let reply: string | null = null;
@@ -210,12 +253,13 @@ export function createWorker(deps: WorkerDeps) {
       logger.warn({ phone: maskPhone(phone), error: error instanceof Error ? error.name : "unknown" }, "whatsapp agent failed; template reply");
     }
     if (session.calls.length === 0) {
-      // No tool, no facts: either the model failed, or the question was not about their dates.
-      return sendMenu(phone, session.locale, failed ? said.agentUnavailable : said.offTopic);
+      // No tool, no facts: either the model failed, or the question was not about their dates (a
+      // farmer with no field yet is shown how to book one).
+      return sendMenu(session, failed ? said.agentUnavailable : (noFieldsLead ?? said.offTopic));
     }
-    // A drafted change is announced only by our own Confirm message: the model's words could say
-    // "done" for something that has not happened, and that is not a number the check could catch.
-    if (session.pending.some((action) => action.kind === "confirm")) return sendCalls(session);
+    // A drafted change or booking is announced only by our own Confirm message: the model's words
+    // could say "done" for something that has not happened, and that is not a number the check could catch.
+    if (session.pending.some((action) => action.kind === "confirm" || action.kind === "confirmBooking")) return sendCalls(session);
     const check = reply ? checkReply(reply, session.calls) : { ok: false, unsupported: [] };
     if (reply && check.ok) {
       await sender.text(phone, reply);
@@ -237,28 +281,29 @@ export function createWorker(deps: WorkerDeps) {
     }
     const principal: FarmerPhonePrincipal = { kind: "farmerPhone", phone };
     const probe = new FarmerSession(deps, principal, "en", now);
-    if ((await probe.fields()).length === 0) {
-      // No booking: one fixed reply, and the model is never called. A farmer who registered on the
-      // web is pointed at booking a field; an unknown number at registering (or their helper).
+    const hasFields = (await probe.fields()).length > 0;
+    const account = hasFields ? null : await store.getFarmerAccount(phone);
+    if (!hasFields && !account) {
+      // Never seen: one fixed reply, and the model is never called. Registering (name and their own
+      // consent) happens on the web, or their village helper books for them.
       const web = config.WEB_BASE_URL.replace(/\/$/, "");
-      const account = await store.getFarmerAccount(phone);
-      if (account) await sender.text(phone, words(chooseLocale(account.language, message.text)).noBookingsYet(account.name, `${web}/farmer/new`), { previewUrl: false });
-      else await sender.text(phone, words(scriptLocale(message.text) ?? "en").unknownNumber(`${web}/farmer/signin`), { previewUrl: false });
+      await sender.text(phone, words(scriptLocale(message.text) ?? "en").unknownNumber(`${web}/farmer/signin`), { previewUrl: false });
       return;
     }
     if (!limiter.allow(phone, at.getTime())) {
       logger.warn({ phone: maskPhone(phone) }, "whatsapp rate limit: message dropped");
       return;
     }
-    const session = new FarmerSession(deps, principal, chooseLocale(await storedLanguage(probe), message.text), now);
+    const session = new FarmerSession(deps, principal, chooseLocale(await storedLanguage(probe, account?.language ?? null), message.text), now);
+    const noFieldsLead = account ? words(session.locale).noBookingsYet(account.name) : null;
     logger.info({ phone: maskPhone(phone), kind: message.kind }, "whatsapp message");
     if (message.kind === "reply" && message.replyId) return handleReply(session, message.replyId);
     if (message.kind === "text" && message.text) {
-      if (config.AGENT_ENABLED && deps.runner) return agentTurn(session, message.text);
-      return sendMenu(phone, session.locale);
+      if (config.AGENT_ENABLED && deps.runner) return agentTurn(session, message.text, noFieldsLead);
+      return sendMenu(session, noFieldsLead ?? undefined);
     }
-    if (message.kind === "audio") return sendMenu(phone, session.locale, words(session.locale).voiceNotSupported);
-    return sendMenu(phone, session.locale);
+    if (message.kind === "audio") return sendMenu(session, words(session.locale).voiceNotSupported);
+    return sendMenu(session, noFieldsLead ?? undefined);
   }
 
   return {

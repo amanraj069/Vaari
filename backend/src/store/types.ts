@@ -179,12 +179,18 @@ export type LoginTokenRecord = { jti: string; phone: string; expiresAt: string; 
  * A change a farmer asked for on WhatsApp ("I cannot wait longer"), waiting for their Confirm tap.
  * Only a Confirm button reply naming this id, from this phone, before expiresAt, performs it, once.
  */
+/**
+ * A change a farmer asked for on WhatsApp, made only when they tap Confirm. Without `booking` it
+ * shortens the waiting limit of field `fieldId`; with `booking` it books a new field at centre
+ * `chcId` (fieldId is then empty and waitingLimitDays repeats the booking's).
+ */
 export type WhatsAppDraftRecord = {
   draftId: string;
   phone: string;
   chcId: string;
   fieldId: string;
   waitingLimitDays: number;
+  booking?: { villageId: string; acres: number; readyDate: string; waitingLimitDays: number };
   createdAt: string;
   expiresAt: string;
   usedAt: string | null;

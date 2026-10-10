@@ -7,9 +7,12 @@
 import type { Locale } from "../shared";
 import { formatDate } from "../explain/templates";
 
+/** A booking with its dates already in words (formatDate), for the Confirm and "booked" messages. */
+export type BookingWords = { village: string; centre: string; acres: number; readyDate: string; lastDay: string };
+
 type Words = {
   unknownNumber: (registerUrl: string) => string;
-  noBookingsYet: (name: string, bookUrl: string) => string;
+  noBookingsYet: (name: string) => string;
   offTopic: string;
   agentUnavailable: string;
   voiceNotSupported: string;
@@ -19,6 +22,12 @@ type Words = {
   menuWhy: string;
   menuWait: string;
   menuPage: string;
+  menuBook: string;
+  bookAsk: string;
+  bookOnWeb: (url: string) => string;
+  bookConfirmBody: (booking: BookingWords) => string;
+  booked: (booking: BookingWords & { token: string }) => string;
+  bookFailed: string;
   pickField: string;
   pickFieldButton: string;
   pickDays: (lastDay: string) => string;
@@ -44,7 +53,7 @@ type Words = {
 const WORDS: Record<Locale, Words> = {
   en: {
     unknownNumber: (registerUrl) => `I could not find this number on Vaari. Register at ${registerUrl}, or ask your village helper to book for you.`,
-    noBookingsYet: (name, bookUrl) => `Hello ${name}. You have no field booked yet. Book one at ${bookUrl} and I will tell you its machine date here.`,
+    noBookingsYet: (name) => `Hello ${name}. You have no field booked yet. Tap Book a field and I will tell you its machine date here.`,
     offTopic: "Sorry, I can only help with your machine dates. Tap the menu to choose.",
     agentUnavailable: "I cannot answer in words right now. Tap the menu to choose.",
     voiceNotSupported: "I cannot listen to voice notes yet. Please type, or tap the menu.",
@@ -54,6 +63,15 @@ const WORDS: Record<Locale, Words> = {
     menuWhy: "Why this day",
     menuWait: "I cannot wait longer",
     menuPage: "My fields page",
+    menuBook: "Book a field",
+    bookAsk:
+      "Tell me in one message: your village, how many acres, and the last day you can wait for the machine. Add the harvest day if it is not today. For example: 4 acres in Balian, I can wait until 3 November.",
+    bookOnWeb: (url) => `Book your field on this page: ${url}\nThe link opens once, for 15 minutes. Then tap "Book a new field".`,
+    bookConfirmBody: (booking) =>
+      `Please check your booking:\nVillage: ${booking.village}\nField: ${booking.acres} acres\nHarvest ready: ${booking.readyDate}\nLast day you can wait: ${booking.lastDay}\nMachine centre: ${booking.centre}\n\nTap Confirm to book it. Nothing is booked until you do.`,
+    booked: (booking) =>
+      `Booked. Your token is ${booking.token}: ${booking.acres} acres in ${booking.village}, harvest ready ${booking.readyDate}, you can wait until ${booking.lastDay}.\n\nThe operator at ${booking.centre} has been told. You will get your machine date as soon as the operator confirms the plan, and I will send it here with your slot link.`,
+    bookFailed: "I could not book this field, so nothing was booked. Please send your village, acres and the last day you can wait again, or ask your village helper.",
     pickField: "Which field?",
     pickFieldButton: "Fields",
     pickDays: (lastDay) => `Your last waiting day is ${lastDay}. How many days after harvest can you wait now?`,
@@ -78,7 +96,7 @@ const WORDS: Record<Locale, Words> = {
   },
   pa: {
     unknownNumber: (registerUrl) => `ਮੈਨੂੰ ਵਾਰੀ 'ਤੇ ਇਹ ਨੰਬਰ ਨਹੀਂ ਮਿਲਿਆ। ${registerUrl} 'ਤੇ ਰਜਿਸਟਰ ਕਰੋ, ਜਾਂ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਬੁਕਿੰਗ ਲਈ ਕਹੋ।`,
-    noBookingsYet: (name, bookUrl) => `ਸਤ ਸ੍ਰੀ ਅਕਾਲ ${name}। ਤੁਹਾਡਾ ਅਜੇ ਕੋਈ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਹੈ। ${bookUrl} 'ਤੇ ਬੁੱਕ ਕਰੋ, ਮੈਂ ਇੱਥੇ ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਦੱਸਾਂਗਾ।`,
+    noBookingsYet: (name) => `ਸਤ ਸ੍ਰੀ ਅਕਾਲ ${name}। ਤੁਹਾਡਾ ਅਜੇ ਕੋਈ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਹੈ। "ਖੇਤ ਬੁੱਕ ਕਰੋ" ਦਬਾਓ, ਮੈਂ ਇੱਥੇ ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਦੱਸਾਂਗਾ।`,
     offTopic: "ਮਾਫ਼ ਕਰਨਾ, ਮੈਂ ਸਿਰਫ਼ ਤੁਹਾਡੀਆਂ ਮਸ਼ੀਨ ਦੀਆਂ ਤਰੀਕਾਂ ਬਾਰੇ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     agentUnavailable: "ਮੈਂ ਹੁਣ ਸ਼ਬਦਾਂ ਵਿੱਚ ਜਵਾਬ ਨਹੀਂ ਦੇ ਸਕਦਾ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     voiceNotSupported: "ਮੈਂ ਅਜੇ ਆਵਾਜ਼ ਵਾਲੇ ਸੁਨੇਹੇ ਨਹੀਂ ਸੁਣ ਸਕਦਾ। ਕਿਰਪਾ ਕਰਕੇ ਲਿਖੋ, ਜਾਂ ਮੀਨੂ ਦਬਾਓ।",
@@ -88,6 +106,15 @@ const WORDS: Record<Locale, Words> = {
     menuWhy: "ਇਹ ਦਿਨ ਕਿਉਂ",
     menuWait: "ਹੋਰ ਉਡੀਕ ਨਹੀਂ",
     menuPage: "ਮੇਰੇ ਖੇਤਾਂ ਦਾ ਪੰਨਾ",
+    menuBook: "ਖੇਤ ਬੁੱਕ ਕਰੋ",
+    bookAsk:
+      "ਇੱਕ ਸੁਨੇਹੇ ਵਿੱਚ ਦੱਸੋ: ਤੁਹਾਡਾ ਪਿੰਡ, ਕਿੰਨੇ ਏਕੜ, ਅਤੇ ਮਸ਼ੀਨ ਲਈ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ। ਜੇ ਵਾਢੀ ਅੱਜ ਨਹੀਂ ਤਾਂ ਵਾਢੀ ਦਾ ਦਿਨ ਵੀ ਲਿਖੋ। ਜਿਵੇਂ: ਬਾਲੀਆਂ ਵਿੱਚ 4 ਏਕੜ, ਮੈਂ 3 ਨਵੰਬਰ ਤੱਕ ਉਡੀਕ ਕਰ ਸਕਦਾ ਹਾਂ।",
+    bookOnWeb: (url) => `ਇਸ ਪੰਨੇ 'ਤੇ ਆਪਣਾ ਖੇਤ ਬੁੱਕ ਕਰੋ: ${url}\nਲਿੰਕ ਇੱਕ ਵਾਰ, 15 ਮਿੰਟ ਲਈ ਖੁੱਲ੍ਹਦਾ ਹੈ। ਫਿਰ "ਨਵਾਂ ਖੇਤ ਬੁੱਕ ਕਰੋ" ਦਬਾਓ।`,
+    bookConfirmBody: (booking) =>
+      `ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਬੁਕਿੰਗ ਦੇਖੋ:\nਪਿੰਡ: ${booking.village}\nਖੇਤ: ${booking.acres} ਏਕੜ\nਵਾਢੀ ਤਿਆਰ: ${booking.readyDate}\nਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ: ${booking.lastDay}\nਮਸ਼ੀਨ ਕੇਂਦਰ: ${booking.centre}\n\nਬੁੱਕ ਕਰਨ ਲਈ ਪੁਸ਼ਟੀ ਦਬਾਓ। ਉਸ ਤੋਂ ਪਹਿਲਾਂ ਕੁਝ ਬੁੱਕ ਨਹੀਂ ਹੁੰਦਾ।`,
+    booked: (booking) =>
+      `ਬੁੱਕ ਹੋ ਗਿਆ। ਤੁਹਾਡਾ ਟੋਕਨ ${booking.token} ਹੈ: ${booking.village} ਵਿੱਚ ${booking.acres} ਏਕੜ, ਵਾਢੀ ਤਿਆਰ ${booking.readyDate}, ਤੁਸੀਂ ${booking.lastDay} ਤੱਕ ਉਡੀਕ ਕਰ ਸਕਦੇ ਹੋ।\n\n${booking.centre} ਦੇ ਆਪਰੇਟਰ ਨੂੰ ਦੱਸ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਜਿਵੇਂ ਹੀ ਆਪਰੇਟਰ ਯੋਜਨਾ ਦੀ ਪੁਸ਼ਟੀ ਕਰੇਗਾ, ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਮਿਲੇਗੀ, ਅਤੇ ਮੈਂ ਇੱਥੇ ਤੁਹਾਡੀ ਵਾਰੀ ਦੇ ਲਿੰਕ ਨਾਲ ਭੇਜਾਂਗਾ।`,
+    bookFailed: "ਮੈਂ ਇਹ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਕਰ ਸਕਿਆ, ਕੁਝ ਵੀ ਬੁੱਕ ਨਹੀਂ ਹੋਇਆ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪਿੰਡ, ਏਕੜ ਅਤੇ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ਫਿਰ ਭੇਜੋ, ਜਾਂ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਪੁੱਛੋ।",
     pickField: "ਕਿਹੜਾ ਖੇਤ?",
     pickFieldButton: "ਖੇਤ",
     pickDays: (lastDay) => `ਤੁਹਾਡੀ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ${lastDay} ਹੈ। ਹੁਣ ਤੁਸੀਂ ਵਾਢੀ ਤੋਂ ਬਾਅਦ ਕਿੰਨੇ ਦਿਨ ਉਡੀਕ ਕਰ ਸਕਦੇ ਹੋ?`,
@@ -112,7 +139,7 @@ const WORDS: Record<Locale, Words> = {
   },
   hi: {
     unknownNumber: (registerUrl) => `मुझे वारी पर यह नंबर नहीं मिला। ${registerUrl} पर रजिस्टर करें, या अपने गाँव के सहायक से बुकिंग करवाएँ।`,
-    noBookingsYet: (name, bookUrl) => `नमस्ते ${name}। आपका अभी कोई खेत बुक नहीं है। ${bookUrl} पर बुक करें, मैं यहाँ आपको मशीन की तारीख़ बताऊँगा।`,
+    noBookingsYet: (name) => `नमस्ते ${name}। आपका अभी कोई खेत बुक नहीं है। "खेत बुक करें" दबाएँ, मैं यहाँ आपको मशीन की तारीख़ बताऊँगा।`,
     offTopic: "माफ़ कीजिए, मैं सिर्फ़ आपकी मशीन की तारीख़ों में मदद कर सकता हूँ। चुनने के लिए मेन्यू दबाएँ।",
     agentUnavailable: "मैं अभी शब्दों में जवाब नहीं दे सकता। चुनने के लिए मेन्यू दबाएँ।",
     voiceNotSupported: "मैं अभी आवाज़ वाले संदेश नहीं सुन सकता। कृपया लिखें, या मेन्यू दबाएँ।",
@@ -122,6 +149,15 @@ const WORDS: Record<Locale, Words> = {
     menuWhy: "यह दिन क्यों",
     menuWait: "और इंतज़ार नहीं",
     menuPage: "मेरे खेतों का पेज",
+    menuBook: "खेत बुक करें",
+    bookAsk:
+      "एक संदेश में बताएँ: आपका गाँव, कितने एकड़, और मशीन के इंतज़ार का आख़िरी दिन। अगर कटाई आज नहीं है तो कटाई का दिन भी लिखें। जैसे: बालियां में 4 एकड़, मैं 3 नवंबर तक इंतज़ार कर सकता हूँ।",
+    bookOnWeb: (url) => `इस पेज पर अपना खेत बुक करें: ${url}\nलिंक एक बार, 15 मिनट के लिए खुलता है। फिर "नया खेत बुक करें" दबाएँ।`,
+    bookConfirmBody: (booking) =>
+      `कृपया अपनी बुकिंग देखें:\nगाँव: ${booking.village}\nखेत: ${booking.acres} एकड़\nकटाई तैयार: ${booking.readyDate}\nइंतज़ार का आख़िरी दिन: ${booking.lastDay}\nमशीन केंद्र: ${booking.centre}\n\nबुक करने के लिए पुष्टि दबाएँ। उससे पहले कुछ बुक नहीं होता।`,
+    booked: (booking) =>
+      `बुक हो गया। आपका टोकन ${booking.token} है: ${booking.village} में ${booking.acres} एकड़, कटाई तैयार ${booking.readyDate}, आप ${booking.lastDay} तक इंतज़ार कर सकते हैं।\n\n${booking.centre} के ऑपरेटर को बता दिया गया है। जैसे ही ऑपरेटर योजना की पुष्टि करेगा, आपको मशीन की तारीख़ मिलेगी, और मैं यहाँ आपकी बारी के लिंक के साथ भेजूँगा।`,
+    bookFailed: "मैं यह खेत बुक नहीं कर सका, कुछ भी बुक नहीं हुआ। कृपया अपना गाँव, एकड़ और इंतज़ार का आख़िरी दिन फिर भेजें, या अपने गाँव के सहायक से पूछें।",
     pickField: "कौन सा खेत?",
     pickFieldButton: "खेत",
     pickDays: (lastDay) => `आपके इंतज़ार का आख़िरी दिन ${lastDay} है। अब आप कटाई के बाद कितने दिन इंतज़ार कर सकते हैं?`,
@@ -156,5 +192,5 @@ export function promiseWords(promise: { kind: "firm"; date: string } | { kind: "
 }
 
 /** Menu and confirmation ids that are ours alone (a farmer cannot type a button id). */
-export const MENU_ACTIONS = ["date", "why", "wait", "page"] as const;
+export const MENU_ACTIONS = ["date", "why", "wait", "book", "page"] as const;
 export type MenuAction = (typeof MENU_ACTIONS)[number];

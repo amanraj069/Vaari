@@ -47,12 +47,22 @@ describe("worker basics (model off)", () => {
     expect(spy.calls).toBe(0);
   });
 
-  it("a farmer who registered on the web but booked nothing is pointed at booking a field", async () => {
+  it("a farmer who registered on the web but booked nothing gets a menu with only 'Book a field'", async () => {
     await runtime.runtime.dependencies.store.createFarmerAccount({
       phone: "+447700900997", farmerId: "farmer-web", name: "Gurpreet Singh", language: "pa", consentAt: "2026-10-31T10:00:00.000Z", consentBy: "farmer", createdAt: "2026-10-31T10:00:00.000Z",
     });
     await runtime.deliver(messageBody({ from: "447700900997", text: "hey" }));
-    expect(lastTo(runtime, "+447700900997")).toMatchObject({ type: "text", body: pa.noBookingsYet("Gurpreet Singh", "http://localhost:3000/farmer/new"), previewUrl: false });
+    const menu = lastTo(runtime, "+447700900997");
+    expect(menu).toMatchObject({ type: "list", body: `${pa.noBookingsYet("Gurpreet Singh")}\n\n${pa.menuBody}` });
+    expect(menu?.type === "list" && menu.rows.map((row) => row.id)).toEqual(["menu:book"]);
+    // Model off: "Book a field" sends the one-time link to the web form, preview off.
+    await runtime.deliver(messageBody({ from: "447700900997", listRow: "menu:book" }));
+    const link = lastTo(runtime, "+447700900997");
+    expect(link).toMatchObject({ type: "text", previewUrl: false });
+    expect(link?.type === "text" && /\/farmer\/login\/[\w.-]+/.test(link.body)).toBe(true);
+    // "My date" from an old menu, with no field: the menu again, never an empty list.
+    await runtime.deliver(messageBody({ from: "447700900997", listRow: "menu:date" }));
+    expect(lastTo(runtime, "+447700900997")).toMatchObject({ type: "list", body: pa.menuBody });
     expect(spy.calls).toBe(0);
   });
 
@@ -66,7 +76,7 @@ describe("worker basics (model off)", () => {
     await runtime.deliver(messageBody({ from: JASWINDER, text: "when is my machine coming?" }));
     const menu = lastTo(runtime, DEMO_FARMER_PHONE);
     expect(menu).toMatchObject({ type: "list", body: pa.menuBody, buttonLabel: pa.menuButton });
-    expect(menu?.type === "list" && menu.rows.map((row) => row.id)).toEqual(["menu:date", "menu:why", "menu:wait", "menu:page"]);
+    expect(menu?.type === "list" && menu.rows.map((row) => row.id)).toEqual(["menu:date", "menu:why", "menu:wait", "menu:book", "menu:page"]);
     expect(spy.calls).toBe(0);
   });
 
