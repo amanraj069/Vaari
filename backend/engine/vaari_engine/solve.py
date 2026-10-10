@@ -25,12 +25,18 @@ from .route import build_routes
 from .search import plan_by_search
 
 
-def shape_new_promise(problem: Problem, field_day: int, ready_day: int, burn_deadline: int) -> FirmPromise | WindowPromise:
+def shape_new_promise(problem: Problem, field_day: int, ready_day: int, burn_deadline: int, first_day: int | None = None) -> FirmPromise | WindowPromise:
+    """A new promise for a field planned on `field_day` (its last part's day). A field split over
+    several days is sown from `first_day`: the window must start no later than that, or the plan
+    that made the promise would already break it (firm promises are "on or before", so the last
+    day covers every part)."""
     firm_until = problem.request.today + problem.settings.firm_within_days
     if field_day <= firm_until:
         return FirmPromise(kind="firm", day=field_day)
     half_width = problem.settings.window_half_width_days
     window_start = max(ready_day, field_day - half_width, problem.plan_start)
+    if first_day is not None:
+        window_start = min(window_start, first_day)
     # A window never reaches past the last day the farmer said they can wait (unless the
     # planned day itself is already past it, which the operator sees as burn risk).
     window_end = min(field_day + half_width, max(field_day, burn_deadline))
@@ -53,13 +59,16 @@ def solve(request: SolveRequest, problem: Problem | None = None, assignment: Ass
     assignment = assignment or assign_with_chosen_method(problem)
 
     field_days: dict[str, int] = {}
+    first_days: dict[str, int] = {}
     unserved_field_ids: list[str] = []
     for field in request.fields:
         jobs = problem.jobs_by_field[field.id]
         if any(job.job_id in assignment.unserved_job_ids for job in jobs):
             unserved_field_ids.append(field.id)
             continue
-        field_days[field.id] = max(assignment.day_machine_by_job[job.job_id][1] for job in jobs)
+        part_days = [assignment.day_machine_by_job[job.job_id][1] for job in jobs]
+        field_days[field.id] = max(part_days)
+        first_days[field.id] = min(part_days)
 
     firm_until = request.today + problem.settings.firm_within_days
     promises: list[PromiseOut] = []
@@ -67,14 +76,18 @@ def solve(request: SolveRequest, problem: Problem | None = None, assignment: Ass
         field_day = field_days.get(field.id)
         previous = field.promise
         if field.id in assignment.broken_field_ids:
-            new_promise = shape_new_promise(problem, field_day, field.ready_day, field.ready_day + field.waiting_limit_days) if field_day is not None else None
+            new_promise = (
+                shape_new_promise(problem, field_day, field.ready_day, field.ready_day + field.waiting_limit_days, first_days.get(field.id))
+                if field_day is not None
+                else None
+            )
             promises.append(PromiseOut(field_id=field.id, promise=new_promise, previous=previous, changed=True, broken=True))
         elif previous is None:
             if field_day is not None:
                 promises.append(
                     PromiseOut(
                         field_id=field.id,
-                        promise=shape_new_promise(problem, field_day, field.ready_day, field.ready_day + field.waiting_limit_days),
+                        promise=shape_new_promise(problem, field_day, field.ready_day, field.ready_day + field.waiting_limit_days, first_days.get(field.id)),
                         previous=None,
                         changed=True,
                         broken=False,
