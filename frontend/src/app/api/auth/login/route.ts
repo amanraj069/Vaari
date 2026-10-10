@@ -5,14 +5,18 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isStaffPick, rememberRolePick } from "@/lib/cognito";
 import { COOKIE, serverConfig } from "@/lib/server-config";
 
 const base64Url = (buffer: Buffer) => buffer.toString("base64url");
 
-export async function GET() {
+export async function GET(request: Request) {
   if (serverConfig.authMode !== "cognito" || !serverConfig.cognitoDomain) {
     return NextResponse.redirect(new URL("/signin?error=cognito_off", serverConfig.publicBaseUrl));
   }
+  // The role picked on /signin/<role>, for /welcome after the first sign-in.
+  const pick = new URL(request.url).searchParams.get("pick") ?? "";
+  if (isStaffPick(pick)) await rememberRolePick(pick);
   const verifier = base64Url(randomBytes(32));
   const challenge = base64Url(createHash("sha256").update(verifier).digest());
   const state = base64Url(randomBytes(16));

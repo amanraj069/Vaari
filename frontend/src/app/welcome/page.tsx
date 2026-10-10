@@ -22,7 +22,10 @@ export default async function WelcomePage() {
 
   const chcResponse = await apiFetch("/chcs").catch(() => null);
   const chcs = chcResponse?.ok ? z.array(chcOptionSchema).parse(await chcResponse.json()) : [];
-  const suggestedName = (await cookies()).get(COOKIE.displayName)?.value ?? (me.data.name.includes("@") ? "" : me.data.name);
+  const jar = await cookies();
+  const suggestedName = jar.get(COOKIE.displayName)?.value ?? (me.data.name.includes("@") ? "" : me.data.name);
+  // The role picked on /signin: helpers and officers are told how their access is granted.
+  const picked = jar.get(COOKIE.rolePick)?.value;
 
   return (
     <>
@@ -34,6 +37,7 @@ export default async function WelcomePage() {
           currentRole={me.data.role}
           locale={localeSchema.catch("en").parse(await getLocale())}
           operatorSelfService={serverConfig.demoMode}
+          pickedRole={picked === "helper" || picked === "officer" ? picked : null}
         />
       </PageMain>
     </>

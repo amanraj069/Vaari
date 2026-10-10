@@ -27,9 +27,11 @@ type Props = {
   currentRole: Role | null;
   locale: Locale;
   operatorSelfService: boolean;
+  /** Picked on /signin as a village helper or officer: their access comes from their office. */
+  pickedRole?: "helper" | "officer" | null;
 };
 
-export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operatorSelfService }: Props) {
+export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operatorSelfService, pickedRole = null }: Props) {
   const t = useTranslations("welcome");
   const router = useRouter();
   const refreshSession = useRefreshSession();
@@ -63,6 +65,11 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, operator
         <h1 className={PAGE_TITLE}>{t("title")}</h1>
         <p className="mt-2 text-ink-muted">{t("body")}</p>
       </div>
+      {pickedRole ? (
+        <p role="note" className="rounded-control border border-wheat-deep/30 bg-wheat-soft/50 p-4 text-base">
+          {t("pickedNote", { role: pickedRole })}
+        </p>
+      ) : null}
 
       <label className="block">
         <span className="font-medium">{t("nameLabel")}</span>

@@ -245,6 +245,27 @@ html.dark .hero-photo-in img {
     color-mix(in srgb, var(--color-paper) 10%, transparent) 75%
   );
 }
+/* Sign-in picture (AuthPhotoPanel): solid page colour under the words in the lower half, so every
+   line meets AA in both themes; clear in the upper third, where the sprouts are. */
+.photo-wash-auth {
+  background: linear-gradient(
+    to top,
+    var(--color-paper) 0%,
+    color-mix(in srgb, var(--color-paper) 97%, transparent) 42%,
+    color-mix(in srgb, var(--color-paper) 70%, transparent) 56%,
+    color-mix(in srgb, var(--color-paper) 0%, transparent) 72%
+  );
+}
+/* Browser autofill on sign-in forms keeps the theme's colours (Chrome paints it blue-grey). */
+.auth-form input:-webkit-autofill,
+.auth-form input:-webkit-autofill:hover,
+.auth-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-paper) inset;
+  box-shadow: 0 0 0 1000px var(--color-paper) inset;
+  transition: background-color 9999s ease-out 0s;
+}
 /* Closing card: the opening photo again. Paper under the words at the left, the sunrise showing
    through on the right behind the frosted role cards; an even wash on narrow screens. */
 /* A photographic panel that is dark in both themes (the /proof hero): the photo keeps its real

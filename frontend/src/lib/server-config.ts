@@ -10,6 +10,11 @@ export const serverConfig = {
   demoMode: (process.env.DEMO_MODE ?? "true") === "true",
   cognitoDomain: process.env.COGNITO_DOMAIN ?? "",
   cognitoClientId: process.env.COGNITO_CLIENT_ID ?? "",
+  // The user pool's region, for email sign-in (Cognito's own API). Empty: read from COGNITO_DOMAIN
+  // (<prefix>.auth.<region>.amazoncognito.com); set it when the domain is a custom one.
+  cognitoRegion: process.env.COGNITO_REGION ?? "",
+  // The user pool's password policy, for the live checklist on staff sign-up (lib/cognito.ts).
+  cognitoPasswordPolicy: process.env.COGNITO_PASSWORD_POLICY ?? "",
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "http://localhost:3000",
   secureCookies: (process.env.PUBLIC_BASE_URL ?? "").startsWith("https://"),
   // Shared with the API: proves the client address we forward is ours (rate limits per farmer).
@@ -30,6 +35,8 @@ export const COOKIE = {
   oauthState: "vaari_oauth",
   // Name from Google's ID token, only to pre-fill the /welcome form.
   displayName: "vaari_name",
+  // The role a person picked on /signin (helper, operator, officer), so /welcome can start from it.
+  rolePick: "vaari_role_pick",
   locale: "NEXT_LOCALE",
 } as const;
 

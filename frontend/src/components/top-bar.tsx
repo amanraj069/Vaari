@@ -83,7 +83,7 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
           <span aria-hidden className="size-11 animate-pulse rounded-full bg-line/70" />
         ) : me ? (
           <AccountMenu me={me} />
-        ) : pathname !== "/signin" ? (
+        ) : pathname !== "/signin" && !pathname.startsWith("/signin/") ? (
           <Link href="/signin" className="ml-1 inline-flex h-11 items-center whitespace-nowrap rounded-full border border-line-strong bg-surface px-4 text-sm font-medium hover:border-ink/50 sm:ml-0 sm:px-5">
             {t("signIn")}
           </Link>
