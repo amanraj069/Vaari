@@ -47,6 +47,7 @@ describe("no phone number leaves the API where it does not belong", () => {
   it("officer responses", async () => {
     expectNoPhone((await request(app).get("/me").set(bearer("officer")).expect(200)).body, "officer GET /me");
     expectNoPhone((await request(app).get("/chcs").set(bearer("officer")).expect(200)).body, "officer GET /chcs");
+    expectNoPhone((await request(app).get("/officer/overview").set(bearer("officer")).expect(200)).body, "officer GET /officer/overview");
     // Everything else an officer tries is refused, and the refusal carries no record either.
     for (const path of ["/operator/board", "/operator/queue", "/operator/plan", `/fields/${fieldId}/why`, `/fields/${fieldId}/slot-link`, "/facilitator/fields"]) {
       const response = await request(app).get(path).set(bearer("officer"));

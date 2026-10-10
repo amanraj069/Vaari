@@ -27,13 +27,15 @@ export const meSchema = z.object({
   // null until a new Google user picks a role on /welcome.
   role: roleSchema.nullable(),
   chcId: z.string().nullable(),
+  // The machine centre's name, for the dashboard's sidebar (null for officers and new users).
+  chcName: z.string().nullable().default(null),
   language: localeSchema,
   demo: z.boolean(),
   needsOnboarding: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 
-// Roles a new user can pick for themselves on /welcome (operator only in DEMO_MODE; the API checks).
+// Roles a new user may ask for on /welcome; operator is granted only to the Cognito "operator" group (the API checks).
 export const selfServiceRoleSchema = z.enum(["operator"]);
 
 /**
@@ -150,6 +152,14 @@ export const farmerHomeSchema = z.object({
 });
 export type FarmerHome = z.infer<typeof farmerHomeSchema>;
 
+/** GET /farmer/me: who a phone session belongs to, for the dashboard frame (no phone number in it). */
+export const farmerMeSchema = z.object({
+  // Null until the farmer gives a name (a code sign-in with no account and no booking yet).
+  name: z.string().nullable(),
+  registered: z.boolean(),
+});
+export type FarmerMe = z.infer<typeof farmerMeSchema>;
+
 export const villageOptionSchema = z.object({ id: z.string(), name: z.string(), namePa: z.string().nullable() });
 export type VillageOption = z.infer<typeof villageOptionSchema>;
 
@@ -169,7 +179,7 @@ export const farmerOtpSentSchema = z.object({
   channel: z.enum(["whatsapp", "demo"]),
   expiresInSeconds: z.number().int(),
   resendInSeconds: z.number().int(),
-  // DEMO delivery only (FARMER_OTP_DELIVERY=demo, DEMO_MODE): the code itself, shown on screen as a demo.
+  // A demo farmer's phone only (channel "demo"): the code itself, shown on screen as a demo.
   demoCode: otpCodeSchema.nullable(),
 });
 export type FarmerOtpSent = z.infer<typeof farmerOtpSentSchema>;
@@ -312,6 +322,31 @@ export const solverViewSchema = z.object({
   breaksProvenMinimal: z.boolean().nullable(),
 });
 
+/**
+ * One day of a plan, for the calendar and the workload grid: how many fields and acres it sows,
+ * how full each machine's day is (minutes used of the minutes it can work), rain and workshop days.
+ */
+export const planDaySchema = z.object({
+  date: z.string(),
+  rain: z.boolean(),
+  fields: z.number().int(),
+  acres: z.number(),
+  // Fields sown this day on or after the farmer's last waiting day (burn risk).
+  atRisk: z.number().int(),
+  machines: z.array(
+    z.object({
+      machineId: z.string(),
+      name: z.string(),
+      down: z.boolean(),
+      fields: z.number().int(),
+      acres: z.number(),
+      busyMinutes: z.number().int(),
+      capacityMinutes: z.number().int(),
+    }),
+  ),
+});
+export type PlanDay = z.infer<typeof planDaySchema>;
+
 /** /operator: the published plan the machines follow, plus anything waiting for a decision. */
 export const operatorBoardSchema = z.object({
   chc: z.object({ id: z.string(), name: z.string() }),
@@ -333,6 +368,11 @@ export const operatorBoardSchema = z.object({
     requested: z.number().int(),
     brokenThisSeason: z.number().int(),
   }),
+  // Every open field by risk, for the risk chart.
+  riskCounts: z.object({ safe: z.number().int(), tight: z.number().int(), at_risk: z.number().int(), unplanned: z.number().int() }),
+  // The published plan's days (empty before the first plan) and the day the lanes show (?date=).
+  days: z.array(planDaySchema),
+  selectedDate: z.string(),
   lanes: z.array(laneSchema),
   atRisk: z.array(queueItemSchema),
   solver: solverViewSchema.nullable(),
@@ -346,6 +386,9 @@ export const operatorPlanSchema = z.object({
   plan: planSummarySchema.nullable(),
   changes: planChangesViewSchema.nullable(),
   pins: z.array(z.object({ fieldId: z.string(), token: z.number().int(), farmerName: z.string(), machineName: z.string(), date: z.string() })),
+  // The plan's days for the calendar, and the day the lanes show (?date=; the plan's first day by default).
+  days: z.array(planDaySchema),
+  selectedDate: z.string(),
   lanes: z.array(laneSchema),
   newRequests: z.number().int(),
   attention: z.array(attentionItemSchema),
@@ -393,6 +436,70 @@ export const publicSummarySchema = z.object({
   villageCount: z.number().int(),
 });
 export type PublicSummary = z.infer<typeof publicSummarySchema>;
+
+/**
+ * GET /officer/overview: the district as an agriculture officer sees it. Aggregates only: counts
+ * per machine centre and per village, never a farmer's name, phone or field. Every number is
+ * counted from stored records (simulated demo data), the same way the operator's board counts them.
+ */
+const officerCountsSchema = z.object({
+  machinesWorking: z.number().int(),
+  machinesTotal: z.number().int(),
+  fieldsActive: z.number().int(),
+  acresActive: z.number(),
+  fieldsSown: z.number().int(),
+  promisesOpen: z.number().int(),
+  promisesOnTrack: z.number().int(),
+  promisesKept: z.number().int(),
+  promisesBroken: z.number().int(),
+  burnRisk: z.number().int(),
+  tight: z.number().int(),
+  waitingForDate: z.number().int(),
+});
+export type OfficerCounts = z.infer<typeof officerCountsSchema>;
+
+export const officerCentreSchema = officerCountsSchema.extend({
+  id: z.string(),
+  name: z.string(),
+  villageCount: z.number().int(),
+  lat: z.number(),
+  lon: z.number(),
+  // The published plan's first day; null before the first plan is approved.
+  planDate: z.string().nullable(),
+  // A newer plan is waiting for the operator's approval.
+  draftWaiting: z.boolean(),
+  // Worst delay of any field against first-come-first-served in the published plan.
+  maxDelayVsQueueDays: z.number().int().nullable(),
+});
+export type OfficerCentre = z.infer<typeof officerCentreSchema>;
+
+export const officerVillageSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  centreId: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+  fieldsActive: z.number().int(),
+  acresActive: z.number(),
+  fieldsSown: z.number().int(),
+  burnRisk: z.number().int(),
+  tight: z.number().int(),
+});
+export type OfficerVillage = z.infer<typeof officerVillageSchema>;
+
+export const officerOverviewSchema = z.object({
+  today: z.string(),
+  optimumLastDate: z.string(),
+  totals: officerCountsSchema.extend({ centres: z.number().int(), villages: z.number().int() }),
+  centres: z.array(officerCentreSchema),
+  // Villages with at least one booked field, most fields at burn risk first.
+  villages: z.array(officerVillageSchema),
+  // Fields and acres each published plan puts on each of the next days, all centres together.
+  sowingAhead: z.array(z.object({ date: z.string(), fields: z.number().int(), acres: z.number() })),
+  // Real district outlines (OpenStreetMap, data/boundaries.json): rings of [lon, lat].
+  districts: z.array(z.object({ name: z.string(), rings: z.array(z.array(z.tuple([z.number(), z.number()]))) })),
+});
+export type OfficerOverview = z.infer<typeof officerOverviewSchema>;
 
 /**
  * POST /fields. A facilitator books for a farmer (who has no account): the farmer's name, their

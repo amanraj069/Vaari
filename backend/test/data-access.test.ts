@@ -30,7 +30,9 @@ beforeAll(async () => {
   const googleVerifier: TokenVerifier = {
     async verify(token): Promise<Principal> {
       const user = await store.getUser(token);
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, demo: false };
+      // Tokens starting "google-operator" stand for members of the Cognito "operator" group.
+      const groupRole = token.startsWith("google-operator") ? ("operator" as const) : null;
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, demo: false };
     },
   };
   googleApp = createApp({ ...runtime.dependencies, verifier: googleVerifier });
@@ -74,7 +76,7 @@ describe("slot links", () => {
 });
 
 describe("real users and demo personas", () => {
-  const realUser = "google-real-user-1";
+  const realUser = "google-operator-real-1";
 
   it("a demo persona cannot change any profile", async () => {
     await request(app).post("/me/profile").set(bearer(tokens.facilitator!)).send({ name: "X", role: "operator", chcId: DEMO_CHC_ID, language: "en" }).expect(403);
