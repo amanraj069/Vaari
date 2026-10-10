@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { isSameOrigin } from "@/lib/same-origin";
 import { apiFetch } from "@/lib/session";
 
-const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "public/", "facilitator/", "slot/"];
+const ALLOWED_PREFIXES = ["me", "villages", "farmer/", "fields/", "operator/", "officer/", "public/", "facilitator/", "slot/"];
 // These answer with a farmer's session token: only their own route handlers call them, and keep the
 // token in the httpOnly cookie (/farmer/login/<token>, /api/farmer/otp/verify).
 const NEVER_FORWARDED = ["farmer/login", "farmer/otp/verify"];

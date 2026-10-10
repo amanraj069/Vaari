@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * One top bar for every page. Left: the mark and the links for whoever is signed in (operator:
- * Plan, Queue; facilitator: Book; visitors: See the proof). Farmers are not signed in: their
- * pages (/slot, /farmer) have their own small header. Right: three
- * same-size controls, language, theme and the account menu (or Sign in). On phones the links
- * drop to a second row so nothing is squeezed. With `overlay` (the landing page) it sits
- * transparent on top of the hero photo and visitors get section links.
+ * The top bar of every public page (landing, proof, sign-in, privacy). Left: the mark and the same
+ * links for everyone who is signed in, whatever their role: Dashboard and the proof (their own
+ * pages live in the dashboard's sidebar, and in the account menu). Visitors get the proof (and, on
+ * the landing page, its sections). Right: three same-size controls, language, theme and the
+ * account menu (or Sign in). On phones the links drop to a second row so nothing is squeezed. With
+ * `overlay` (the landing page) it sits transparent on top of the hero photo.
  */
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -39,16 +39,11 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
   }, []);
 
   let links: NavLink[] = [];
-  if (me?.role === "operator" && !me.needsOnboarding) {
-    links = [
-      { href: "/operator", label: t("today") },
-      { href: "/operator/plan", label: t("plan") },
-      { href: "/operator/queue", label: t("queue") },
-    ];
-  } else if (me?.role === "facilitator" && !me.needsOnboarding) {
-    // Facilitators book for farmers; no operator or officer pages.
-    links = [{ href: "/book", label: t("book") }];
-  } else if (!me && !session.isPending && !session.isError) {
+  if (me) {
+    // Signed in (staff or a farmer's phone session): one way to their dashboard, the same for every role.
+    const ready = me.kind === "farmer" || (!me.me.needsOnboarding && Boolean(me.me.role));
+    links = ready ? [{ href: "/dashboard", label: t("dashboard") }, { href: "/proof", label: t("proof") }] : [{ href: "/proof", label: t("proof") }];
+  } else if (!session.isPending && !session.isError) {
     links = overlay
       ? [
           { href: "#problem", label: t("problem"), wideOnly: true },
@@ -57,6 +52,7 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
         ]
       : [{ href: "/proof", label: t("proof") }];
   }
+  const onSignInPage = pathname === "/signin" || pathname.startsWith("/signin/") || pathname === "/farmer/signin";
 
   const innerContent = (
     <>
@@ -82,8 +78,8 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
         {session.isPending || (session.isError && !me) ? (
           <span aria-hidden className="size-11 animate-pulse rounded-full bg-line/70" />
         ) : me ? (
-          <AccountMenu me={me} />
-        ) : pathname !== "/signin" && !pathname.startsWith("/signin/") ? (
+          <AccountMenu viewer={me} />
+        ) : !onSignInPage ? (
           <Link href="/signin" className="ml-1 inline-flex h-11 items-center whitespace-nowrap rounded-full border border-line-strong bg-surface px-4 text-sm font-medium hover:border-ink/50 sm:ml-0 sm:px-5">
             {t("signIn")}
           </Link>

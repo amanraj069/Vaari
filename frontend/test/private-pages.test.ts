@@ -10,7 +10,7 @@ describe("private pages", () => {
       { key: "X-Robots-Tag", value: "noindex, nofollow" },
       { key: "Referrer-Policy", value: "no-referrer" },
     ]);
-    expect(PRIVATE_PAGE_SOURCES).toEqual(["/slot/:path*", "/farmer", "/farmer/:path*"]);
+    expect(PRIVATE_PAGE_SOURCES).toEqual(["/slot/:path*", "/farmer", "/farmer/:path*", "/dashboard", "/dashboard/:path*"]);
     expect(await privatePageHeaders()).toEqual(PRIVATE_PAGE_SOURCES.map((source) => ({ source, headers: PRIVATE_PAGE_HEADERS })));
     expect(PRIVATE_PAGE_METADATA).toEqual({ robots: { index: false, follow: false }, referrer: "no-referrer" });
   });
