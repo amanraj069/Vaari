@@ -9,12 +9,12 @@ import type { ComponentProps, ReactNode } from "react";
 type Variant = "primary" | "accent" | "secondary" | "quiet";
 const VARIANT: Record<Variant, string> = {
   primary: "bg-ink text-paper hover:bg-ink/90 border border-ink",
-  accent: "bg-wheat text-on-wheat hover:bg-wheat/90 border border-wheat-deep/30",
+  accent: "bg-action text-on-action hover:bg-action/90 border border-action",
   secondary: "bg-surface text-ink border border-line-strong hover:border-ink/50",
   quiet: "bg-transparent text-ink hover:bg-ink/5 border border-transparent",
 };
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-control px-5 min-h-11 font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-control px-5 min-h-11 font-medium transition-[color,background-color,border-color,scale] duration-150 enabled:active:scale-[0.98] [&:not(button)]:active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function Button({ variant = "primary", className = "", ...props }: ComponentProps<"button"> & { variant?: Variant }) {
   return <button className={`${BASE} ${VARIANT[variant]} ${className}`} {...props} />;

@@ -17,7 +17,9 @@ export default defineConfig({
       command: "npm run dev",
       cwd: "../backend",
       url: "http://localhost:4100/healthz",
-      env: { PORT: "4100", REPO: "memory", AUTH_MODE: "demo", DEMO_MODE: "true", ENGINE_TIME_LIMIT_SECONDS: "1", NODE_ENV: "development", PROXY_SHARED_SECRET: "e2e-proxy-secret-at-least-32-characters" },
+      // DEMO_FARMER_PHONES: the farmer sign-in spec's numbers (+91 90000 00251/252/301/302) are demo farmer
+      // phones, so their codes show on screen and nothing is ever sent to them.
+      env: { PORT: "4100", REPO: "memory", AUTH_MODE: "demo", ENGINE_TIME_LIMIT_SECONDS: "1", NODE_ENV: "development", PROXY_SHARED_SECRET: "e2e-proxy-secret-at-least-32-characters", DEMO_FARMER_PHONES: "+919000000251,+919000000252,+919000000301,+919000000302" },
       reuseExistingServer: false,
       timeout: 120_000,
     },
@@ -29,7 +31,6 @@ export default defineConfig({
         NEXT_DIST_DIR: ".next-e2e",
         API_URL: "http://localhost:4100",
         AUTH_MODE: "demo",
-        DEMO_MODE: "true",
         PUBLIC_BASE_URL: "http://localhost:3100",
         PROXY_SHARED_SECRET: "e2e-proxy-secret-at-least-32-characters",
         WHATSAPP_BUSINESS_NUMBER: "910000000000",

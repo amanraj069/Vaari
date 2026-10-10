@@ -77,7 +77,7 @@ export function FarmerTicketForm({ villages, today, onSubmit }: Props) {
         </p>
         <p className="mt-3">{tr("successNoDate")}</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <ButtonLink href="/farmer" variant="accent" className="min-h-12">
+          <ButtonLink href="/dashboard" variant="accent" className="min-h-12">
             {tr("seeMyFields")}
           </ButtonLink>
           <Button variant="quiet" className="min-h-12" onClick={reset}>

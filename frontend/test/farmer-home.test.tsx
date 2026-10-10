@@ -7,7 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FarmerHomeView, type LinkProblem } from "@/components/farmer-home";
+import { FarmerHomeView } from "@/components/farmer-home";
+import { FarmerLinkNotice } from "@/components/farmer-link-notice";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { SAMPLE_FIELDS, SAMPLE_TODAY } from "@/lib/samples";
 import type { FarmerHome } from "@/shared";
@@ -35,12 +36,12 @@ function serve(answer: { status: number; body: unknown }) {
   );
 }
 
-function renderHome(options: { whatsappNumber?: string | null; linkProblem?: LinkProblem; locale?: "en" | "pa" | "hi" } = {}) {
+function renderHome(options: { whatsappNumber?: string | null; locale?: "en" | "pa" | "hi" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderWithIntl(
     <ThemeProvider>
       <QueryClientProvider client={client}>
-        <FarmerHomeView whatsappNumber={options.whatsappNumber === undefined ? "910000000000" : options.whatsappNumber} linkProblem={options.linkProblem ?? null} />
+        <FarmerHomeView whatsappNumber={options.whatsappNumber === undefined ? "910000000000" : options.whatsappNumber} />
       </QueryClientProvider>
     </ThemeProvider>,
     options.locale,
@@ -49,7 +50,7 @@ function renderHome(options: { whatsappNumber?: string | null; linkProblem?: Lin
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("/farmer (phone session)", () => {
+describe("/dashboard for a farmer (phone session)", () => {
   it("lists every field for the phone, each with its machine centre, and offers a new booking", async () => {
     serve({ status: 200, body: HOME });
     renderHome();
@@ -60,7 +61,7 @@ describe("/farmer (phone session)", () => {
     expect(screen.getByText("Other Society")).toBeInTheDocument();
     expect(screen.getByText(/Every field booked with your phone number/)).toBeInTheDocument();
     // A new field is booked on its own page; existing fields are changed from their own links.
-    expect(screen.getByRole("link", { name: "Book a new field" })).toHaveAttribute("href", "/farmer/new");
+    expect(screen.getByRole("link", { name: "Book a new field" })).toHaveAttribute("href", "/dashboard/book");
     expect(screen.queryByRole("button", { name: /cannot wait/i })).not.toBeInTheDocument();
     expect(requests[0]).toContain("/api/proxy/farmer/home?lang=en");
   });
@@ -92,11 +93,12 @@ describe("/farmer (phone session)", () => {
     expect(screen.queryByRole("link", { name: "Book a new field" })).not.toBeInTheDocument();
   });
 
-  it("explains a used or expired login link", async () => {
-    serve({ status: 401, body: { error: "UNAUTHENTICATED" } });
-    renderHome({ linkProblem: "expired" });
-    expect(await screen.findByText("This link has already been used or has expired")).toBeInTheDocument();
+  it("the farmer sign-in explains a used or expired login link, and a sign-in that ended", () => {
+    renderWithIntl(<FarmerLinkNotice problem="expired" />);
+    expect(screen.getByText("This link has already been used or has expired")).toBeInTheDocument();
     expect(screen.getByText(/each link opens once and only for 15 minutes/)).toBeInTheDocument();
+    renderWithIntl(<FarmerLinkNotice problem="ended" />);
+    expect(screen.getByText("Your sign-in has ended")).toBeInTheDocument();
   });
 
   it("without a WhatsApp number configured, shows no WhatsApp button or card", async () => {
@@ -140,7 +142,8 @@ describe("/farmer (phone session)", () => {
     expect(await screen.findAllByRole("listitem")).not.toHaveLength(0);
     vi.unstubAllGlobals();
     serve({ status: 401, body: { error: "UNAUTHENTICATED" } });
-    renderHome({ locale, linkProblem: "expired" });
+    renderHome({ locale });
     expect(await screen.findAllByRole("link")).not.toHaveLength(0);
+    for (const problem of ["expired", "unavailable", "ended"] as const) renderWithIntl(<FarmerLinkNotice problem={problem} />, locale);
   });
 });

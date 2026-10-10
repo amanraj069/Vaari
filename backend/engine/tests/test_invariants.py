@@ -35,10 +35,12 @@ def assert_promises_kept(request: dict, response) -> None:
             continue
         day = response.field_days.get(field["id"])
         assert day is not None, f"promised field {field['id']} left unserved without being reported broken"
-        if promise["kind"] == "firm":
-            assert day <= promise["day"], f"{field['id']} sown day {day} after firm {promise['day']}"
-        else:
-            assert promise["startDay"] <= day <= promise["endDay"], f"{field['id']} sown day {day} outside window"
+        # Every part of a field split over several days, not only its last day.
+        for part in (assignment for assignment in response.assignments if assignment.field_id == field["id"]):
+            if promise["kind"] == "firm":
+                assert part.day <= promise["day"], f"{field['id']} part {part.part} sown day {part.day} after firm {promise['day']}"
+            else:
+                assert promise["startDay"] <= part.day <= promise["endDay"], f"{field['id']} part {part.part} sown day {part.day} outside window"
 
 
 def assert_capacity_and_readiness(request: dict, response) -> None:
@@ -186,6 +188,37 @@ def test_large_field_is_split_into_parts(method):
     parts = [assignment for assignment in response.assignments if assignment.field_id == "f00"]
     assert len(parts) >= 2
     assert response.field_days["f00"] == max(part.day for part in parts)
+
+
+def assert_new_promises_cover_every_part(response) -> None:
+    """A new promise covers every day the machine comes, so the plan that made it keeps it."""
+    for item in response.promises:
+        if item.promise is None or item.broken:
+            continue
+        for part in (assignment for assignment in response.assignments if assignment.field_id == item.field_id):
+            if isinstance(item.promise, FirmPromise):
+                assert part.day <= item.promise.day, f"{item.field_id} part {part.part} on day {part.day} after its firm day {item.promise.day}"
+            else:
+                assert item.promise.start_day <= part.day <= item.promise.end_day, (
+                    f"{item.field_id} part {part.part} on day {part.day} outside its window {item.promise.start_day}-{item.promise.end_day}"
+                )
+
+
+@PLANNERS
+def test_split_fields_promise_every_part_and_replan_keeps_them(method):
+    # Found on the demo season at a 24 October clock: a field split over days 33 and 29 got the
+    # window 32-34, so its own plan broke it and the next re-plan broke another farmer's promise.
+    for seed in range(1, 21):
+        request = with_method(make_request(field_count=16, machine_count=2, seed=seed), method)
+        for index, field in enumerate(request["fields"]):
+            if index % 4 == 0:
+                field["acres"] = 9.0 + (seed + index) % 5  # big enough to be split over days
+        first = solve(SolveRequest.model_validate(request))
+        assert_new_promises_cover_every_part(first)
+        promised_request = adopt_promises(request, first)
+        second = solve(SolveRequest.model_validate(promised_request))
+        assert not any(item.broken for item in second.promises), f"seed {seed}: a re-plan with nothing changed broke a promise"
+        assert_promises_kept(promised_request, second)
 
 
 @PLANNERS

@@ -16,7 +16,7 @@ describe("sign-in choices", () => {
   const renderChooser = (googleOn = true) =>
     renderWithIntl(
       <QueryClientProvider client={new QueryClient()}>
-        <SignInChooser people={people} demoMode googleOn={googleOn} />
+        <SignInChooser people={people} googleOn={googleOn} />
       </QueryClientProvider>,
     );
 
@@ -38,7 +38,7 @@ describe("sign-in choices", () => {
   it("Log in / Register opens the role last used: from the address, else this browser", () => {
     renderWithIntl(
       <QueryClientProvider client={new QueryClient()}>
-        <SignInChooser people={people} demoMode googleOn initialPick="officer" />
+        <SignInChooser people={people} googleOn initialPick="officer" />
       </QueryClientProvider>,
     );
     expect(screen.getByRole("link", { name: "Log in / Register" })).toHaveAttribute("href", "/signin/officer");

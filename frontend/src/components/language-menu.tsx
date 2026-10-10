@@ -7,23 +7,28 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Dropdown, MENU_ITEM_CLASS } from "./dropdown";
 
-const LANGUAGES = [
+export const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "pa", label: "ਪੰਜਾਬੀ" },
   { code: "hi", label: "हिन्दी" },
 ] as const;
 
-export function LanguageMenu() {
-  const locale = useLocale();
-  const t = useTranslations("nav");
+/** Switches the site's language (a cookie) and re-renders the page in it. Shared with the profile page. */
+export function useChooseLanguage() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const current = LANGUAGES.find((language) => language.code === locale) ?? LANGUAGES[0];
-
   async function choose(code: string) {
     await fetch("/api/locale", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ locale: code }) });
     startTransition(() => router.refresh());
   }
+  return { choose, pending };
+}
+
+export function LanguageMenu() {
+  const locale = useLocale();
+  const t = useTranslations("nav");
+  const { choose, pending } = useChooseLanguage();
+  const current = LANGUAGES.find((language) => language.code === locale) ?? LANGUAGES[0];
 
   return (
     <Dropdown

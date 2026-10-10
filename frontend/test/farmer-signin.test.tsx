@@ -98,7 +98,7 @@ describe("farmer sign-in", () => {
     await userEvent.type(screen.getByRole("textbox", { name: /Your name/ }), "Paramjit Kaur");
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(calls.at(-1)).toEqual({ url: ACCOUNT, body: { name: "Paramjit Kaur", consent: true, language: "en" } });
-    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalledWith("/farmer"));
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalledWith("/dashboard"));
     // The code went to our route handler only; nothing ever posts a code through the proxy.
     expect(calls.filter((call) => call.url === VERIFY).map((call) => call.body)).toEqual([
       { phone: "+919000000201", code: "111111" },
@@ -110,13 +110,13 @@ describe("farmer sign-in", () => {
   it("a known number (an account, or a helper's booking) goes straight to its page", async () => {
     serve({ [REQUEST]: [{ status: 200, body: DEMO_SENT }], [VERIFY]: [{ status: 200, body: { signedIn: true, registered: true } }] });
     const onSignedIn = vi.fn();
-    renderWithIntl(<FarmerSigninForm next="/farmer/new" onSignedIn={onSignedIn} />);
+    renderWithIntl(<FarmerSigninForm next="/dashboard/book" onSignedIn={onSignedIn} />);
     await userEvent.type(screen.getByRole("textbox", { name: /Mobile number/ }), "9000000207");
     await userEvent.click(screen.getByRole("checkbox", { name: /I agree to get messages/ }));
     await userEvent.click(screen.getByRole("button", { name: "Send code on WhatsApp" }));
     await userEvent.type(await screen.findByRole("textbox", { name: "6-digit code" }), "482913");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalledWith("/farmer/new"));
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalledWith("/dashboard/book"));
     expect(screen.queryByRole("heading", { name: "Welcome to Vaari" })).not.toBeInTheDocument();
   });
 

@@ -15,7 +15,7 @@ type Row = { fieldId: string; token: number; farmerName: string; villageName: st
 function Group({ icon: Icon, title, rows, tone = "neutral" }: { icon: LucideIcon; title: string; rows: Row[]; tone?: "neutral" | "risk" }) {
   if (rows.length === 0) return null;
   return (
-    <details open={tone === "risk" || rows.length <= 4} className={`rounded-control border p-3 ${tone === "risk" ? "border-ember/40 bg-ember-soft/50" : "border-line"}`}>
+    <details open={tone === "risk" || rows.length <= 4} className={`rounded-control border p-3 ${tone === "risk" ? "border-ember/40 bg-ember-soft/50" : "border-line bg-surface"}`}>
       <summary className={`flex cursor-pointer items-center gap-2 font-medium ${tone === "risk" ? "text-ember-deep" : ""}`}>
         <Icon aria-hidden className="size-4 shrink-0" strokeWidth={1.75} />
         {title}
@@ -68,5 +68,35 @@ export function PlanChangesList({ changes, brokenProven }: { changes: PlanChange
       />
       <Group icon={CircleDashed} tone="risk" title={t("unplaced", { count: changes.unplaced.length })} rows={changes.unplaced.map((item) => ({ ...item, detail: "" }))} />
     </div>
+  );
+}
+
+/**
+ * The same changes in one line, for the decision bar: one chip per kind of change with its count
+ * (a promise that breaks first, in ember). Every chip is an icon and words, never colour alone.
+ */
+export function PlanChangesSummary({ changes }: { changes: PlanChangesView }) {
+  const t = useTranslations("plan");
+  const chips: { key: string; icon: LucideIcon; text: string; risk: boolean; count: number }[] = [
+    { key: "broken", icon: BellRing, text: t("broken", { count: changes.broken.length }), risk: true, count: changes.broken.length },
+    { key: "unplaced", icon: CircleDashed, text: t("unplaced", { count: changes.unplaced.length }), risk: true, count: changes.unplaced.length },
+    { key: "promised", icon: CalendarPlus, text: t("promised", { count: changes.promised.length }), risk: false, count: changes.promised.length },
+    { key: "firmed", icon: CalendarCheck2, text: t("firmed", { count: changes.firmed.length }), risk: false, count: changes.firmed.length },
+    { key: "rePromised", icon: Sparkles, text: t("rePromised", { count: changes.rePromised.length }), risk: false, count: changes.rePromised.length },
+    { key: "moved", icon: MoveRight, text: t("moved", { count: changes.moved.length }), risk: false, count: changes.moved.length },
+  ].filter((chip) => chip.count > 0);
+  if (chips.length === 0) return <p className="text-sm text-ink-muted">{t("changesNone")}</p>;
+  return (
+    <ul className="flex flex-wrap gap-2">
+      {chips.map((chip) => (
+        <li
+          key={chip.key}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${chip.risk ? "border-ember/40 bg-ember-soft font-medium text-ember-deep" : "border-line bg-surface"}`}
+        >
+          <chip.icon aria-hidden className="size-4 shrink-0" strokeWidth={1.75} />
+          {chip.text}
+        </li>
+      ))}
+    </ul>
   );
 }

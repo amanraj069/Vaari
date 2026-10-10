@@ -1,4 +1,4 @@
-/** Demo sessions keep working when Cognito is switched on, and stop when DEMO_MODE is off. */
+/** Demo accounts work everywhere: alongside Cognito, and with no switch to turn them on. */
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config";
 import { AuthError, createTokenVerifier, mintDemoToken } from "../src/auth/tokens";
@@ -16,12 +16,12 @@ async function setup(environment: Record<string, string>) {
 
 describe("auth modes", () => {
   it("accepts demo sessions alongside Cognito", async () => {
-    const { verifier, token } = await setup({ AUTH_MODE: "cognito", DEMO_MODE: "true", COGNITO_USER_POOL_ID: "us-east-1_TESTPOOL1", COGNITO_CLIENT_ID: "testclient" });
+    const { verifier, token } = await setup({ AUTH_MODE: "cognito", COGNITO_USER_POOL_ID: "us-east-1_TESTPOOL1", COGNITO_CLIENT_ID: "testclient" });
     await expect(verifier.verify(token)).resolves.toMatchObject({ userId: "u1", role: "operator", demo: true });
   });
-  it("rejects demo sessions when DEMO_MODE is off", async () => {
-    const { verifier, token } = await setup({ AUTH_MODE: "cognito", DEMO_MODE: "false", COGNITO_USER_POOL_ID: "us-east-1_TESTPOOL1", COGNITO_CLIENT_ID: "testclient" });
-    await expect(verifier.verify(token)).rejects.toBeInstanceOf(AuthError);
+  it("accepts demo sessions in a production-shaped config too (there is no demo switch)", async () => {
+    const { verifier, token } = await setup({ AUTH_MODE: "demo", DEMO_MODE: "false" });
+    await expect(verifier.verify(token)).resolves.toMatchObject({ userId: "u1", demo: true });
   });
   it("rejects garbage", async () => {
     const { verifier } = await setup({ AUTH_MODE: "demo" });

@@ -75,7 +75,8 @@ export function loadHarvestCurves(config: Config): HarvestCurves {
   }
 }
 
-export async function seedDemo(store: VaariStore, config: Config): Promise<void> {
+/** Seeds the demo centre around `todayIso` (the season clock), so the season always looks in progress. */
+export async function seedDemo(store: VaariStore, config: Config, todayIso: string): Promise<void> {
   const random = seededRandom(SEED);
   const pick = <Item>(items: Item[]): Item => items[Math.floor(random() * items.length)]!;
   const villages = loadVillages(config);
@@ -107,7 +108,7 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   ];
   for (const machine of machines) await store.putMachine(machine);
 
-  const today = dateToDay(config.SEASON_START_DATE, config.DEMO_TODAY);
+  const today = dateToDay(config.SEASON_START_DATE, todayIso);
   // Curves count days from 1 October of the season; convert to the demo season's day index.
   const curveDayZero = dateToDay(config.SEASON_START_DATE, `${config.SEASON_START_DATE.slice(0, 4)}-10-01`);
   const windowFrom = today - BOOKING_WINDOW_DAYS_BEFORE - curveDayZero;
@@ -115,10 +116,12 @@ export async function seedDemo(store: VaariStore, config: Config): Promise<void>
   const drawReadyDay = (villageId: string): number => {
     // The village's own curve first (it may itself be blended or district); the district curve if
     // the village has no ready days inside the booking window.
+    // Outside the fire season's days (a clock moved far from it) no curve has ready days in the
+    // window: spread the fields evenly over it instead, so a demo season can start on any date.
     const day =
       sampleReadyDay(curveByVillage.get(villageId) ?? [], random, windowFrom, windowTo) ??
-      sampleReadyDay(curves.district.readyDays, random, windowFrom, windowTo);
-    if (day === null) throw new Error(`no ready days in the booking window (${config.DEMO_TODAY}); check DEMO_TODAY against the harvest curves`);
+      sampleReadyDay(curves.district.readyDays, random, windowFrom, windowTo) ??
+      windowFrom + Math.floor(random() * (windowTo - windowFrom + 1));
     return day + curveDayZero;
   };
   const now = new Date().toISOString();

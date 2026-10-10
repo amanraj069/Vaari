@@ -21,6 +21,8 @@ export function useDates() {
   const weekdaysShort = t.raw("weekdaysShort") as string[];
   return {
     weekday: (iso: string) => weekdaysLong[parts(iso).weekday]!,
+    weekdayShort: (iso: string) => weekdaysShort[parts(iso).weekday]!,
+    dayOfMonth: (iso: string) => parts(iso).day,
     dayMonth: (iso: string) => {
       const { day, month } = parts(iso);
       return t("dayMonth", { day, month: monthsLong[month]! });

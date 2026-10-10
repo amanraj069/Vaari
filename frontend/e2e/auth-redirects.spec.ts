@@ -1,8 +1,8 @@
 /**
  * Signed-in people never see the sign-in page, and a stale role cookie can never cause a redirect
  * loop: /signin and /welcome hand off to /api/auth/resume, which asks the API and fixes the cookie.
- * Farmers have no account: "Try as farmer" follows a one-time phone login link to /farmer, and that
- * link works once.
+ * Farmers have no account: "Try as farmer" follows a one-time phone login link to their dashboard,
+ * and that link works once. Every role lands on /dashboard.
  */
 import { expect, test, type BrowserContext } from "@playwright/test";
 
@@ -13,7 +13,7 @@ async function signIn(context: BrowserContext, role: string) {
   expect(response.ok()).toBe(true);
 }
 
-for (const [role, home] of [["operator", "/operator"], ["facilitator", "/book"]] as const) {
+for (const [role, home] of [["operator", "/dashboard"], ["facilitator", "/dashboard"], ["officer", "/dashboard"]] as const) {
   test(`signed-in ${role} opening /signin lands on ${home}`, async ({ browser }) => {
     const context = await browser.newContext();
     await signIn(context, role);
@@ -30,23 +30,23 @@ test("a stale 'pending' role cookie after onboarding does not loop", async ({ br
   // Simulate the cookie left over from a first Google sign-in, before onboarding finished.
   await context.addCookies([{ name: "vaari_role", value: "pending", url: BASE }]);
   const page = await context.newPage();
-  for (const start of ["/welcome", "/book"]) {
+  for (const start of ["/welcome", "/dashboard"]) {
     await page.goto(start);
-    await expect(page).toHaveURL(`${BASE}/book`);
+    await expect(page).toHaveURL(`${BASE}/dashboard`);
   }
   const role = (await context.cookies(BASE)).find((cookie) => cookie.name === "vaari_role")?.value;
   expect(role).toBe("facilitator");
   await context.close();
 });
 
-test("the demo farmer opens /farmer from a one-time login link, which then stops working", async ({ browser }) => {
+test("the demo farmer opens their dashboard from a one-time login link, which then stops working", async ({ browser }) => {
   const context = await browser.newContext();
   const answer = await context.request.post(`${BASE}/api/auth/demo`, { data: { role: "farmer" } });
   const { home } = (await answer.json()) as { home: string };
   expect(home).toMatch(/^\/farmer\/login\/[\w.-]+$/);
   const page = await context.newPage();
   const response = await page.goto(home);
-  await expect(page).toHaveURL(`${BASE}/farmer`);
+  await expect(page).toHaveURL(`${BASE}/dashboard`);
   expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await expect(page.getByRole("heading", { name: /Jaswinder/ })).toBeVisible();
   await expect(page.getByText("Balian Cooperative Society")).toBeVisible();
@@ -56,18 +56,23 @@ test("the demo farmer opens /farmer from a one-time login link, which then stops
   // The same link a second time (another device, a forwarded message): refused, with a way back.
   const other = await (await browser.newContext()).newPage();
   await other.goto(home);
-  await expect(other).toHaveURL(`${BASE}/farmer?link=expired`);
+  await expect(other).toHaveURL(`${BASE}/farmer/signin?link=expired`);
   await expect(other.getByText("This link has already been used or has expired")).toBeVisible();
-  await expect(other.getByRole("link", { name: "See all my fields" })).toHaveAttribute("href", "https://wa.me/910000000000?text=my%20fields");
+  await expect(other.getByRole("textbox", { name: /Mobile number/ })).toBeVisible();
   await context.close();
 });
 
-test("/farmer without a phone session offers phone sign-in, never the staff sign-in page", async ({ page }) => {
+test("/farmer (in old WhatsApp messages) without a phone session opens the farmer sign-in, never the staff one", async ({ page }) => {
   await page.goto("/farmer");
-  await expect(page.getByText("Sign in to see your fields")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign in with your phone" })).toHaveAttribute("href", "/farmer/signin");
-  await expect(page).toHaveURL(`${BASE}/farmer`);
-  expect(await page.locator('meta[name="robots"]').getAttribute("content")).toContain("noindex");
+  await expect(page).toHaveURL(`${BASE}/farmer/signin?next=%2Fdashboard`);
+  await expect(page.getByRole("textbox", { name: /Mobile number/ })).toBeVisible();
+});
+
+test("the dashboard is never indexed and sends nobody signed out anywhere but sign-in", async ({ page }) => {
+  await page.goto("/dashboard/plan");
+  await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard%2Fplan$/);
+  const response = await page.request.get(`${BASE}/dashboard`, { maxRedirects: 0 });
+  expect(response.headers()["x-robots-tag"]).toContain("noindex");
 });
 
 test("signed-out visitors still see the sign-in page", async ({ page }) => {

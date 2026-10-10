@@ -1,37 +1,31 @@
 "use client";
 
 /**
- * /farmer: every field booked with the farmer's phone number, with "Book a new field" beside them.
- * A farmer arrives signed in with a code on WhatsApp (/farmer/signin) or from a one-time link
- * (WhatsApp, or "Try as farmer"); both leave a 7-day phone session. Each field is a TokenCard with
- * its date, status and history; changing a booking is that field's own slot link, or the helper
- * who booked it. With no session (or a used or expired link) the page offers phone sign-in and
- * "my fields" on WhatsApp. Beside the list: everything also works on WhatsApp, starting with "hey".
+ * /dashboard for a farmer: every field booked with their phone number, with "Book a new field"
+ * beside them. A farmer arrives signed in with a code on WhatsApp (/farmer/signin) or from a
+ * one-time link (WhatsApp, or "Try as farmer"); both leave a 7-day phone session. Each field is a
+ * TokenCard with its date, status and history; changing a booking is that field's own slot link,
+ * or the helper who booked it. If the session ends while the page is open, it offers phone sign-in
+ * and "my fields" on WhatsApp. Beside the list: everything also works on WhatsApp.
  */
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, LinkIcon, Plus, Sprout } from "lucide-react";
+import { KeyRound, Plus, Sprout } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { ApiError, api } from "@/lib/api";
-import { useDates } from "@/lib/dates";
 import { DateGuide } from "./farmer-aside";
-import { FarmerHeader } from "./farmer-header";
 import { FarmerNameForm } from "./farmer-name-form";
-import { PAGE_FRAME, PageColumns, PageHeader } from "./page-shell";
-import { SimulatedBadge } from "./simulated-badge";
+import { PageColumns, PageHeader } from "./page-shell";
 import { TokenCard } from "./token-card";
 import { Button, ButtonLink, Skeleton, StateMessage } from "./ui";
 import { SeeAllMyFields } from "./whatsapp-link";
 import { WhatsAppStart } from "./whatsapp-start";
 
-export type LinkProblem = "expired" | "unavailable" | null;
-
-export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber: string | null; linkProblem: LinkProblem }) {
+export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | null }) {
   const t = useTranslations("farmer");
   const tc = useTranslations("common");
   const ts = useTranslations("farmerSignin");
   const locale = useLocale();
-  const dates = useDates();
   // Polling keeps the dates fresh when the operator publishes a plan (no websockets by design).
   const home = useQuery({
     queryKey: ["farmer-home", locale],
@@ -41,7 +35,7 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
   });
   const noSession = home.isError && home.error instanceof ApiError && home.error.status === 401;
   const newBooking = (
-    <ButtonLink href="/farmer/new" variant="accent" className="min-h-12">
+    <ButtonLink href="/dashboard/book" variant="accent" className="min-h-12">
       <Plus aria-hidden className="size-5" strokeWidth={2} />
       {t("newBooking")}
     </ButtonLink>
@@ -49,8 +43,7 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
 
   return (
     <>
-      <FarmerHeader signedIn={home.isSuccess} />
-      <main className={`pb-16 pt-8 sm:pt-10 text-lg ${PAGE_FRAME}`}>
+      <div className="text-lg">
         {home.isPending ? (
           <div className="space-y-4" aria-busy="true">
             <span className="sr-only" role="status">{tc("loading")}</span>
@@ -60,9 +53,9 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
         ) : noSession ? (
           <div className="mx-auto max-w-xl">
             <StateMessage
-              icon={linkProblem === "expired" ? LinkIcon : KeyRound}
-              title={linkProblem === "expired" ? t("linkExpiredTitle") : t("noSessionTitle")}
-              body={linkProblem === "expired" ? t("linkExpiredBody") : t("noSessionBody")}
+              icon={KeyRound}
+              title={t("noSessionTitle")}
+              body={t("noSessionBody")}
               action={
                 <div className="grid gap-4">
                   <ButtonLink href="/farmer/signin" variant="accent" className="min-h-12 w-full">
@@ -89,7 +82,6 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
           <>
             <PageHeader
               className="mb-6"
-              badge={<SimulatedBadge demoDate={dates.short(home.data.today)} />}
               title={home.data.farmerName ? t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" }) : t("allFieldsTitle")}
               description={t("readOnlyNote")}
               actions={newBooking}
@@ -118,7 +110,7 @@ export function FarmerHomeView({ whatsappNumber, linkProblem }: { whatsappNumber
             />
           </>
         )}
-      </main>
+      </div>
     </>
   );
 }

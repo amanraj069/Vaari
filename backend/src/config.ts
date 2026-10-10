@@ -15,7 +15,6 @@ const configSchema = z.object({
   // Read by logger.ts directly (the logger exists before the config); listed here so a typo fails start-up.
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   AUTH_MODE: z.enum(["demo", "cognito"]).default("demo"),
-  DEMO_MODE: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   DEMO_SESSION_SECRET: z.string().min(32).default("local-dev-only-demo-secret-change-me-0000"),
   COGNITO_USER_POOL_ID: z.string().default(""),
   COGNITO_CLIENT_ID: z.string().default(""),
@@ -46,7 +45,9 @@ const configSchema = z.object({
   SEASON_START_DATE: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-10-01"),
   // ASSUMPTION: the last day of the wheat sowing season. Slot links expire 7 days after it.
   SEASON_END_DATE: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-12-31"),
-  DEMO_TODAY: z.string().default("2026-10-31"),
+  // The day the whole site treats as today (simulated). Fixed per deployment: nothing in the app
+  // changes it. The demo season's data starts on 1 November, so today is 31 October.
+  DATE_TODAY: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-10-31"),
   // PAU Package of Practices, Rabi 2025-26: first fortnight of November is the optimum.
   OPTIMUM_LAST_DATE: z.string().default("2026-11-15"),
   // Express "trust proxy": which hops in front of the API may set X-Forwarded-For. "loopback" in
@@ -75,8 +76,6 @@ const configSchema = z.object({
   WHATSAPP_TEMPLATE_SLOT_BUTTON: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   // Authentication template (copy-code button) for farmer sign-in codes, in en, pa and hi.
   WHATSAPP_TEMPLATE_OTP: z.string().default(""),
-  // In DEMO_MODE, notices go only to these numbers (comma-separated, E.164).
-  WHATSAPP_ALLOWED_TEST_NUMBERS: z.string().default(""),
   // memory: in-process (dev, tests). sqs: the webhook writes to SQS and `npm run worker` reads it.
   WHATSAPP_QUEUE: z.enum(["memory", "sqs"]).default("memory"),
   WHATSAPP_SQS_QUEUE_URL: z.string().default(""),
@@ -89,12 +88,16 @@ const configSchema = z.object({
   BEDROCK_MODEL_ID: z.string().default("global.amazon.nova-2-lite-v1:0"),
   BEDROCK_REGION: z.string().optional(),
   AGENT_TIMEOUT_SECONDS: z.coerce.number().positive().default(20),
-  // How a farmer's sign-in code reaches them. demo: shown on screen (DEMO_MODE only). whatsapp: the
-  // WHATSAPP_TEMPLATE_OTP template. off: farmer sign-in is closed. Unset: demo with DEMO_MODE, else off.
-  FARMER_OTP_DELIVERY: z.enum(["off", "demo", "whatsapp"]).optional(),
+  // How a farmer's sign-in code reaches them. whatsapp: the WHATSAPP_TEMPLATE_OTP template. off:
+  // sign-in by code is closed. Unset: whatsapp when WhatsApp and that template are set up, else off.
+  // The demo farmers' phones always see their code on screen (demo accounts, labelled as such).
+  FARMER_OTP_DELIVERY: z.enum(["off", "whatsapp"]).optional(),
+  // More demo farmer phones (E.164, comma-separated) that see their sign-in code on screen, besides
+  // the seeded demo farmer's. Never a real person's number: anyone can sign in as these.
+  DEMO_FARMER_PHONES: z.string().default(""),
 });
 
-export type Config = Omit<z.infer<typeof configSchema>, "FARMER_OTP_DELIVERY"> & { FARMER_OTP_DELIVERY: "off" | "demo" | "whatsapp" };
+export type Config = Omit<z.infer<typeof configSchema>, "FARMER_OTP_DELIVERY"> & { FARMER_OTP_DELIVERY: "off" | "whatsapp" };
 
 /**
  * Values that must never sign anything in production: the development defaults above and the
@@ -157,24 +160,16 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Config
   if (parsed.data.REPO === "dynamo" && !parsed.data.AWS_REGION) {
     throw new Error("REPO=dynamo needs AWS_REGION (credentials come from the AWS default provider chain)");
   }
-  const otpDelivery = parsed.data.FARMER_OTP_DELIVERY ?? (parsed.data.DEMO_MODE ? "demo" : "off");
-  if (otpDelivery === "demo" && !parsed.data.DEMO_MODE) {
-    throw new Error("FARMER_OTP_DELIVERY=demo shows sign-in codes on screen, so it needs DEMO_MODE=true");
+  if (parsed.data.DATE_TODAY < parsed.data.SEASON_START_DATE || parsed.data.DATE_TODAY > parsed.data.SEASON_END_DATE) {
+    throw new Error("DATE_TODAY must fall inside the season (SEASON_START_DATE to SEASON_END_DATE)");
   }
+  const otpDelivery = parsed.data.FARMER_OTP_DELIVERY ?? (parsed.data.WHATSAPP_ENABLED && parsed.data.WHATSAPP_TEMPLATE_OTP ? "whatsapp" : "off");
   if (otpDelivery === "whatsapp" && (!parsed.data.WHATSAPP_ENABLED || !parsed.data.WHATSAPP_TEMPLATE_OTP)) {
     throw new Error("FARMER_OTP_DELIVERY=whatsapp needs WHATSAPP_ENABLED=true and WHATSAPP_TEMPLATE_OTP");
   }
   return { ...parsed.data, FARMER_OTP_DELIVERY: otpDelivery };
 }
 
-/** WHATSAPP_ALLOWED_TEST_NUMBERS as E.164 numbers (anything that is not a phone number is ignored). */
-export function allowedTestNumbers(config: Config, normalise: (input: string) => string | null): Set<string> {
-  return new Set(
-    config.WHATSAPP_ALLOWED_TEST_NUMBERS.split(",")
-      .map((item) => normalise(item))
-      .filter((item): item is string => item !== null),
-  );
-}
 
 /** Express's "trust proxy" value from TRUST_PROXY: a hop count ("1"), "true"/"false", or names/CIDRs. */
 export function trustProxySetting(config: Config): number | boolean | string {

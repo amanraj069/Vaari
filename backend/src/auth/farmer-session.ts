@@ -1,6 +1,6 @@
 /**
  * A farmer is their phone number. To see all their fields they get a one-time login link (on
- * WhatsApp from the bot; in DEMO_MODE from the "Try as farmer" button), which the web exchanges for
+ * WhatsApp from the bot; for the demo farmer, from the "Try as farmer" button), which the web exchanges for
  * a 7-day session scoped to that phone, or they sign in on the web with a one-time code
  * (auth/farmer-otp.ts), which ends in the same session.
  *
@@ -33,7 +33,7 @@ const secretOf = (config: Config) => new TextEncoder().encode(config.SLOT_TOKEN_
 
 /**
  * The internal function that mints a farmer's login link. The WhatsApp worker will call it when a
- * farmer writes "my fields"; DEMO_MODE's farmer persona calls it today. Not an HTTP route.
+ * farmer writes "my fields"; the demo farmer's "Try as farmer" calls it too. Not an HTTP route.
  */
 export async function mintFarmerLoginLink(
   config: Config,

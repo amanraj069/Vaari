@@ -42,8 +42,11 @@ export function BookedList({
   state,
   onCopyLink,
   onReissueLink,
+  bare = false,
 }: {
   state: BookedListState;
+  /** Inside a dashboard panel: no heading of its own and no outer border (the panel has both). */
+  bare?: boolean;
   onCopyLink: (item: QueueItem) => void;
   /** Makes a new slot link (the old one stops working). Resolves when the new link is copied. */
   onReissueLink?: (item: QueueItem) => Promise<void>;
@@ -66,25 +69,26 @@ export function BookedList({
   }
 
   return (
-    <section aria-labelledby="booked-title">
-      <h2 id="booked-title" className="font-display text-2xl">{t("listTitle")}</h2>
+    // Bare: the panel around it is the region (and names it), so this is a plain container.
+    <section aria-labelledby={bare ? undefined : "booked-title"} role={bare ? "presentation" : undefined}>
+      {bare ? null : <h2 id="booked-title" className="font-display text-2xl">{t("listTitle")}</h2>}
       {state.kind === "loading" ? (
-        <div className="mt-4 space-y-3">
+        <div className={`${bare ? "p-4" : "mt-4"} space-y-3`}>
           <Skeleton className="h-20" />
           <Skeleton className="h-20" />
         </div>
       ) : state.kind === "error" ? (
-        <div className="mt-4">
+        <div className={bare ? "p-4" : "mt-4"}>
           <StateMessage tone="error" title={t("listError")} action={<Button onClick={state.onRetry}>{tc("retry")}</Button>} />
         </div>
       ) : state.items.length === 0 ? (
-        <div className="mt-4">
+        <div className={bare ? "p-4" : "mt-4"}>
           <StateMessage title={t("listEmpty")} body={t("listEmptyBody")} />
         </div>
       ) : (
-        <ul className="mt-4 divide-y divide-line rounded-card border border-line bg-surface">
+        <ul className={bare ? "divide-y divide-line" : "mt-4 divide-y divide-line rounded-card border border-line bg-surface"}>
           {state.items.map((item) => (
-            <li key={item.fieldId} className="flex items-center gap-3 px-4 py-3">
+            <li key={item.fieldId} className={`flex items-center gap-3 py-3 ${bare ? "px-5" : "px-4"}`}>
               <div className="min-w-0 flex-1">
                 <p className="truncate">
                   <span className="font-medium tabular">#{String(item.token).padStart(3, "0")}</span> {item.farmerName}

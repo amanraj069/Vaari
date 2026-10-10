@@ -1,23 +1,30 @@
 "use client";
 
 /**
- * Who is signed in, for the top bar on every page. One query key, so a sign-in or onboarding can
- * refresh it everywhere (call `useRefreshSession()` after anything that changes the session).
+ * Who is signed in (staff or a farmer's phone session), for the top bar on public pages. One query
+ * key, so a sign-in or onboarding can refresh it everywhere (`useRefreshSession()`).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { meSchema, type Me } from "@/shared";
+import { z } from "zod";
+import { farmerMeSchema, meSchema } from "@/shared";
+import type { Viewer } from "./viewer-kind";
 
 export const SESSION_QUERY_KEY = ["session"] as const;
+
+const viewerSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("staff"), me: meSchema }),
+  z.object({ kind: z.literal("farmer"), farmer: farmerMeSchema }),
+]);
 
 export function useSession() {
   return useQuery({
     queryKey: SESSION_QUERY_KEY,
-    queryFn: async (): Promise<Me | null> => {
+    queryFn: async (): Promise<Viewer | null> => {
       const response = await fetch("/api/auth/session", { cache: "no-store" });
       // 503 means "unknown" (API unreachable), not "signed out": fail the query so callers can tell.
       if (!response.ok) throw new Error(`session check failed (${response.status})`);
-      const body = (await response.json()) as { signedIn: boolean; me?: unknown };
-      const parsed = meSchema.safeParse(body.me);
+      const body = (await response.json()) as { signedIn: boolean; viewer?: unknown };
+      const parsed = viewerSchema.safeParse(body.viewer);
       return body.signedIn && parsed.success ? parsed.data : null;
     },
     staleTime: 30_000,

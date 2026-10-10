@@ -1,6 +1,6 @@
 /**
  * Entry point. Wires config, store (REPO=memory|dynamo), engine client, token verifier and
- * planner; in demo mode seeds the demo season if it is not there yet; then listens.
+ * planner; seeds the demo centre (its season and demo accounts) if it is not there yet; then listens.
  */
 import { createApp, logger } from "./app";
 import { loadConfig } from "./config";
@@ -31,13 +31,13 @@ export async function buildRuntime(options: { freshDemo?: boolean; whatsapp?: Pa
      */
     async resetDemo() {
       await store.clearChcData(DEMO_CHC_ID);
-      await seedDemo(store, config);
+      await seedDemo(store, config, config.DATE_TODAY);
       // The season is already running: start as if the operator published a plan last evening.
       await planner.publishInitialPlan(DEMO_CHC_ID, DEMO_OPERATOR_NAME);
     },
   };
   // With DynamoDB the season survives restarts: seed only when the demo CHC does not exist yet.
-  if (config.DEMO_MODE && (options.freshDemo || !(await store.getChc(DEMO_CHC_ID)))) await dependencies.resetDemo();
+  if (options.freshDemo || !(await store.getChc(DEMO_CHC_ID))) await dependencies.resetDemo();
   return { config, dependencies };
 }
 

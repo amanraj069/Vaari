@@ -79,7 +79,6 @@ export default async function SignInPage({
       <div className="mt-6 flex flex-1 flex-col">
         <SignInChooser
           people={people}
-          demoMode={serverConfig.demoMode}
           googleOn={cognitoOn}
           initialPick={
             pick === "helper" || pick === "operator" || pick === "officer"

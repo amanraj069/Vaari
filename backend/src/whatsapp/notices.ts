@@ -6,13 +6,13 @@
  * sentence (explain/slot-reasons.ts), in the farmer's language; and, with
  * WHATSAPP_TEMPLATE_SLOT_BUTTON, a "My slot" button that opens the field's signed slot link.
  *
- * Sent only to a field with a phone AND consent; in DEMO_MODE only to WHATSAPP_ALLOWED_TEST_NUMBERS;
+ * Sent only to a field with a phone AND consent, never to a demo farmer's phone (demo/phones.ts);
  * nothing at all unless WHATSAPP_ENABLED. Each send is recorded with its delivery status (updated by
  * status webhooks); only the phone's last 4 digits are kept.
  */
 import { randomUUID } from "node:crypto";
 import { mintSlotToken } from "../auth/slot-token";
-import { allowedTestNumbers } from "../config";
+import { isDemoFarmerPhone } from "../demo/phones";
 import { buildOneFarmerField } from "../domain/views";
 import { logger } from "../logger";
 import type { NoticeKind, PlanChanges } from "../store/types";
@@ -33,12 +33,13 @@ export function createNotifier(deps: NotifierDeps) {
   const running = new Set<Promise<void>>();
 
   /** Sends one notice; returns what happened, counted in the "whatsapp notices" summary line. */
-  async function notify(chcId: string, fieldId: string, kind: NoticeKind): Promise<"sent" | "failed" | "no phone or consent" | "not an allowed test number" | "no template"> {
+  async function notify(chcId: string, fieldId: string, kind: NoticeKind): Promise<"sent" | "failed" | "no phone or consent" | "demo account" | "no template"> {
     const field = await store.getField(chcId, fieldId);
     if (!field?.farmerPhone || !field.consentAt) return "no phone or consent"; // never contacted
     const phone = fromWhatsAppNumber(field.farmerPhone);
     if (!phone) return "no phone or consent";
-    if (config.DEMO_MODE && !allowedTestNumbers(config, fromWhatsAppNumber).has(phone)) return "not an allowed test number";
+    // A demo farmer's phone is a demo account anyone may use: never messaged.
+    if (isDemoFarmerPhone(config, phone)) return "demo account";
     const template = templates[kind];
     if (!template) {
       logger.warn({ kind }, "whatsapp notice skipped: no template name configured");

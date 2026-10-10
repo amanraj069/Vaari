@@ -35,6 +35,8 @@ type Props = {
   /** Makes each stop a button (for example, to move it). */
   onSelectStop?: (stop: LaneStop) => void;
   selectLabel?: (stop: LaneStop) => string;
+  /** card: a lane on its own; row: one row inside a dashboard panel (rows separated by a rule). */
+  variant?: "card" | "row";
 };
 
 const RISK_BLOCK: Record<LaneStop["risk"], string> = {
@@ -44,7 +46,7 @@ const RISK_BLOCK: Record<LaneStop["risk"], string> = {
   unplanned: "border-ink/10",
 };
 
-export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBack, onSelectStop, selectLabel }: Props) {
+export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBack, onSelectStop, selectLabel, variant = "card" }: Props) {
   const t = useTranslations("operator");
   const dates = useDates();
   const startMinute = minutesOf(dayStart);
@@ -54,7 +56,14 @@ export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBac
   const tint = LANE_TINTS[index % LANE_TINTS.length];
 
   return (
-    <motion.li layout className="grid gap-4 rounded-card border border-line bg-surface p-4 md:grid-cols-[14rem_1fr] md:p-5 md:items-center">
+    <motion.li
+      layout
+      className={
+        variant === "row"
+          ? "grid gap-4 border-b border-line px-5 py-4 last:border-b-0 md:grid-cols-[12.5rem_1fr] md:items-center"
+          : "grid gap-4 rounded-card border border-line bg-surface p-4 md:grid-cols-[14rem_1fr] md:p-5 md:items-center"
+      }
+    >
       <div className="flex items-start justify-between gap-2 md:block">
         <div>
           <p className="flex items-center gap-2 font-medium">

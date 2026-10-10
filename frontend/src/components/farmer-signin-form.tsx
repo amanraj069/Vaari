@@ -6,7 +6,7 @@
  * WhatsApp (the same screen whether or not the number is known), then, only for a number Vaari has
  * never seen, the name (FarmerNameForm). A number a helper already booked with goes straight to
  * its bookings. The code goes to our own route handler, which keeps the session in an httpOnly
- * cookie. In DEMO_MODE nothing is sent: the code is shown on screen, labelled as a demo. Every
+ * cookie. For a demo farmer's phone nothing is sent: the code is shown on screen, labelled as a demo. Every
  * refusal from the API has its own sentence, and a button never sits dim without saying why.
  */
 import { ArrowLeft, Check, KeyRound } from "lucide-react";
@@ -47,7 +47,7 @@ function Panel({ step, current, children }: { step: Step; current: Step; childre
 /** What the code step looks like before a code is sent: its tallest form, so the box is sized for it. */
 const CODE_SHAPE = { channel: "demo" as const, expiresInSeconds: 600, resendInSeconds: 30, demoCode: "000000", digits: "9000000000" };
 
-export function FarmerSigninForm({ next = "/farmer", onSignedIn = openPage }: { next?: string; onSignedIn?: (path: string) => void }) {
+export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }: { next?: string; onSignedIn?: (path: string) => void }) {
   const t = useTranslations("farmerSignin");
   const locale = useLocale();
   const [step, setStep] = useState<Step>("phone");

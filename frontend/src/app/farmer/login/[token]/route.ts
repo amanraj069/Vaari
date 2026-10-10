@@ -1,7 +1,7 @@
 /**
  * GET /farmer/login/<token>: the link a farmer taps on WhatsApp (and the demo farmer follows).
- * Exchanges the one-time login token for a 7-day phone session cookie, then opens /farmer. A used,
- * expired or broken link opens /farmer with a plain "ask for a new link" message.
+ * Exchanges the one-time login token for a 7-day phone session cookie, then opens the farmer's
+ * dashboard. A used, expired or broken link opens the farmer sign-in with a plain word on why.
  * The token goes to the API in a POST body, never in a URL the API would log.
  */
 import { NextResponse } from "next/server";
@@ -25,10 +25,10 @@ function redirectTo(path: string) {
 export async function GET(_request: Request, context: Context) {
   const { token } = await context.params;
   const response = await apiFetch("/farmer/login", { method: "POST", body: JSON.stringify({ token }) }).catch(() => null);
-  if (!response) return redirectTo("/farmer?link=unavailable");
-  if (!response.ok) return redirectTo("/farmer?link=expired");
+  if (!response) return redirectTo("/farmer/signin?link=unavailable");
+  if (!response.ok) return redirectTo("/farmer/signin?link=expired");
   const session = sessionSchema.safeParse(await response.json().catch(() => null));
-  if (!session.success) return redirectTo("/farmer?link=unavailable");
+  if (!session.success) return redirectTo("/farmer/signin?link=unavailable");
   await setFarmerSession(session.data.sessionToken, session.data.expiresIn);
-  return redirectTo("/farmer");
+  return redirectTo("/dashboard");
 }

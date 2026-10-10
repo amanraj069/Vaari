@@ -10,14 +10,14 @@ import { MemoryStore } from "../src/store/memory";
 
 describe("demo seed", () => {
   const config = loadConfig({ NODE_ENV: "test" });
-  const today = dateToDay(config.SEASON_START_DATE, config.DEMO_TODAY);
+  const today = dateToDay(config.SEASON_START_DATE, config.DATE_TODAY);
   const curves = loadHarvestCurves(config);
   const curveByVillage = new Map(curves.villages.map((curve) => [curve.villageId, new Map(curve.readyDays)]));
   const district = new Map(curves.district.readyDays);
 
   it("draws every ready day from the village's harvest curve (or the district's) inside the booking window", async () => {
     const store = new MemoryStore();
-    await seedDemo(store, config);
+    await seedDemo(store, config, config.DATE_TODAY);
     const fields = await store.listFields(DEMO_CHC_ID);
     expect(fields.length).toBeGreaterThan(0);
     for (const field of fields) {
@@ -34,8 +34,8 @@ describe("demo seed", () => {
   it("is the same season on every reset", async () => {
     const first = new MemoryStore();
     const second = new MemoryStore();
-    await seedDemo(first, config);
-    await seedDemo(second, config);
+    await seedDemo(first, config, config.DATE_TODAY);
+    await seedDemo(second, config, config.DATE_TODAY);
     expect(await second.listFields(DEMO_CHC_ID)).toEqual(
       // Timestamps are when the seed ran; everything else is identical.
       (await first.listFields(DEMO_CHC_ID)).map((field) => ({ ...field, createdAt: expect.any(String), consentAt: field.consentAt === null ? null : expect.any(String) })),
@@ -46,7 +46,7 @@ describe("demo seed", () => {
     const store = new MemoryStore();
     const realUser = { userId: "google-sub-123", name: "Real Person", role: "operator" as const, chcId: DEMO_CHC_ID, language: "pa" as const };
     await store.putUser(realUser);
-    await seedDemo(store, config);
+    await seedDemo(store, config, config.DATE_TODAY);
     expect(await store.getUser(realUser.userId)).toEqual(realUser);
   });
 });

@@ -1,17 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Github, Mail } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { PAGE_FRAME } from "./page-shell";
 
-/** contactEmail comes from the server (CONTACT_EMAIL), the same address /privacy gives for deletion. */
+/**
+ * contactEmail comes from the server (CONTACT_EMAIL), the same address /privacy gives for deletion.
+ * Public pages only: the dashboard is a workspace with its own slim footer (DashboardShell).
+ */
 export function GlobalFooter({ contactEmail }: { contactEmail: string }) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   // The credits were first written for the landing page's footer.
   const tl = useTranslations("landing");
+  const pathname = usePathname();
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return null;
 
   return (
     <footer className="footer-weave mt-auto pb-8">
@@ -40,8 +46,8 @@ export function GlobalFooter({ contactEmail }: { contactEmail: string }) {
           <div>
             <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">{t("footerFarmers")}</h3>
             <ul className="flex flex-col gap-3 text-sm text-ink-muted">
-              <li><Link href="/farmer" className="hover:text-ink transition-colors">{t("myFields")}</Link></li>
-              <li><Link href="/book" className="hover:text-ink transition-colors">{t("book")}</Link></li>
+              <li><Link href="/dashboard" className="hover:text-ink transition-colors">{t("myFields")}</Link></li>
+              <li><Link href="/dashboard/book" className="hover:text-ink transition-colors">{t("book")}</Link></li>
             </ul>
           </div>
 
@@ -49,8 +55,8 @@ export function GlobalFooter({ contactEmail }: { contactEmail: string }) {
           <div>
             <h3 className="font-display text-lg font-medium mb-4 text-wheat-deep">{t("footerOperators")}</h3>
             <ul className="flex flex-col gap-3 text-sm text-ink-muted">
-              <li><Link href="/operator" className="hover:text-ink transition-colors">{t("plan")}</Link></li>
-              <li><Link href="/operator/queue" className="hover:text-ink transition-colors">{t("queue")}</Link></li>
+              <li><Link href="/dashboard/plan" className="hover:text-ink transition-colors">{t("plan")}</Link></li>
+              <li><Link href="/dashboard/queue" className="hover:text-ink transition-colors">{t("queue")}</Link></li>
             </ul>
           </div>
 
