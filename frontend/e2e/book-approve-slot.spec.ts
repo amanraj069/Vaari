@@ -23,6 +23,8 @@ async function signedInPage(browser: Browser, role: "facilitator" | "operator"):
 }
 
 async function expectNoAxeViolations(page: Page) {
+  // Let the page's fade-in (and any entrance animation) finish: text mid-fade has no fixed contrast.
+  await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity));
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(result.violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`)).toEqual([]);
 }
