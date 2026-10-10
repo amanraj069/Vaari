@@ -40,7 +40,8 @@ test("'Try the demo accounts' shows the demo people in place of the choices; the
   await expect(page.getByRole("link", { name: "Log in / Register" })).toBeVisible();
   await page.getByRole("button", { name: /Try the demo accounts/ }).click();
   await page.getByRole("listitem").filter({ hasText: "District agriculture officer" }).getByRole("button", { name: "Use this account" }).click();
-  await page.waitForURL(`${BASE}/proof`);
+  await page.waitForURL(`${BASE}/dashboard`);
+  await expect(page.getByRole("heading", { level: 1, name: /The district on/ })).toBeVisible();
 });
 
 test("/signin and a role page pass the accessibility bar", async ({ browser }) => {

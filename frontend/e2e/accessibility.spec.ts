@@ -1,6 +1,7 @@
 /**
- * Accessibility matrix for / (landing), /book, /slot/[token] (valid and tampered), /farmer (the
- * demo farmer's phone session), the operator's /operator and /operator/plan, /proof, /privacy and /design:
+ * Accessibility matrix for / (landing), the dashboard (helper: bookings and booking; the demo farmer's
+ * fields; the operator's Today, Plan and Queue; the officer's district; a profile), /slot/[token]
+ * (valid and tampered), /proof, /privacy and /design:
  * English, Punjabi, Hindi x light, dark x 360px, 1280px. Each combination must have zero axe
  * WCAG 2.1 A/AA violations, no sideways scroll, a single-row header, and 44px touch targets.
  * Plus keyboard use of the "I cannot wait longer" dialog and the reduced-motion setting.
@@ -55,14 +56,19 @@ test.beforeAll(async ({ browser }) => {
 
 const PAGES = [
   { name: "landing", role: undefined, path: () => "/", ready: "#hero-title" },
-  { name: "book", role: "facilitator", path: () => "/book", ready: "main section" },
+  { name: "book", role: "facilitator", path: () => "/dashboard/book", ready: "main section" },
+  { name: "bookings", role: "facilitator", path: () => "/dashboard", ready: "main h1" },
   { name: "slot", role: undefined, path: () => slotPath, ready: "text=/#\\d{3}/" },
   { name: "slot-tampered", role: undefined, path: () => `${slotPath.slice(0, -4)}AAAA`, ready: '[role="alert"] h1' },
   // A farmer's own fields, read-only, behind the demo farmer's phone session.
-  { name: "farmer", role: "farmer", path: () => "/farmer", ready: "main h1" },
+  { name: "farmer", role: "farmer", path: () => "/dashboard", ready: "main h1" },
   // Operators work on laptops in the office and tablets in the field: the same bar applies.
-  { name: "operator", role: "operator", path: () => "/operator", ready: "main h1" },
-  { name: "operator-plan", role: "operator", path: () => "/operator/plan", ready: "main h1" },
+  { name: "operator", role: "operator", path: () => "/dashboard", ready: "main h1" },
+  { name: "operator-plan", role: "operator", path: () => "/dashboard/plan", ready: "main h1" },
+  { name: "operator-queue", role: "operator", path: () => "/dashboard/queue", ready: "main h1" },
+  // The officer's district overview: counts, map, centres and charts.
+  { name: "officer", role: "officer", path: () => "/dashboard", ready: "main h1" },
+  { name: "profile", role: "operator", path: () => "/dashboard/profile", ready: "main h1" },
   // The evidence page, rendered from the committed data/sim/results.json.
   { name: "proof", role: undefined, path: () => "/proof", ready: "#replay-title" },
   // Public, signed out: the privacy notice and its deletion section.

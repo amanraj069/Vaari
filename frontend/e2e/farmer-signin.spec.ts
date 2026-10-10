@@ -1,6 +1,6 @@
 /**
  * A farmer on their own: registers on /farmer/signin with name, phone and consent, signs in with the
- * code (shown on screen in DEMO_MODE), books a field on /farmer/new and sees it on /farmer, with the
+ * code (shown on screen in DEMO_MODE), books a field on /dashboard/book and sees it on /dashboard, with the
  * WhatsApp way in ("hey" to Vaari) beside it. Then both new pages pass the accessibility bar: axe
  * WCAG 2.1 A/AA, no sideways scroll, 44px touch targets, in English, Punjabi and Hindi, light and dark.
  */
@@ -22,7 +22,7 @@ async function register(page: Page, name: string, digits: string) {
   await expect(page.getByRole("heading", { name: "Welcome to Vaari" })).toBeVisible();
   await page.getByRole("textbox", { name: /Your name/ }).fill(name);
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.waitForURL(`${BASE}/farmer`);
+  await page.waitForURL(`${BASE}/dashboard`);
 }
 
 // Test numbers: +91 90000 00xxx. DEMO delivery sends nothing anywhere; the store is in memory.
@@ -35,7 +35,7 @@ test("a farmer signs up with a code, books a field and sees it on their page", a
   expect(await page.evaluate(() => document.cookie)).not.toContain("vaari_farmer");
 
   await page.getByRole("link", { name: "Book a new field" }).first().click();
-  await page.waitForURL(`${BASE}/farmer/new`);
+  await page.waitForURL(`${BASE}/dashboard/book`);
   await page.locator("main fieldset button[aria-pressed]").first().click();
   for (let step = 0; step < 4; step++) {
     if (step === 2) await page.getByRole("button", { name: /Today/ }).click();
@@ -44,14 +44,15 @@ test("a farmer signs up with a code, books a field and sees it on their page", a
   await page.getByRole("button", { name: "Book this field" }).click();
   await expect(page.getByText("Your turn is booked")).toBeVisible();
   await page.getByRole("link", { name: "See my fields" }).click();
-  await page.waitForURL(`${BASE}/farmer`);
+  await page.waitForURL(`${BASE}/dashboard`);
   await expect(page.getByRole("list", { name: "Your fields" }).getByRole("listitem")).toHaveCount(1);
 
-  // Signing out ends the phone session.
-  await page.getByRole("button", { name: "Sign out" }).click();
+  // Signing out (the account menu) ends the phone session.
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await page.waitForURL(`${BASE}/`);
   await page.goto("/farmer");
-  await expect(page.getByText("Sign in to see your fields")).toBeVisible();
+  await expect(page).toHaveURL(/\/farmer\/signin/);
 });
 
 async function signedInState(browser: Browser) {
@@ -63,11 +64,11 @@ async function signedInState(browser: Browser) {
   return state;
 }
 
-test("/farmer/signin and /farmer/new pass the accessibility bar", async ({ browser }) => {
+test("/farmer/signin and the farmer's /dashboard/book pass the accessibility bar", async ({ browser }) => {
   const session = await signedInState(browser);
   for (const target of [
     { path: "/farmer/signin", ready: "main section.auth-form form", signedIn: false },
-    { path: "/farmer/new", ready: "main fieldset", signedIn: true },
+    { path: "/dashboard/book", ready: "main fieldset", signedIn: true },
   ]) {
     for (const locale of ["en", "pa", "hi"]) {
       for (const theme of ["light", "dark"]) {

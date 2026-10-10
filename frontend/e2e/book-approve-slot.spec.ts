@@ -1,8 +1,8 @@
 /**
  * The vertical slice through the real UI and API, start to finish:
- *   a facilitator books a field on /book and gets the farmer's slot link -> the link says
+ *   a facilitator books a field on /dashboard/book and gets the farmer's slot link -> the link says
  *   "Requested" (no date until a plan is published) -> the operator sees the new request on
- *   /operator, makes tomorrow's plan on /operator/plan, reads that this farmer gets a first date,
+ *   /dashboard, makes tomorrow's plan on /dashboard/plan, reads that this farmer gets a first date,
  *   and approves -> the farmer opens the link with no account and sees a firm date -> the helper
  *   reissues the link from the booked list and the old one stops working.
  * The booking carries the farmer's phone and consent; the phone never appears on the slot page.
@@ -32,9 +32,10 @@ async function expectNoAxeViolations(page: Page) {
 test("facilitator books, operator generates and approves, the slot link shows a firm date", async ({ browser }) => {
   // 1. A facilitator books a field for a farmer without an account.
   const facilitator = await signedInPage(browser, "facilitator");
-  await facilitator.goto("/book");
+  await facilitator.goto("/dashboard/book");
   await expect(facilitator.getByRole("heading", { name: "Book a field for a farmer" })).toBeVisible();
-  await expect(facilitator.getByRole("navigation", { name: "Main" }).getByRole("link")).toHaveText(["Book a field"]);
+  // A helper's dashboard: their bookings, booking, and the proof (the phone's bottom bar).
+  await expect(facilitator.getByRole("navigation", { name: "Dashboard pages" }).getByRole("link")).toHaveText(["Bookings", "Book a field", "Proof"]);
 
   const next = () => facilitator.getByRole("button", { name: "Next", exact: true }).click();
   await facilitator.getByRole("textbox", { name: /Farmer's name/ }).fill("Paramjit Kaur");
@@ -78,39 +79,69 @@ test("facilitator books, operator generates and approves, the slot link shows a 
 
   // 3. The operator sees the new request on today's board and plans tomorrow.
   const operator = await signedInPage(browser, "operator");
-  await operator.goto("/operator");
+  await operator.goto("/dashboard");
   await expect(operator.getByText(/\d+ new requests? (has|have) no date yet\./)).toBeVisible();
-  await operator.getByRole("main").getByRole("link", { name: "Plan tomorrow" }).last().click();
-  await expect(operator).toHaveURL(/\/operator\/plan$/);
-  await operator.getByRole("button", { name: "Make a fresh plan" }).first().click();
+  // One call to action per state: the request card carries the only "Plan tomorrow".
+  await expect(operator.getByRole("main").getByRole("link", { name: "Plan tomorrow" })).toHaveCount(1);
+  await operator.getByRole("main").getByRole("link", { name: "Plan tomorrow" }).click();
+  await expect(operator).toHaveURL(/\/dashboard\/plan$/);
+  await expect(operator.getByRole("button", { name: "Make a fresh plan" })).toHaveCount(1);
+  await operator.getByRole("button", { name: "Make a fresh plan" }).click();
   // The draft says exactly what approving will do, before anything is published.
   await expect(operator.getByText("Draft", { exact: true }).first()).toBeVisible();
   await expect(operator.getByText("Nothing changes for farmers until you approve.", { exact: false })).toBeVisible();
-  await expect(operator.getByText(/farmers? gets? a first date/)).toBeVisible();
-  await expect(operator.getByRole("complementary", { name: "What approving does" }).getByText("Paramjit Kaur")).toBeVisible();
+  // One decision bar: the consequences in one line, the Approve button beside them, each farmer one click away.
+  const approving = operator.getByRole("region", { name: "What approving does" });
+  await expect(approving.getByText(/farmers? gets? a first date/).first()).toBeVisible();
+  await approving.getByText("See every farmer this changes").click();
+  const firstDates = approving.locator("details").filter({ hasText: /farmers? gets? a first date/ });
+  if (!(await approving.getByText("Paramjit Kaur").isVisible())) await firstDates.locator("summary").click();
+  await expect(approving.getByText("Paramjit Kaur")).toBeVisible();
   await expectNoAxeViolations(operator);
   // Still nothing for the farmer: a draft is not a promise.
   const beforeApproval = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { status: string };
   expect(beforeApproval.status).toBe("requested");
 
+  // Approving lives only under "What approving does": decide after seeing the consequences.
+  await expect(operator.getByRole("button", { name: "Approve and publish" })).toHaveCount(1);
   await operator.getByRole("button", { name: "Approve and publish" }).click();
   await expect(operator.getByText(/Published by Harpal Singh/)).toBeVisible();
 
-  // 4. The farmer's link now shows a firm date: exactly the date the backend promised.
+  // 4. The farmer's link now shows exactly what the backend promised: a firm date within two days,
+  // or, when those days are full, a window that ends by the farmer's last waiting day.
   await farmer.reload();
-  await expect(farmer.getByText("The machine comes on")).toBeVisible();
-  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as { id: string; status: string; promise: { kind: string; date?: string } | null };
-  expect(slot.status).toBe("firm");
-  expect(slot.promise?.kind).toBe("firm");
-  const promised = new Date(`${slot.promise!.date}T00:00:00Z`);
+  const slot = (await (await farmer.request.get(`/api/proxy/slot/${token}`)).json()) as {
+    id: string;
+    status: string;
+    burnDeadlineDate: string;
+    promise: { kind: "firm"; date: string } | { kind: "window"; startDate: string; endDate: string } | null;
+  };
+  expect(slot.promise).not.toBeNull();
   // English dates are day-first (Indian usage): "Sunday", "1 November".
-  const weekday = new Intl.DateTimeFormat("en-IN", { weekday: "long", timeZone: "UTC" }).format(promised);
-  const dayMonth = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(promised);
-  await expect(farmer.getByText(weekday, { exact: true })).toBeVisible();
-  await expect(farmer.getByText(dayMonth, { exact: true })).toBeVisible();
-  await expect(farmer.getByText("Firm date").first()).toBeVisible();
-  // The plain reason names the machine and the stop.
-  await expect(farmer.getByText(/comes to Balian on .*Your field is stop \d+ of \d+ that day\./)).toBeVisible();
+  const longDate = (iso: string) => {
+    const date = new Date(`${iso}T00:00:00Z`);
+    return {
+      weekday: new Intl.DateTimeFormat("en-IN", { weekday: "long", timeZone: "UTC" }).format(date),
+      dayMonth: new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(date),
+    };
+  };
+  if (slot.promise!.kind === "firm") {
+    expect(slot.status).toBe("firm");
+    await expect(farmer.getByText("The machine comes on")).toBeVisible();
+    const { weekday, dayMonth } = longDate(slot.promise!.date);
+    await expect(farmer.getByText(weekday, { exact: true })).toBeVisible();
+    await expect(farmer.getByText(dayMonth, { exact: true })).toBeVisible();
+    await expect(farmer.getByText("Firm date").first()).toBeVisible();
+    // The plain reason names the machine and the stop.
+    await expect(farmer.getByText(/comes to Balian on .*Your field is stop \d+ of \d+ that day\./)).toBeVisible();
+  } else {
+    expect(slot.status).toBe("window");
+    expect(slot.promise!.endDate <= slot.burnDeadlineDate).toBe(true);
+    await expect(farmer.getByText("The machine comes between")).toBeVisible();
+    const start = longDate(slot.promise!.startDate);
+    const end = longDate(slot.promise!.endDate);
+    await expect(farmer.getByText(`Your turn is between ${start.weekday}, ${start.dayMonth} and ${end.weekday}, ${end.dayMonth}.`, { exact: false })).toBeVisible();
+  }
   await expect(farmer.getByRole("list", { name: "Progress of this turn" }).locator('[aria-current="step"]')).toContainText("Planned");
   await expect(farmer.getByRole("heading", { name: "Why this date" })).toBeVisible();
   await expect(farmer.getByText("Simulated season, real fire timing")).toBeVisible();
@@ -123,7 +154,7 @@ test("facilitator books, operator generates and approves, the slot link shows a 
   expect(new URL(farmer.url()).pathname).toMatch(/^\/slot\//);
 
   // 5. The helper gives the farmer a new link: the old one stops working, the new one opens.
-  await facilitator.goto("/book");
+  await facilitator.goto("/dashboard");
   await facilitator.getByRole("button", { name: "New link for Paramjit Kaur" }).first().click();
   await facilitator.getByRole("button", { name: "Make a new link and copy it" }).click();
   // (Copied, or made but not copied when the headless clipboard refuses: either way the old link is dead.)
