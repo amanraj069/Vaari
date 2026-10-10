@@ -1,7 +1,7 @@
 // Vaari permissions. Deny by default: anything not permitted here is refused with 403.
 // Principals: User (signed in: attrs role, userId, chcId) and FarmerPhone (a farmer's phone
 // session; attr phone). Resources: Field (attrs chcId, farmerPhone, bookedBy), Chc (attr chcId).
-// Farmers have no account: a FarmerPhone principal can only read fields booked with its phone.
+// A FarmerPhone principal reads the fields booked with its phone and books new ones for itself.
 
 // A farmer's phone sees and asks about the fields booked with that phone, nothing else. On WhatsApp
 // (a Meta-signed message from that number) it may also ask for an earlier date ("I cannot wait
@@ -9,6 +9,11 @@
 @id("farmer-phone-own-fields")
 permit (principal is FarmerPhone, action in [Action::"ViewField", Action::"AskWhy", Action::"RequestSooner"], resource is Field)
 when { resource.farmerPhone != "" && resource.farmerPhone == principal.phone };
+
+// A registered farmer asks a CHC for a date for a field of their own; the route takes the phone
+// from the session, so they can only ever book for themselves.
+@id("farmer-phone-request-field")
+permit (principal is FarmerPhone, action == Action::"RequestField", resource is Chc);
 
 // Facilitators ask a CHC for a date on a farmer's behalf.
 @id("request-field")

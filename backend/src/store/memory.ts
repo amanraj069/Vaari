@@ -12,6 +12,8 @@ import {
   type FieldRecord,
   type FireCheckRecord,
   type DeliveryStatus,
+  type FarmerAccountRecord,
+  type OtpChallengeRecord,
   type LoginTokenRecord,
   type MachineRecord,
   type OutboundNoticeRecord,
@@ -42,6 +44,8 @@ export class MemoryStore implements VaariStore {
   private inboundMessages = new Map<string, string>(); // messageId -> expiresAt
   private whatsAppDrafts = new Map<string, WhatsAppDraftRecord>();
   private outboundNotices = new Map<string, OutboundNoticeRecord>();
+  private farmerAccounts = new Map<string, FarmerAccountRecord>();
+  private otpChallenges = new Map<string, OtpChallengeRecord>();
 
   async listChcs() {
     return copy([...this.chcs.values()].sort((left, right) => byString(left.id, right.id)));
@@ -212,6 +216,34 @@ export class MemoryStore implements VaariStore {
   }
   async getOutboundNotice(messageId: string) {
     return copy(this.outboundNotices.get(messageId) ?? null);
+  }
+
+  async getFarmerAccount(phone: string) {
+    return copy(this.farmerAccounts.get(phone) ?? null);
+  }
+  async createFarmerAccount(record: FarmerAccountRecord) {
+    const existing = this.farmerAccounts.get(record.phone);
+    if (existing) return copy(existing);
+    this.farmerAccounts.set(record.phone, copy(record));
+    return copy(record);
+  }
+  async putOtpChallenge(record: OtpChallengeRecord) {
+    this.otpChallenges.set(record.phone, copy(record));
+  }
+  async getOtpChallenge(phone: string) {
+    return copy(this.otpChallenges.get(phone) ?? null);
+  }
+  async countOtpAttempt(phone: string, seen: number) {
+    const challenge = this.otpChallenges.get(phone);
+    if (!challenge || challenge.attempts !== seen) return false;
+    this.otpChallenges.set(phone, { ...challenge, attempts: seen + 1 });
+    return true;
+  }
+  async deleteOtpChallenge(phone: string, codeHash: string) {
+    const challenge = this.otpChallenges.get(phone);
+    if (!challenge || challenge.codeHash !== codeHash) return false;
+    this.otpChallenges.delete(phone);
+    return true;
   }
 
   async getUser(userId: string) {

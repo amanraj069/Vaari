@@ -1,7 +1,8 @@
 /**
- * Farmers have no account: a farmer is their phone number. To see all their fields they get a
- * one-time login link (on WhatsApp, later from the bot; in DEMO_MODE from the "Try as farmer"
- * button), which the web exchanges for a 7-day session scoped to that phone.
+ * A farmer is their phone number. To see all their fields they get a one-time login link (on
+ * WhatsApp from the bot; in DEMO_MODE from the "Try as farmer" button), which the web exchanges for
+ * a 7-day session scoped to that phone, or they sign in on the web with a one-time code
+ * (auth/farmer-otp.ts), which ends in the same session.
  *
  *   login token   typ "farmer-login", phone, jti, 15 minutes, usable once (the jti is stored and
  *                 marked used in a conditional write, so a replayed or forwarded link fails)
@@ -71,6 +72,12 @@ export async function exchangeFarmerLogin(config: Config, store: VaariStore, tok
   const used = await store.useLoginToken(jti, new Date().toISOString());
   if (!used) throw new AuthError("farmer login link already used or unknown");
   if (used.phone !== phone) throw new AuthError("farmer login link does not match its record");
+  return mintFarmerSession(config, phone);
+}
+
+/** A 7-day phone session, after a login link or a one-time code (auth/farmer-otp.ts) proved the phone. */
+export async function mintFarmerSession(config: Config, phone: string): Promise<{ sessionToken: string; expiresIn: number }> {
+  if (toE164(phone) !== phone) throw new Error("mintFarmerSession needs a phone number in E.164");
   const sessionToken = await new SignJWT({ typ: "farmer-session", phone })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(ISSUER)

@@ -8,7 +8,8 @@ import type { Locale } from "../shared";
 import { formatDate } from "../explain/templates";
 
 type Words = {
-  unknownNumber: string;
+  unknownNumber: (registerUrl: string) => string;
+  noBookingsYet: (name: string, bookUrl: string) => string;
   offTopic: string;
   agentUnavailable: string;
   voiceNotSupported: string;
@@ -42,7 +43,8 @@ type Words = {
 
 const WORDS: Record<Locale, Words> = {
   en: {
-    unknownNumber: "I could not find a booking for this number. Please ask your village helper.",
+    unknownNumber: (registerUrl) => `I could not find this number on Vaari. Register at ${registerUrl}, or ask your village helper to book for you.`,
+    noBookingsYet: (name, bookUrl) => `Hello ${name}. You have no field booked yet. Book one at ${bookUrl} and I will tell you its machine date here.`,
     offTopic: "Sorry, I can only help with your machine dates. Tap the menu to choose.",
     agentUnavailable: "I cannot answer in words right now. Tap the menu to choose.",
     voiceNotSupported: "I cannot listen to voice notes yet. Please type, or tap the menu.",
@@ -75,7 +77,8 @@ const WORDS: Record<Locale, Words> = {
     noDate: "no date yet",
   },
   pa: {
-    unknownNumber: "ਮੈਨੂੰ ਇਸ ਨੰਬਰ ਦੀ ਕੋਈ ਬੁਕਿੰਗ ਨਹੀਂ ਮਿਲੀ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਪੁੱਛੋ।",
+    unknownNumber: (registerUrl) => `ਮੈਨੂੰ ਵਾਰੀ 'ਤੇ ਇਹ ਨੰਬਰ ਨਹੀਂ ਮਿਲਿਆ। ${registerUrl} 'ਤੇ ਰਜਿਸਟਰ ਕਰੋ, ਜਾਂ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਬੁਕਿੰਗ ਲਈ ਕਹੋ।`,
+    noBookingsYet: (name, bookUrl) => `ਸਤ ਸ੍ਰੀ ਅਕਾਲ ${name}। ਤੁਹਾਡਾ ਅਜੇ ਕੋਈ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਹੈ। ${bookUrl} 'ਤੇ ਬੁੱਕ ਕਰੋ, ਮੈਂ ਇੱਥੇ ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਦੱਸਾਂਗਾ।`,
     offTopic: "ਮਾਫ਼ ਕਰਨਾ, ਮੈਂ ਸਿਰਫ਼ ਤੁਹਾਡੀਆਂ ਮਸ਼ੀਨ ਦੀਆਂ ਤਰੀਕਾਂ ਬਾਰੇ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     agentUnavailable: "ਮੈਂ ਹੁਣ ਸ਼ਬਦਾਂ ਵਿੱਚ ਜਵਾਬ ਨਹੀਂ ਦੇ ਸਕਦਾ। ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     voiceNotSupported: "ਮੈਂ ਅਜੇ ਆਵਾਜ਼ ਵਾਲੇ ਸੁਨੇਹੇ ਨਹੀਂ ਸੁਣ ਸਕਦਾ। ਕਿਰਪਾ ਕਰਕੇ ਲਿਖੋ, ਜਾਂ ਮੀਨੂ ਦਬਾਓ।",
@@ -108,7 +111,8 @@ const WORDS: Record<Locale, Words> = {
     noDate: "ਅਜੇ ਕੋਈ ਤਰੀਕ ਨਹੀਂ",
   },
   hi: {
-    unknownNumber: "मुझे इस नंबर की कोई बुकिंग नहीं मिली। कृपया अपने गाँव के सहायक से पूछें।",
+    unknownNumber: (registerUrl) => `मुझे वारी पर यह नंबर नहीं मिला। ${registerUrl} पर रजिस्टर करें, या अपने गाँव के सहायक से बुकिंग करवाएँ।`,
+    noBookingsYet: (name, bookUrl) => `नमस्ते ${name}। आपका अभी कोई खेत बुक नहीं है। ${bookUrl} पर बुक करें, मैं यहाँ आपको मशीन की तारीख़ बताऊँगा।`,
     offTopic: "माफ़ कीजिए, मैं सिर्फ़ आपकी मशीन की तारीख़ों में मदद कर सकता हूँ। चुनने के लिए मेन्यू दबाएँ।",
     agentUnavailable: "मैं अभी शब्दों में जवाब नहीं दे सकता। चुनने के लिए मेन्यू दबाएँ।",
     voiceNotSupported: "मैं अभी आवाज़ वाले संदेश नहीं सुन सकता। कृपया लिखें, या मेन्यू दबाएँ।",

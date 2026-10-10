@@ -7,6 +7,7 @@
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import {
   BatchWriteCommand,
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -23,6 +24,8 @@ import {
   type FieldRecord,
   type FireCheckRecord,
   type DeliveryStatus,
+  type FarmerAccountRecord,
+  type OtpChallengeRecord,
   type LoginTokenRecord,
   type MachineRecord,
   type OutboundNoticeRecord,
@@ -437,6 +440,56 @@ export class DynamoStore implements VaariStore {
   async getOutboundNotice(messageId: string) {
     const item = await this.get("whatsappNotices", { messageId });
     return item ? (item as OutboundNoticeRecord) : null;
+  }
+
+  // --- Farmer accounts and one-time codes --------------------------------------------------
+
+  async getFarmerAccount(phone: string) {
+    return (await this.get("farmerAccounts", { phone })) as FarmerAccountRecord | null;
+  }
+  async createFarmerAccount(record: FarmerAccountRecord) {
+    try {
+      await this.documents.send(new PutCommand({ TableName: this.table("farmerAccounts"), Item: { ...record }, ConditionExpression: "attribute_not_exists(phone)" }));
+      return record;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return (await this.getFarmerAccount(record.phone))!;
+      throw error;
+    }
+  }
+  async putOtpChallenge(record: OtpChallengeRecord) {
+    await this.put("otpChallenges", { ...record, ttl: epochSeconds(record.expiresAt) + 3_600 });
+  }
+  async getOtpChallenge(phone: string) {
+    const item = await this.get("otpChallenges", { phone });
+    return item ? (omit(item, ["ttl"]) as OtpChallengeRecord) : null;
+  }
+  async countOtpAttempt(phone: string, seen: number) {
+    try {
+      await this.documents.send(
+        new UpdateCommand({
+          TableName: this.table("otpChallenges"),
+          Key: { phone },
+          ConditionExpression: "attribute_exists(phone) AND attempts = :seen",
+          UpdateExpression: "SET attempts = :next",
+          ExpressionAttributeValues: { ":seen": seen, ":next": seen + 1 },
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
+  }
+  async deleteOtpChallenge(phone: string, codeHash: string) {
+    try {
+      await this.documents.send(
+        new DeleteCommand({ TableName: this.table("otpChallenges"), Key: { phone }, ConditionExpression: "codeHash = :hash", ExpressionAttributeValues: { ":hash": codeHash } }),
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) return false;
+      throw error;
+    }
   }
 
   async getUser(userId: string) {

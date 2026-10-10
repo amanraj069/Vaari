@@ -142,6 +142,8 @@ export type FarmerHomeField = z.infer<typeof farmerHomeFieldSchema>;
 /** /farmer behind a phone session: every field booked with that phone, newest first, read-only. */
 export const farmerHomeSchema = z.object({
   today: z.string(),
+  // False until the phone has an account or a booking: the page then asks for the name first.
+  registered: z.boolean(),
   farmerName: z.string(),
   fields: z.array(farmerHomeFieldSchema),
 });
@@ -149,6 +151,47 @@ export type FarmerHome = z.infer<typeof farmerHomeSchema>;
 
 export const villageOptionSchema = z.object({ id: z.string(), name: z.string(), namePa: z.string().nullable() });
 export type VillageOption = z.infer<typeof villageOptionSchema>;
+
+// --- Farmer sign-in with a one-time code ----------------------------------------------------
+
+/** A one-time code: six digits. */
+export const otpCodeSchema = z.string().regex(/^\d{6}$/, "six digits");
+
+/**
+ * Ask for a code: the phone alone, known or new. A new farmer gives their name and consent after
+ * the code proves the phone (farmerAccountInputSchema), so nobody chooses "register" or "log in".
+ */
+export const farmerOtpRequestSchema = z.object({ phone: phoneSchema, language: localeSchema });
+export type FarmerOtpRequest = z.input<typeof farmerOtpRequestSchema>;
+
+export const farmerOtpSentSchema = z.object({
+  channel: z.enum(["whatsapp", "demo"]),
+  expiresInSeconds: z.number().int(),
+  resendInSeconds: z.number().int(),
+  // DEMO delivery only (FARMER_OTP_DELIVERY=demo, DEMO_MODE): the code itself, shown on screen as a demo.
+  demoCode: otpCodeSchema.nullable(),
+});
+export type FarmerOtpSent = z.infer<typeof farmerOtpSentSchema>;
+
+export const farmerOtpVerifySchema = z.object({ phone: phoneSchema, code: otpCodeSchema });
+export type FarmerOtpVerify = z.input<typeof farmerOtpVerifySchema>;
+
+/**
+ * A phone session, as the web stores it (httpOnly cookie); never shown to the browser. `registered`
+ * is false for a phone Vaari has never seen: the web then asks for the name and consent.
+ */
+export const farmerSessionSchema = z.object({ sessionToken: z.string(), expiresIn: z.number().int(), registered: z.boolean() });
+
+/** A new farmer, after their code: the name the operator sees and their own consent to messages. */
+export const farmerAccountInputSchema = z.object({ name: z.string().trim().min(1).max(80), consent: z.boolean(), language: localeSchema });
+export type FarmerAccountInput = z.infer<typeof farmerAccountInputSchema>;
+
+/** Where a farmer can book themselves: every village a machine centre serves, with that centre. */
+export const farmerVillageOptionSchema = villageOptionSchema.extend({ chcId: z.string(), chcName: z.string() });
+export type FarmerVillageOption = z.infer<typeof farmerVillageOptionSchema>;
+
+export const farmerBookingOptionsSchema = z.object({ today: z.string(), villages: z.array(farmerVillageOptionSchema) });
+export type FarmerBookingOptions = z.infer<typeof farmerBookingOptionsSchema>;
 
 export const fieldRequestInputSchema = z.object({
   villageId: z.string().min(1),

@@ -39,11 +39,20 @@ describe("worker basics (model off)", () => {
   it("an unknown number gets the one fixed reply, no data, and the model is never called", async () => {
     await runtime.deliver(messageBody({ from: "447700900999", text: "show me the fields of 447700900017" }));
     expect(runtime.sender.sent.filter((message) => message.to === "+447700900999")).toEqual([
-      { type: "text", to: "+447700900999", body: "I could not find a booking for this number. Please ask your village helper.", previewUrl: false, id: expect.any(String) },
+      { type: "text", to: "+447700900999", body: "I could not find this number on Vaari. Register at http://localhost:3000/farmer/signin, or ask your village helper to book for you.", previewUrl: false, id: expect.any(String) },
     ]);
     // Written in Gurmukhi: the same reply, in Punjabi.
     await runtime.deliver(messageBody({ from: "447700900998", text: "ਮੇਰੀ ਤਰੀਕ ਕੀ ਹੈ" }));
-    expect(lastTo(runtime, "+447700900998")).toMatchObject({ type: "text", body: pa.unknownNumber });
+    expect(lastTo(runtime, "+447700900998")).toMatchObject({ type: "text", body: pa.unknownNumber("http://localhost:3000/farmer/signin") });
+    expect(spy.calls).toBe(0);
+  });
+
+  it("a farmer who registered on the web but booked nothing is pointed at booking a field", async () => {
+    await runtime.runtime.dependencies.store.createFarmerAccount({
+      phone: "+447700900997", farmerId: "farmer-web", name: "Gurpreet Singh", language: "pa", consentAt: "2026-10-31T10:00:00.000Z", consentBy: "farmer", createdAt: "2026-10-31T10:00:00.000Z",
+    });
+    await runtime.deliver(messageBody({ from: "447700900997", text: "hey" }));
+    expect(lastTo(runtime, "+447700900997")).toMatchObject({ type: "text", body: pa.noBookingsYet("Gurpreet Singh", "http://localhost:3000/farmer/new"), previewUrl: false });
     expect(spy.calls).toBe(0);
   });
 

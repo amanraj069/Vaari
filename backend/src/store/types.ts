@@ -190,6 +190,31 @@ export type WhatsAppDraftRecord = {
   usedAt: string | null;
 };
 
+/**
+ * A farmer who registered (or logged in) with their phone and a one-time code. The phone is the
+ * key; farmerId is the farmer record their own bookings use. consentBy is "farmer" when they agreed
+ * themselves at registration, or the facilitator's user id when a helper's booking recorded it.
+ */
+export type FarmerAccountRecord = {
+  phone: string;
+  farmerId: string;
+  name: string;
+  language: Locale;
+  consentAt: string;
+  consentBy: string;
+  createdAt: string;
+};
+
+/** The latest one-time code for a phone. Only an HMAC of the code is stored. */
+export type OtpChallengeRecord = {
+  phone: string;
+  codeHash: string;
+  language: Locale;
+  sentAt: string;
+  expiresAt: string;
+  attempts: number;
+};
+
 export type NoticeKind = "new_date" | "firm_date" | "date_changed";
 export type DeliveryStatus = "accepted" | "sent" | "delivered" | "read" | "failed";
 
@@ -297,6 +322,18 @@ export interface VaariStore {
   /** A delivery status webhook. Ignored for unknown ids and for statuses older than the stored one. */
   setNoticeStatus(messageId: string, status: DeliveryStatus, at: string, error: string | null): Promise<boolean>;
   getOutboundNotice(messageId: string): Promise<OutboundNoticeRecord | null>;
+
+  getFarmerAccount(phone: string): Promise<FarmerAccountRecord | null>;
+  /** Creates the account unless one exists for that phone (a conditional write); returns the stored one. */
+  createFarmerAccount(record: FarmerAccountRecord): Promise<FarmerAccountRecord>;
+
+  /** Replaces any earlier code for that phone. */
+  putOtpChallenge(record: OtpChallengeRecord): Promise<void>;
+  getOtpChallenge(phone: string): Promise<OtpChallengeRecord | null>;
+  /** Counts one wrong or right try, only if `attempts` is still `seen` (so two tries cannot share a count). */
+  countOtpAttempt(phone: string, seen: number): Promise<boolean>;
+  /** Deletes the challenge only if it is still this code (used once). */
+  deleteOtpChallenge(phone: string, codeHash: string): Promise<boolean>;
 
   getUser(userId: string): Promise<UserRecord | null>;
   putUser(user: UserRecord): Promise<void>;

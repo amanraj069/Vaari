@@ -88,6 +88,22 @@ describe("WhatsApp in production", () => {
   });
 });
 
+describe("farmer sign-in codes", () => {
+  it("shows codes on screen in DEMO_MODE, and is off without it unless WhatsApp sends them", () => {
+    expect(loadConfig({ NODE_ENV: "test" }).FARMER_OTP_DELIVERY).toBe("demo");
+    expect(loadConfig({ NODE_ENV: "test", DEMO_MODE: "false" }).FARMER_OTP_DELIVERY).toBe("off");
+    expect(() => loadConfig({ NODE_ENV: "test", DEMO_MODE: "false", FARMER_OTP_DELIVERY: "demo" })).toThrow("needs DEMO_MODE=true");
+  });
+
+  it("sends codes on WhatsApp only with WhatsApp on and an authentication template", () => {
+    expect(() => loadConfig({ NODE_ENV: "test", FARMER_OTP_DELIVERY: "whatsapp" })).toThrow("WHATSAPP_TEMPLATE_OTP");
+    expect(() => loadConfig({ NODE_ENV: "test", FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_ENABLED: "true" })).toThrow("WHATSAPP_TEMPLATE_OTP");
+    expect(loadConfig({ NODE_ENV: "test", FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_ENABLED: "true", WHATSAPP_TEMPLATE_OTP: "vaari_code" }).FARMER_OTP_DELIVERY).toBe("whatsapp");
+    expect(exampleValues.FARMER_OTP_DELIVERY).toBeDefined();
+    expect(exampleValues.WHATSAPP_TEMPLATE_OTP).toBeDefined();
+  });
+});
+
 describe("season dates", () => {
   it("refuses a season that ends before it starts", () => {
     expect(() => loadConfig({ NODE_ENV: "test", SEASON_START_DATE: "2026-10-01", SEASON_END_DATE: "2026-09-30" })).toThrow("SEASON_END_DATE");

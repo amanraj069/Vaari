@@ -36,6 +36,9 @@ export const TABLES = {
   whatsappMessages: { name: "whatsapp-messages", partitionKey: S("messageId"), indexes: [], ttlAttribute: "ttl" },
   whatsappDrafts: { name: "whatsapp-drafts", partitionKey: S("draftId"), indexes: [], ttlAttribute: "ttl" },
   whatsappNotices: { name: "whatsapp-notices", partitionKey: S("messageId"), indexes: [] },
+  // Farmers who registered or logged in with their phone, and their latest one-time code (TTL).
+  farmerAccounts: { name: "farmer-accounts", partitionKey: S("phone"), indexes: [] },
+  otpChallenges: { name: "otp-challenges", partitionKey: S("phone"), indexes: [], ttlAttribute: "ttl" },
 } satisfies Record<string, TableSpec>;
 
 export type TableKey = keyof typeof TABLES;

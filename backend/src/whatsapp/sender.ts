@@ -16,6 +16,8 @@ export interface WhatsAppSender {
   buttons(to: string, body: string, buttons: Button[]): Promise<string>;
   list(to: string, body: string, buttonLabel: string, rows: ListRow[]): Promise<string>;
   template(to: string, name: string, language: string, parameters: string[]): Promise<string>;
+  /** An authentication template: the code in the body and in its copy-code button. */
+  authCode(to: string, name: string, language: string, code: string): Promise<string>;
 }
 
 export class WhatsAppSendError extends Error {
@@ -80,6 +82,20 @@ export class GraphSender implements WhatsAppSender {
       template: { name, language: { code: language }, components: [{ type: "body", parameters: parameters.map((text) => ({ type: "text", text: clip(text, 1024) })) }] },
     });
   }
+
+  authCode(to: string, name: string, language: string, code: string) {
+    return this.post(to, {
+      type: "template",
+      template: {
+        name,
+        language: { code: language },
+        components: [
+          { type: "body", parameters: [{ type: "text", text: code }] },
+          { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: code }] },
+        ],
+      },
+    });
+  }
 }
 
 /** Records instead of sending: tests, and dev with WHATSAPP_ENABLED=false. */
@@ -87,7 +103,8 @@ export type SentMessage =
   | { type: "text"; to: string; body: string; previewUrl: boolean; id: string }
   | { type: "buttons"; to: string; body: string; buttons: Button[]; id: string }
   | { type: "list"; to: string; body: string; buttonLabel: string; rows: ListRow[]; id: string }
-  | { type: "template"; to: string; name: string; language: string; parameters: string[]; id: string };
+  | { type: "template"; to: string; name: string; language: string; parameters: string[]; id: string }
+  | { type: "authCode"; to: string; name: string; language: string; code: string; id: string };
 
 type WithoutId<Message> = Message extends unknown ? Omit<Message, "id"> : never;
 
@@ -114,5 +131,8 @@ export class RecordingSender implements WhatsAppSender {
   }
   async template(to: string, name: string, language: string, parameters: string[]) {
     return this.record({ type: "template", to, name, language, parameters });
+  }
+  async authCode(to: string, name: string, language: string, code: string) {
+    return this.record({ type: "authCode", to, name, language, code });
   }
 }

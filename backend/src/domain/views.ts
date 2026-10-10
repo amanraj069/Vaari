@@ -433,6 +433,7 @@ export async function buildFarmerPhoneHome(planner: Planner, store: VaariStore, 
   const newestFirst = [...fields].sort((left, right) => (left.createdAt < right.createdAt ? 1 : left.createdAt > right.createdAt ? -1 : 0));
   return {
     today: planner.dayToIso(planner.today()),
+    registered: fields.length > 0,
     farmerName: newestFirst[0]?.farmerName ?? "",
     fields: newestFirst.map((field) => {
       const { context, historyByField } = contexts.get(field.chcId)!;

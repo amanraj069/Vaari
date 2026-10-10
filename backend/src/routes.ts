@@ -4,7 +4,8 @@
  *
  * Three kinds of caller:
  * - signed-in users (facilitator, operator, officer): bearer token from the Next proxy;
- * - farmers: a phone session (bearer token typ "farmer-session") on /farmer/* only, read-only;
+ * - farmers: a phone session (bearer token typ "farmer-session") on /farmer/* only: they read their
+ *   own fields and book new ones for their own phone, nothing else;
  * - anyone holding a slot link: /slot/:token, scoped to the one field (and link version) it names.
  * No response from a slot, officer or public route ever contains a phone number.
  */
@@ -17,6 +18,11 @@ import {
   bookingInputSchema,
   dateToDay,
   demoPersonaSchema,
+  farmerAccountInputSchema,
+  farmerOtpRequestSchema,
+  farmerOtpVerifySchema,
+  fieldRequestInputSchema,
+  type FarmerVillageOption,
   waitingLimitInputSchema,
   localeSchema,
   moveInputSchema,
@@ -31,6 +37,7 @@ import {
 import type { AppDependencies } from "./app";
 import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
 import { exchangeFarmerLogin, mintFarmerLoginLink, verifyFarmerSession, type FarmerPhonePrincipal } from "./auth/farmer-session";
+import { accountFromBookings, createFarmerAccount, createFarmerOtp, isRefusal } from "./auth/farmer-otp";
 import { assertCurrentLink, mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { authorize, fieldResource, type Action, type Resource } from "./authz/cedar";
 import { DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
@@ -45,6 +52,9 @@ export class ForbiddenError extends Error {
     super("forbidden");
   }
 }
+
+// A farmer booking themselves may hold this many fields that are not yet sown.
+const MAX_OPEN_FIELDS_PER_PHONE = 10;
 
 type AuthedRequest = Request & { principal: Principal };
 type FarmerRequest = Request & { farmer: FarmerPhonePrincipal };
@@ -82,6 +92,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
   const slotLimiter = clientRateLimit(config, config.SLOT_RATE_LIMIT_PER_MINUTE);
   const demoLimiter = clientRateLimit(config, 20);
   const farmerLoginLimiter = clientRateLimit(config, 20);
+  const farmerCodeLimiter = clientRateLimit(config, 10);
+  const farmerOtp = createFarmerOtp(() => ({ config, store: dependencies.store, sender: dependencies.whatsapp.sender }));
 
   const authenticate: RequestHandler = (request, _response, next) => {
     const token = bearerOf(request);
@@ -280,14 +292,125 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // Every field booked with this phone, in any CHC: status, promise and history. Read-only.
+  // Sign-in with a one-time code (auth/farmer-otp.ts): ask for a code with the phone alone, then
+  // trade it for the same 7-day phone session (and whether Vaari knows the phone). The web's own
+  // route handler keeps the session in an httpOnly cookie.
+  router.post(
+    "/farmer/otp/request",
+    farmerCodeLimiter,
+    asyncHandler<Request>(async (request, response) => {
+      const result = await farmerOtp.request(farmerOtpRequestSchema.parse(request.body));
+      if (isRefusal(result)) {
+        const { status, ...body } = result;
+        response.status(status).json(body);
+        return;
+      }
+      response.json(result);
+    }),
+  );
+
+  router.post(
+    "/farmer/otp/verify",
+    farmerCodeLimiter,
+    asyncHandler<Request>(async (request, response) => {
+      const { phone, code } = farmerOtpVerifySchema.parse(request.body);
+      const result = await farmerOtp.verify(phone, code);
+      if (isRefusal(result)) {
+        const { status, ...body } = result;
+        response.status(status).json(body);
+        return;
+      }
+      response.json(result);
+    }),
+  );
+
+  // Every field booked with this phone, in any CHC: status, promise and history.
   router.get(
     "/farmer/home",
     authenticateFarmer,
     asyncHandler<FarmerRequest>(async (request, response) => {
-      const fields = await dependencies.store.listFieldsByPhone(request.farmer.phone);
+      const [fields, account] = await Promise.all([dependencies.store.listFieldsByPhone(request.farmer.phone), dependencies.store.getFarmerAccount(request.farmer.phone)]);
       for (const field of fields) requireCedar(request.farmer, "ViewField", fieldResource(field));
-      response.json(await buildFarmerPhoneHome(dependencies.planner, dependencies.store, fields, localeOf(request)));
+      const home = await buildFarmerPhoneHome(dependencies.planner, dependencies.store, fields, localeOf(request));
+      response.json(account ? { ...home, registered: true, farmerName: account.name } : home);
+    }),
+  );
+
+  // A new farmer finishes signing up after their code: their name and their own consent. A phone
+  // that already has an account (or a helper's booking) keeps it as it is: 200, nothing renamed.
+  router.post(
+    "/farmer/account",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const input = farmerAccountInputSchema.parse(request.body);
+      if (input.consent !== true) {
+        response.status(400).json({ error: "CONSENT_REQUIRED" });
+        return;
+      }
+      const { account, created } = await createFarmerAccount(dependencies.store, request.farmer.phone, input.name, input.language);
+      response.status(created ? 201 : 200).json({ name: account.name });
+    }),
+  );
+
+  // What a farmer may book themselves: every village a machine centre serves, and today's date.
+  router.get(
+    "/farmer/booking-options",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (_request, response) => {
+      const villagesById = new Map(dependencies.planner.villages().map((village) => [village.id, village]));
+      const options = new Map<string, FarmerVillageOption>();
+      for (const chc of await dependencies.store.listChcs()) {
+        for (const villageId of chc.villageIds) {
+          const village = villagesById.get(villageId);
+          if (village && !options.has(villageId)) options.set(villageId, { id: village.id, name: village.name, namePa: village.namePa, chcId: chc.id, chcName: chc.name });
+        }
+      }
+      response.json({
+        today: dependencies.planner.dayToIso(dependencies.planner.today()),
+        villages: [...options.values()].sort((left, right) => left.name.localeCompare(right.name)),
+      });
+    }),
+  );
+
+  // A farmer books a field for their own phone (the "new booking" on /farmer). The phone comes from
+  // the session, the name and consent from their account; the centre is the one that serves the
+  // village. Like a helper's booking, it gets a date when the operator publishes a plan.
+  router.post(
+    "/farmer/fields",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const { phone } = request.farmer;
+      const input = fieldRequestInputSchema.parse(request.body);
+      // Registered, or booked for by a helper (then the account comes from that booking).
+      const account = await accountFromBookings(dependencies.store, phone, localeOf(request));
+      if (!account) {
+        response.status(403).json({ error: "NOT_REGISTERED" });
+        return;
+      }
+      const chc = (await dependencies.store.listChcs()).find((candidate) => candidate.villageIds.includes(input.villageId));
+      if (!chc) throw new NotFoundError("no machine centre serves this village");
+      requireCedar(request.farmer, "RequestField", { type: "Chc", id: chc.id });
+      const open = (await dependencies.store.listFieldsByPhone(phone)).filter((field) => field.state !== "done");
+      if (open.length >= MAX_OPEN_FIELDS_PER_PHONE) {
+        response.status(409).json({ error: "TOO_MANY_FIELDS" });
+        return;
+      }
+      const today = dependencies.planner.today();
+      const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
+      if (readyDay < today - 7 || readyDay > today + 30) {
+        response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
+        return;
+      }
+      const field = await dependencies.planner.requestField(
+        chc.id,
+        { farmerId: account.farmerId, farmerName: account.name, bookedBy: null, farmerPhone: phone, consentAt: account.consentAt, consentBy: account.consentBy },
+        input,
+      );
+      const token = await mintSlotToken(config, field);
+      response.status(201).json({
+        field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
+        slot: { token, path: `/slot/${token}` },
+      });
     }),
   );
 

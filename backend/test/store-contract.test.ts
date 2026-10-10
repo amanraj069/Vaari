@@ -118,6 +118,32 @@ for (const { name, make } of stores) {
       expect(await store.useLoginToken(`never-${run}`, "2026-10-31T00:02:00.000Z")).toBeNull();
     });
 
+    it("creates a farmer account once per phone and keeps the first", async () => {
+      const phone = `+447700900${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
+      const account = { phone, farmerId: `farmer-${run}`, name: "Paramjit Kaur", language: "pa" as const, consentAt: "2026-10-31T10:00:00.000Z", consentBy: "farmer", createdAt: "2026-10-31T10:00:00.000Z" };
+      expect(await store.getFarmerAccount(phone)).toBeNull();
+      expect(await store.createFarmerAccount(account)).toEqual(account);
+      expect(await store.createFarmerAccount({ ...account, farmerId: "someone-else", name: "Other" })).toEqual(account);
+      expect(await store.getFarmerAccount(phone)).toEqual(account);
+    });
+
+    it("keeps one sign-in code per phone: counts each try once, and deletes only the right code", async () => {
+      const phone = `+447700900${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
+      const challenge = { phone, codeHash: `hash-${run}`, language: "en" as const, sentAt: "2026-10-31T10:00:00.000Z", expiresAt: "2099-10-31T10:10:00.000Z", attempts: 0 };
+      await store.putOtpChallenge({ ...challenge, codeHash: "an-older-code" });
+      await store.putOtpChallenge(challenge);
+      expect(await store.getOtpChallenge(phone)).toEqual(challenge);
+      expect(await store.countOtpAttempt(phone, 0)).toBe(true);
+      // A second try that read the same count loses the race.
+      expect(await store.countOtpAttempt(phone, 0)).toBe(false);
+      expect((await store.getOtpChallenge(phone))?.attempts).toBe(1);
+      expect(await store.deleteOtpChallenge(phone, "an-older-code")).toBe(false);
+      expect(await store.deleteOtpChallenge(phone, challenge.codeHash)).toBe(true);
+      expect(await store.deleteOtpChallenge(phone, challenge.codeHash)).toBe(false);
+      expect(await store.getOtpChallenge(phone)).toBeNull();
+      expect(await store.countOtpAttempt(phone, 1)).toBe(false);
+    });
+
     it("claims a WhatsApp message id once, until its claim expires", async () => {
       const id = `wamid.contract-${run}`;
       expect(await store.claimInboundMessage(id, "2026-10-31T10:00:00.000Z", "2026-11-03T10:00:00.000Z")).toBe(true);

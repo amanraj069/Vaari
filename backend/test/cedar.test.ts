@@ -36,9 +36,10 @@ describe("Cedar policies", () => {
     for (const user of [operator, facilitator, officer]) expect(authorize(user, "RequestSooner", field).allowed).toBe(false);
   });
 
-  it("a farmer's phone session can never act: no reissue, contact, booking or operator action", () => {
+  it("a farmer's phone may book for itself (the route supplies the phone) but never reissue, see contacts or run a centre", () => {
+    expect(authorize(farmerPhone, "RequestField", chcA)).toMatchObject({ allowed: true });
     for (const action of ["ReissueLink", "ViewFarmerContact"] as Action[]) expect(authorize(farmerPhone, action, field).allowed).toBe(false);
-    for (const action of ["RequestField", "ViewAggregates", ...OPERATOR_ACTIONS] as Action[]) {
+    for (const action of ["ViewAggregates", ...OPERATOR_ACTIONS] as Action[]) {
       const decision = authorize(farmerPhone, action, chcA);
       expect(decision.allowed).toBe(false);
       expect(decision.errors).toEqual([]); // the User policies skip a FarmerPhone cleanly

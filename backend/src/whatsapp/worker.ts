@@ -238,8 +238,12 @@ export function createWorker(deps: WorkerDeps) {
     const principal: FarmerPhonePrincipal = { kind: "farmerPhone", phone };
     const probe = new FarmerSession(deps, principal, "en", now);
     if ((await probe.fields()).length === 0) {
-      // Unknown number: one fixed reply, no data, and the model is never called.
-      await sender.text(phone, words(scriptLocale(message.text) ?? "en").unknownNumber);
+      // No booking: one fixed reply, and the model is never called. A farmer who registered on the
+      // web is pointed at booking a field; an unknown number at registering (or their helper).
+      const web = config.WEB_BASE_URL.replace(/\/$/, "");
+      const account = await store.getFarmerAccount(phone);
+      if (account) await sender.text(phone, words(chooseLocale(account.language, message.text)).noBookingsYet(account.name, `${web}/farmer/new`), { previewUrl: false });
+      else await sender.text(phone, words(scriptLocale(message.text) ?? "en").unknownNumber(`${web}/farmer/signin`), { previewUrl: false });
       return;
     }
     if (!limiter.allow(phone, at.getTime())) {

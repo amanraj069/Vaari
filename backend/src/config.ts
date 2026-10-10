@@ -68,6 +68,8 @@ const configSchema = z.object({
   WHATSAPP_TEMPLATE_NEW_DATE: z.string().default(""),
   WHATSAPP_TEMPLATE_FIRM_DATE: z.string().default(""),
   WHATSAPP_TEMPLATE_DATE_CHANGED: z.string().default(""),
+  // Authentication template (copy-code button) for farmer sign-in codes, in en, pa and hi.
+  WHATSAPP_TEMPLATE_OTP: z.string().default(""),
   // In DEMO_MODE, notices go only to these numbers (comma-separated, E.164).
   WHATSAPP_ALLOWED_TEST_NUMBERS: z.string().default(""),
   // memory: in-process (dev, tests). sqs: the webhook writes to SQS and `npm run worker` reads it.
@@ -82,9 +84,12 @@ const configSchema = z.object({
   BEDROCK_MODEL_ID: z.string().default("global.amazon.nova-2-lite-v1:0"),
   BEDROCK_REGION: z.string().optional(),
   AGENT_TIMEOUT_SECONDS: z.coerce.number().positive().default(20),
+  // How a farmer's sign-in code reaches them. demo: shown on screen (DEMO_MODE only). whatsapp: the
+  // WHATSAPP_TEMPLATE_OTP template. off: farmer sign-in is closed. Unset: demo with DEMO_MODE, else off.
+  FARMER_OTP_DELIVERY: z.enum(["off", "demo", "whatsapp"]).optional(),
 });
 
-export type Config = z.infer<typeof configSchema>;
+export type Config = Omit<z.infer<typeof configSchema>, "FARMER_OTP_DELIVERY"> & { FARMER_OTP_DELIVERY: "off" | "demo" | "whatsapp" };
 
 /**
  * Values that must never sign anything in production: the development defaults above and the
@@ -147,7 +152,14 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Config
   if (parsed.data.REPO === "dynamo" && !parsed.data.AWS_REGION) {
     throw new Error("REPO=dynamo needs AWS_REGION (credentials come from the AWS default provider chain)");
   }
-  return parsed.data;
+  const otpDelivery = parsed.data.FARMER_OTP_DELIVERY ?? (parsed.data.DEMO_MODE ? "demo" : "off");
+  if (otpDelivery === "demo" && !parsed.data.DEMO_MODE) {
+    throw new Error("FARMER_OTP_DELIVERY=demo shows sign-in codes on screen, so it needs DEMO_MODE=true");
+  }
+  if (otpDelivery === "whatsapp" && (!parsed.data.WHATSAPP_ENABLED || !parsed.data.WHATSAPP_TEMPLATE_OTP)) {
+    throw new Error("FARMER_OTP_DELIVERY=whatsapp needs WHATSAPP_ENABLED=true and WHATSAPP_TEMPLATE_OTP");
+  }
+  return { ...parsed.data, FARMER_OTP_DELIVERY: otpDelivery };
 }
 
 /** WHATSAPP_ALLOWED_TEST_NUMBERS as E.164 numbers (anything that is not a phone number is ignored). */
