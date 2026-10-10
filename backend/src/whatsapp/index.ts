@@ -11,6 +11,7 @@ import { StrandsRunner, type AgentRunner } from "./agent";
 import { createNotifier, type Notifier } from "./notices";
 import { MemoryQueue, SqsQueue, type WebhookQueue } from "./queue";
 import { GraphSender, RecordingSender, type WhatsAppSender } from "./sender";
+import { AwsSpeech, type SpeechService } from "./voice";
 import { createWorker, type WhatsAppWorker } from "./worker";
 
 export type WhatsAppRuntime = { queue: WebhookQueue; sender: WhatsAppSender; runner: AgentRunner | null; worker: WhatsAppWorker; notifier: Notifier };
@@ -26,17 +27,20 @@ export function whatsappSetupProblems(config: Config): string[] {
   if (!config.WHATSAPP_VERIFY_TOKEN) problems.push("WHATSAPP_VERIFY_TOKEN is not set: Meta's webhook verification (GET) will be refused with 403");
   if (!config.WHATSAPP_TOKEN || !config.WHATSAPP_PHONE_NUMBER_ID) problems.push("WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID is not set: replies cannot be sent");
   if (config.WHATSAPP_QUEUE === "sqs" && !config.WHATSAPP_SQS_QUEUE_URL) problems.push("WHATSAPP_QUEUE=sqs but WHATSAPP_SQS_QUEUE_URL is not set: webhooks cannot be queued (500)");
+  if (config.VOICE_ENABLED && !config.VOICE_S3_BUCKET) problems.push("VOICE_ENABLED=true but VOICE_S3_BUCKET is not set: voice notes get 'please type' (Transcribe reads only from S3)");
+  if (config.VOICE_ENABLED && !config.AGENT_ENABLED) problems.push("VOICE_ENABLED=true but AGENT_ENABLED=false: voice notes get 'please type' (the agent answers what was heard)");
   return problems;
 }
 
 export function buildWhatsApp(
   deps: { config: Config; store: VaariStore; planner: Planner; engine: EngineClient },
-  overrides: { sender?: WhatsAppSender; runner?: AgentRunner | null; queue?: WebhookQueue; now?: () => Date } = {},
+  overrides: { sender?: WhatsAppSender; runner?: AgentRunner | null; speech?: SpeechService | null; queue?: WebhookQueue; now?: () => Date } = {},
 ): WhatsAppRuntime {
   const { config } = deps;
   const sender = overrides.sender ?? (config.WHATSAPP_ENABLED ? new GraphSender(config) : new RecordingSender());
   const runner = overrides.runner !== undefined ? overrides.runner : config.AGENT_ENABLED ? new StrandsRunner(config) : null;
-  const worker = createWorker({ ...deps, sender, runner, now: overrides.now });
+  const speech = overrides.speech !== undefined ? overrides.speech : config.VOICE_ENABLED && config.VOICE_S3_BUCKET ? new AwsSpeech(config) : null;
+  const worker = createWorker({ ...deps, sender, runner, speech, now: overrides.now });
   const queue = overrides.queue ?? (config.WHATSAPP_QUEUE === "sqs" ? new SqsQueue(config.WHATSAPP_SQS_QUEUE_URL, config.AWS_REGION ?? "ap-south-1") : new MemoryQueue());
   if (queue instanceof MemoryQueue) queue.setConsumer(worker.handle);
   return { queue, sender, runner, worker, notifier: createNotifier({ ...deps, sender }) };

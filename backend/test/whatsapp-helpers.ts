@@ -12,6 +12,7 @@ import { MemoryQueue } from "../src/whatsapp/queue";
 import { RecordingSender } from "../src/whatsapp/sender";
 import { signatureFor } from "../src/whatsapp/signature";
 import type { FarmerTool } from "../src/whatsapp/tools";
+import type { Heard, SpeechService } from "../src/whatsapp/voice";
 
 export const APP_SECRET = "test-app-secret";
 export const VERIFY_TOKEN = "test-verify-token";
@@ -70,14 +71,33 @@ export class ScriptedRunner implements AgentRunner {
   }
 }
 
-export async function whatsappRuntime(options: { config?: Partial<Config>; runner?: AgentRunner | null } = {}) {
+/** Transcribe and Polly stand-ins: `heard` is what every note "says"; what was spoken is recorded. */
+export class FakeSpeech implements SpeechService {
+  heard: Heard | null = null;
+  failTranscribe = false;
+  failSpeak = false;
+  readonly notes: Uint8Array[] = [];
+  readonly spoken: { text: string; language: string }[] = [];
+  async transcribe(audio: Uint8Array) {
+    this.notes.push(audio);
+    if (this.failTranscribe) throw new Error("Transcribe job failed: test");
+    return this.heard;
+  }
+  async speak(text: string, language: "hi-IN" | "en-IN") {
+    if (this.failSpeak) throw new Error("Polly failed: test");
+    this.spoken.push({ text, language });
+    return new TextEncoder().encode(`OggS:${language}`);
+  }
+}
+
+export async function whatsappRuntime(options: { config?: Partial<Config>; runner?: AgentRunner | null; speech?: SpeechService | null } = {}) {
   const sender = new RecordingSender();
   const queue = new MemoryQueue();
   const clock = { now: new Date() };
   const runtime = await buildRuntime({
     freshDemo: true,
     config: { WHATSAPP_ENABLED: true, WHATSAPP_APP_SECRET: APP_SECRET, WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN, ...options.config },
-    whatsapp: { sender, queue, runner: options.runner ?? null, now: () => clock.now },
+    whatsapp: { sender, queue, runner: options.runner ?? null, speech: options.speech ?? null, now: () => clock.now },
   });
   const app = createApp(runtime.dependencies);
   /** Posts a body to the webhook, signed like Meta, and waits for the worker to finish. */

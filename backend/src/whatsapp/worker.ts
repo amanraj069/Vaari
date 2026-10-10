@@ -9,7 +9,10 @@
  *       a button or list reply -> the tools directly (no model),
  *       text -> the agent when AGENT_ENABLED (its reply checked against this turn's tool results,
  *               else the template reply), otherwise the menu,
- *       a voice note -> "please type or tap the menu" (transcription is not built).
+ *       a voice note -> with VOICE_ENABLED and the agent: Transcribe's words (and language) go
+ *               through the same agent turn as text, the farmer first reads what was heard, and
+ *               Polly reads back what that turn sent as a voice note after the text; otherwise
+ *               "please type or tap the menu".
  * A change needs a tap: cannot_wait_longer and book_field draft; only a Confirm button reply naming
  * that draft, from the same phone, within 15 minutes, calls planner.shortenWaitingLimit or books the
  * field (the same checks as /farmer/new). Typed words never do. A booked field waits for the
@@ -17,6 +20,7 @@
  * approval carries the field's slot link (notices.ts).
  * Logs carry the phone's last 4 digits only, never message text, never tokens.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { Locale } from "../shared";
 import type { FarmerPhonePrincipal } from "../auth/farmer-session";
 import { mintFarmerLoginLink } from "../auth/farmer-session";
@@ -33,8 +37,11 @@ import { parseWebhook, type InboundMessage } from "./payload";
 import { fromWhatsAppNumber, maskPhone } from "./phone";
 import type { WhatsAppSender } from "./sender";
 import { FarmerSession, type BookingDetails, type FarmerToolDeps, type ToolCall } from "./tools";
+import { toDevanagari, type Heard, type SpeechService } from "./voice";
 
 const DEDUPE_DAYS = 3;
+/** Polly takes up to 3,000 billed characters; a spoken reply is cut well before that. */
+const SPOKEN_CHARACTERS = 1_500;
 
 /** At most `limit` messages per phone per rolling hour (one worker process; SQS runs one worker). */
 export class PhoneRateLimiter {
@@ -52,12 +59,27 @@ export class PhoneRateLimiter {
   }
 }
 
-export type WorkerDeps = FarmerToolDeps & { sender: WhatsAppSender; runner: AgentRunner | null; now?: () => Date };
+export type WorkerDeps = FarmerToolDeps & { sender: WhatsAppSender; runner: AgentRunner | null; speech?: SpeechService | null; now?: () => Date };
 
 export function createWorker(deps: WorkerDeps) {
   const now = deps.now ?? (() => new Date());
   const limiter = new PhoneRateLimiter(deps.config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR);
-  const { sender, store, config } = deps;
+  const { store, config } = deps;
+  const speech = deps.speech ?? null;
+
+  // During a voice turn, every body sent (text, buttons, list) is also collected here, so the voice
+  // reply says exactly what the farmer can read, and every send path stays as it is.
+  const spokenTurn = new AsyncLocalStorage<string[]>();
+  const sender: WhatsAppSender = {
+    text: (to, body, options) => (spokenTurn.getStore()?.push(body), deps.sender.text(to, body, options)),
+    buttons: (to, body, buttons) => (spokenTurn.getStore()?.push(body), deps.sender.buttons(to, body, buttons)),
+    list: (to, body, buttonLabel, rows) => (spokenTurn.getStore()?.push(body), deps.sender.list(to, body, buttonLabel, rows)),
+    template: (...args) => deps.sender.template(...args),
+    authCode: (...args) => deps.sender.authCode(...args),
+    voice: (...args) => deps.sender.voice(...args),
+    uploadMedia: (...args) => deps.sender.uploadMedia(...args),
+    downloadMedia: (...args) => deps.sender.downloadMedia(...args),
+  };
 
   async function storedLanguage(session: FarmerSession, accountLanguage: Locale | null): Promise<Locale | null> {
     const newest = (await session.fields())[0];
@@ -271,6 +293,56 @@ export function createWorker(deps: WorkerDeps) {
     return sendCalls(session);
   }
 
+  /** Polly reads what a voice turn sent, as a voice note. A failure leaves the text the farmer already has. */
+  async function speakReply(session: FarmerSession, spoken: string[]): Promise<boolean> {
+    if (!speech || (session.locale === "pa" && !config.VOICE_PUNJABI_AUDIO)) return false;
+    // Links are for tapping, not hearing; "#007" is said as "007"; bullets are not said.
+    const text = spoken
+      .join("\n\n")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/#(\d)/g, "$1")
+      .replace(/•/g, "")
+      .trim()
+      .slice(0, SPOKEN_CHARACTERS);
+    if (!text) return false;
+    try {
+      const audio = await speech.speak(session.locale === "pa" ? toDevanagari(text) : text, session.locale === "en" ? "en-IN" : "hi-IN");
+      await sender.voice(session.principal.phone, await sender.uploadMedia(audio, "audio/ogg"));
+      return true;
+    } catch (error) {
+      logger.warn({ phone: maskPhone(session.principal.phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp voice reply failed; the text reply stands");
+      return false;
+    }
+  }
+
+  /**
+   * A voice note: Transcribe's words go through the same agent turn as typed text, in the language it
+   * heard. The farmer first reads what was heard (a misheard word shows, and a booking or change still
+   * needs their Confirm tap); then the turn's replies; then the same replies spoken.
+   */
+  async function voiceTurn(message: InboundMessage, principal: FarmerPhonePrincipal, fallback: Locale, accountName: string | null): Promise<string> {
+    const phone = principal.phone;
+    let heard: Heard | null = null;
+    try {
+      const media = await sender.downloadMedia(message.mediaId ?? "", config.VOICE_MAX_BYTES);
+      heard = await speech!.transcribe(media.bytes, message.id);
+    } catch (error) {
+      logger.warn({ phone: maskPhone(phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp voice note not transcribed");
+    }
+    const session = new FarmerSession(deps, principal, heard?.locale ?? fallback, now);
+    const said = words(session.locale);
+    if (!heard) {
+      await sendMenu(session, said.voiceNotUnderstood);
+      return "voice note: not understood; sent the menu";
+    }
+    const heardText = heard.text;
+    await sender.text(phone, said.heard(heardText));
+    const spoken: string[] = [];
+    await spokenTurn.run(spoken, () => agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null));
+    const voiced = await speakReply(session, spoken);
+    return `answered voice note (${heard.locale}) with the agent${voiced ? " and a voice reply" : ", text only"}`;
+  }
+
   /** Handles one message; returns what was done, for the "whatsapp message handled" log line. */
   async function handleMessage(message: InboundMessage): Promise<string> {
     const at = now();
@@ -306,6 +378,9 @@ export function createWorker(deps: WorkerDeps) {
       return "answered text with the menu (AGENT_ENABLED=false)";
     }
     if (message.kind === "audio") {
+      if (config.VOICE_ENABLED && speech && config.AGENT_ENABLED && deps.runner && message.mediaId) {
+        return voiceTurn(message, principal, session.locale, account?.name ?? null);
+      }
       await sendMenu(session, words(session.locale).voiceNotSupported);
       return "voice note: sent 'please type' and the menu";
     }
