@@ -37,11 +37,12 @@ import {
 import type { AppDependencies } from "./app";
 import { mintDemoToken, AuthError, type Principal } from "./auth/tokens";
 import { exchangeFarmerLogin, mintFarmerLoginLink, verifyFarmerSession, type FarmerPhonePrincipal } from "./auth/farmer-session";
-import { accountFromBookings, createFarmerAccount, createFarmerOtp, isRefusal } from "./auth/farmer-otp";
+import { createFarmerAccount, createFarmerOtp, isRefusal } from "./auth/farmer-otp";
 import { assertCurrentLink, mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { authorize, fieldResource, type Action, type Resource } from "./authz/cedar";
 import { DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
+import { bookFieldForPhone } from "./domain/farmer-booking";
 import type { FieldRecord } from "./store/types";
 import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
 import { explainField as explainFieldFor } from "./domain/why";
@@ -54,7 +55,6 @@ export class ForbiddenError extends Error {
 }
 
 // A farmer booking themselves may hold this many fields that are not yet sown.
-const MAX_OPEN_FIELDS_PER_PHONE = 10;
 
 type AuthedRequest = Request & { principal: Principal };
 type FarmerRequest = Request & { farmer: FarmerPhonePrincipal };
@@ -379,33 +379,16 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     "/farmer/fields",
     authenticateFarmer,
     asyncHandler<FarmerRequest>(async (request, response) => {
-      const { phone } = request.farmer;
       const input = fieldRequestInputSchema.parse(request.body);
-      // Registered, or booked for by a helper (then the account comes from that booking).
-      const account = await accountFromBookings(dependencies.store, phone, localeOf(request));
-      if (!account) {
-        response.status(403).json({ error: "NOT_REGISTERED" });
+      const booked = await bookFieldForPhone(dependencies, request.farmer, input, localeOf(request));
+      if (!booked.ok) {
+        if (booked.error === "NO_CENTRE") throw new NotFoundError("no machine centre serves this village");
+        if (booked.error === "FORBIDDEN") throw new ForbiddenError(booked.reasons);
+        const status = { NOT_REGISTERED: 403, TOO_MANY_FIELDS: 409, READY_DATE_OUT_OF_RANGE: 400 }[booked.error];
+        response.status(status).json({ error: booked.error });
         return;
       }
-      const chc = (await dependencies.store.listChcs()).find((candidate) => candidate.villageIds.includes(input.villageId));
-      if (!chc) throw new NotFoundError("no machine centre serves this village");
-      requireCedar(request.farmer, "RequestField", { type: "Chc", id: chc.id });
-      const open = (await dependencies.store.listFieldsByPhone(phone)).filter((field) => field.state !== "done");
-      if (open.length >= MAX_OPEN_FIELDS_PER_PHONE) {
-        response.status(409).json({ error: "TOO_MANY_FIELDS" });
-        return;
-      }
-      const today = dependencies.planner.today();
-      const readyDay = dateToDay(config.SEASON_START_DATE, input.readyDate);
-      if (readyDay < today - 7 || readyDay > today + 30) {
-        response.status(400).json({ error: "READY_DATE_OUT_OF_RANGE" });
-        return;
-      }
-      const field = await dependencies.planner.requestField(
-        chc.id,
-        { farmerId: account.farmerId, farmerName: account.name, bookedBy: null, farmerPhone: phone, consentAt: account.consentAt, consentBy: account.consentBy },
-        input,
-      );
+      const { field } = booked;
       const token = await mintSlotToken(config, field);
       response.status(201).json({
         field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
