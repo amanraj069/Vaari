@@ -5,7 +5,8 @@
  * button 20, row title 24, row description 72, 3 buttons, 10 rows.
  */
 import type { Config } from "../config";
-import { toWhatsAppNumber } from "./phone";
+import { logger } from "../logger";
+import { maskPhone, toWhatsAppNumber } from "./phone";
 
 export type Button = { id: string; title: string };
 export type ListRow = { id: string; title: string; description?: string };
@@ -36,15 +37,26 @@ export class GraphSender implements WhatsAppSender {
   constructor(private readonly config: Config) {}
 
   private async post(to: string, message: Record<string, unknown>): Promise<string> {
+    const started = Date.now();
     const response = await fetch(`https://graph.facebook.com/${this.config.WHATSAPP_GRAPH_VERSION}/${this.config.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
       method: "POST",
       headers: { authorization: `Bearer ${this.config.WHATSAPP_TOKEN}`, "content-type": "application/json" },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: toWhatsAppNumber(to), ...message }),
       signal: AbortSignal.timeout(15_000),
     });
-    const body = (await response.json().catch(() => null)) as { messages?: { id: string }[]; error?: { code?: number; message?: string } } | null;
-    // The error text from Meta never contains the token; the recipient is not logged by callers.
-    if (!response.ok || !body?.messages?.[0]?.id) throw new WhatsAppSendError(`WhatsApp send failed: ${body?.error?.code ?? response.status}`, response.status);
+    const body = (await response.json().catch(() => null)) as {
+      messages?: { id: string }[];
+      error?: { code?: number; message?: string; error_data?: { details?: string }; fbtrace_id?: string };
+    } | null;
+    if (!response.ok || !body?.messages?.[0]?.id) {
+      // Meta's code, message and details say what to fix (131030: recipient not in the test
+      // number's allowed list; 190: token expired; 131047: outside the 24-hour window). They never
+      // contain the token or the recipient.
+      const error = body?.error;
+      const why = [error?.code ?? response.status, error?.message, error?.error_data?.details].filter(Boolean).join(" ");
+      throw new WhatsAppSendError(`WhatsApp send failed: ${why}${error?.fbtrace_id ? ` (fbtrace_id ${error.fbtrace_id})` : ""}`, response.status);
+    }
+    logger.info({ to: maskPhone(to), type: message.type, messageId: body.messages[0].id, ms: Date.now() - started }, "whatsapp sent");
     return body.messages[0].id;
   }
 

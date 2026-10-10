@@ -14,6 +14,7 @@ describe("token redaction", () => {
     expect(redactUrl(`/api/proxy/slot/${TOKEN}?lang=en`)).toBe("/api/proxy/slot/[redacted]?lang=en");
     expect(redactUrl("/operator/board")).toBe("/operator/board");
     expect(redactUrl("/farmer/home?lang=hi")).toBe("/farmer/home?lang=hi");
+    expect(redactUrl("/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=s3cret&hub.challenge=9")).toBe("/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=[redacted]&hub.challenge=9");
   });
 
   it("the request serializer the API logger uses keeps only method and a redacted URL", () => {

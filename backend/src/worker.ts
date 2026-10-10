@@ -6,11 +6,12 @@
 import { loadConfig } from "./config";
 import { createEngineClient } from "./engine/client";
 import { Planner } from "./domain/planner";
-import { logger } from "./logger";
+import { logProcessFailures, logger } from "./logger";
 import { createStore } from "./store";
-import { buildWhatsApp } from "./whatsapp";
+import { buildWhatsApp, whatsappSetupProblems } from "./whatsapp";
 import { SqsQueue } from "./whatsapp/queue";
 
+logProcessFailures("worker");
 const config = loadConfig();
 if (config.WHATSAPP_QUEUE !== "sqs") {
   logger.error("npm run worker needs WHATSAPP_QUEUE=sqs (with the in-memory queue the API handles WhatsApp itself)");
@@ -22,5 +23,6 @@ const whatsapp = buildWhatsApp({ config, store, planner: new Planner(store, engi
 const queue = whatsapp.queue as SqsQueue;
 const stop = new AbortController();
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => stop.abort());
-logger.info({ agent: config.AGENT_ENABLED, model: config.AGENT_ENABLED ? config.BEDROCK_MODEL_ID : undefined }, "whatsapp worker listening");
+logger.info({ agent: config.AGENT_ENABLED, model: config.AGENT_ENABLED ? config.BEDROCK_MODEL_ID : undefined, logLevel: logger.level }, "whatsapp worker listening");
+for (const problem of whatsappSetupProblems(config)) logger.warn(problem);
 await queue.consume(whatsapp.worker.handle, stop.signal);

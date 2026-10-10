@@ -250,7 +250,9 @@ export function createWorker(deps: WorkerDeps) {
       reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools() });
     } catch (error) {
       failed = true;
-      logger.warn({ phone: maskPhone(phone), error: error instanceof Error ? error.name : "unknown" }, "whatsapp agent failed; template reply");
+      // Bedrock's error names the problem (AccessDeniedException, ThrottlingException, a timeout);
+      // it never echoes the farmer's words.
+      logger.warn({ phone: maskPhone(phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp agent failed; template reply");
     }
     if (session.calls.length === 0) {
       // No tool, no facts: either the model failed, or the question was not about their dates (a
@@ -269,16 +271,14 @@ export function createWorker(deps: WorkerDeps) {
     return sendCalls(session);
   }
 
-  async function handleMessage(message: InboundMessage) {
+  /** Handles one message; returns what was done, for the "whatsapp message handled" log line. */
+  async function handleMessage(message: InboundMessage): Promise<string> {
     const at = now();
     const claimed = await store.claimInboundMessage(message.id, at.toISOString(), new Date(at.getTime() + DEDUPE_DAYS * 86_400_000).toISOString());
-    if (!claimed) return; // a duplicate delivery: already handled
+    if (!claimed) return "skipped: already handled (Meta delivered it again)";
     const phone = fromWhatsAppNumber(message.sender);
-    if (!phone) {
-      // No sender number: nobody to answer and nothing to look up.
-      logger.warn("whatsapp message without a sender number");
-      return;
-    }
+    // No sender number: nobody to answer and nothing to look up.
+    if (!phone) return "dropped: no sender number in the payload";
     const principal: FarmerPhonePrincipal = { kind: "farmerPhone", phone };
     const probe = new FarmerSession(deps, principal, "en", now);
     const hasFields = (await probe.fields()).length > 0;
@@ -288,22 +288,29 @@ export function createWorker(deps: WorkerDeps) {
       // consent) happens on the web, or their village helper books for them.
       const web = config.WEB_BASE_URL.replace(/\/$/, "");
       await sender.text(phone, words(scriptLocale(message.text) ?? "en").unknownNumber(`${web}/farmer/signin`), { previewUrl: false });
-      return;
+      return "unknown number (no field, no account): sent the registration link";
     }
-    if (!limiter.allow(phone, at.getTime())) {
-      logger.warn({ phone: maskPhone(phone) }, "whatsapp rate limit: message dropped");
-      return;
-    }
+    if (!limiter.allow(phone, at.getTime())) return `dropped: over ${config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR} messages this hour`;
     const session = new FarmerSession(deps, principal, chooseLocale(await storedLanguage(probe, account?.language ?? null), message.text), now);
     const noFieldsLead = account ? words(session.locale).noBookingsYet(account.name) : null;
-    logger.info({ phone: maskPhone(phone), kind: message.kind }, "whatsapp message");
-    if (message.kind === "reply" && message.replyId) return handleReply(session, message.replyId);
-    if (message.kind === "text" && message.text) {
-      if (config.AGENT_ENABLED && deps.runner) return agentTurn(session, message.text, noFieldsLead);
-      return sendMenu(session, noFieldsLead ?? undefined);
+    if (message.kind === "reply" && message.replyId) {
+      await handleReply(session, message.replyId);
+      return `answered button/list reply ${message.replyId.split(":")[0]}`;
     }
-    if (message.kind === "audio") return sendMenu(session, words(session.locale).voiceNotSupported);
-    return sendMenu(session, noFieldsLead ?? undefined);
+    if (message.kind === "text" && message.text) {
+      if (config.AGENT_ENABLED && deps.runner) {
+        await agentTurn(session, message.text, noFieldsLead);
+        return "answered text with the agent";
+      }
+      await sendMenu(session, noFieldsLead ?? undefined);
+      return "answered text with the menu (AGENT_ENABLED=false)";
+    }
+    if (message.kind === "audio") {
+      await sendMenu(session, words(session.locale).voiceNotSupported);
+      return "voice note: sent 'please type' and the menu";
+    }
+    await sendMenu(session, noFieldsLead ?? undefined);
+    return `answered ${message.kind} message with the menu`;
   }
 
   return {
@@ -312,16 +319,24 @@ export function createWorker(deps: WorkerDeps) {
       let parsed;
       try {
         parsed = parseWebhook(body);
-      } catch {
-        logger.warn("whatsapp webhook body was not a WhatsApp payload; dropped");
+      } catch (error) {
+        logger.warn({ err: error instanceof Error ? error.name : "unknown" }, "whatsapp webhook body was not a WhatsApp payload; dropped");
         return;
       }
-      for (const status of parsed.statuses) await store.setNoticeStatus(status.messageId, status.status, status.at, status.error);
+      for (const status of parsed.statuses) {
+        // Meta's verdict on a message we sent; "failed" carries its error code and title.
+        if (status.status === "failed") logger.warn({ messageId: status.messageId, error: status.error }, "whatsapp delivery failed");
+        else logger.info({ messageId: status.messageId, status: status.status }, "whatsapp delivery status");
+        await store.setNoticeStatus(status.messageId, status.status, status.at, status.error);
+      }
       for (const message of parsed.messages) {
+        const started = Date.now();
+        const context = { messageId: message.id, phone: maskPhone(fromWhatsAppNumber(message.sender)), kind: message.kind };
         try {
-          await handleMessage(message);
+          const outcome = await handleMessage(message);
+          logger.info({ ...context, outcome, ms: Date.now() - started }, "whatsapp message handled");
         } catch (error) {
-          logger.error({ err: error instanceof Error ? { name: error.name, message: error.message } : "unknown", sender: maskPhone(fromWhatsAppNumber(message.sender)) }, "whatsapp message failed");
+          logger.error({ ...context, err: error, ms: Date.now() - started }, "whatsapp message failed");
         }
       }
     },

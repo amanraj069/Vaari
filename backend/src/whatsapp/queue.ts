@@ -54,19 +54,25 @@ export class SqsQueue implements WebhookQueue {
   async consume(consumer: QueueConsumer, signal: AbortSignal) {
     while (!signal.aborted) {
       const received = await this.client
-        .send(new ReceiveMessageCommand({ QueueUrl: this.queueUrl, MaxNumberOfMessages: 10, WaitTimeSeconds: 20, VisibilityTimeout: 120 }), { abortSignal: signal })
+        .send(new ReceiveMessageCommand({ QueueUrl: this.queueUrl, MaxNumberOfMessages: 10, WaitTimeSeconds: 20, VisibilityTimeout: 120, MessageSystemAttributeNames: ["ApproximateReceiveCount"] }), { abortSignal: signal })
         .catch((error: unknown) => {
           if (!signal.aborted) logger.error({ err: error }, "sqs receive failed");
           return null;
         });
-      for (const message of received?.Messages ?? []) {
+      const messages = received?.Messages ?? [];
+      if (messages.length > 0) logger.info({ count: messages.length }, "sqs: received webhook bodies");
+      for (const message of messages) {
         try {
           await consumer(message.Body ?? "");
-          await this.client.send(new DeleteMessageCommand({ QueueUrl: this.queueUrl, ReceiptHandle: message.ReceiptHandle }));
         } catch (error) {
           // Left on the queue: retried after the visibility timeout (a DLQ catches poison messages).
-          logger.error({ err: error }, "whatsapp worker failed; message left for retry");
+          logger.error({ sqsMessageId: message.MessageId, receiveCount: message.Attributes?.ApproximateReceiveCount, err: error }, "whatsapp worker failed; message left for retry");
+          continue;
         }
+        await this.client
+          .send(new DeleteMessageCommand({ QueueUrl: this.queueUrl, ReceiptHandle: message.ReceiptHandle }))
+          // Handled but not deleted: it comes back after the timeout and the dedupe skips it.
+          .catch((error: unknown) => logger.error({ sqsMessageId: message.MessageId, err: error }, "sqs delete failed (handled; the redelivery will be skipped)"));
       }
       if (!received) await new Promise((resolve) => setTimeout(resolve, 2_000));
     }

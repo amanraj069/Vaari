@@ -9,7 +9,8 @@ import { createEngineClient } from "./engine/client";
 import { DEMO_CHC_ID, DEMO_OPERATOR_NAME, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
 import { createStore } from "./store";
-import { buildWhatsApp } from "./whatsapp";
+import { logProcessFailures } from "./logger";
+import { buildWhatsApp, whatsappSetupProblems } from "./whatsapp";
 
 export async function buildRuntime(options: { freshDemo?: boolean; whatsapp?: Parameters<typeof buildWhatsApp>[1]; config?: Partial<ReturnType<typeof loadConfig>> } = {}) {
   const config = { ...loadConfig(), ...options.config };
@@ -41,12 +42,28 @@ export async function buildRuntime(options: { freshDemo?: boolean; whatsapp?: Pa
 }
 
 if (process.env.NODE_ENV !== "test") {
+  logProcessFailures("api");
   const started = Date.now();
-  const { config, dependencies } = await buildRuntime();
+  const { config, dependencies } = await buildRuntime().catch((error: unknown) => {
+    logger.fatal({ err: error }, "vaari api could not start");
+    process.exit(1);
+  });
   createApp(dependencies).listen(config.PORT, () => {
     logger.info(
-      { port: config.PORT, engineMode: config.ENGINE_MODE, authMode: config.AUTH_MODE, repo: config.REPO, tablePrefix: config.REPO === "dynamo" ? config.TABLE_PREFIX : undefined, startupMs: Date.now() - started },
+      {
+        port: config.PORT,
+        engineMode: config.ENGINE_MODE,
+        authMode: config.AUTH_MODE,
+        repo: config.REPO,
+        tablePrefix: config.REPO === "dynamo" ? config.TABLE_PREFIX : undefined,
+        // Where a webhook goes: answered here (memory) or queued for `npm run worker` (sqs).
+        whatsapp: config.WHATSAPP_ENABLED ? `on, queue ${config.WHATSAPP_QUEUE}${config.WHATSAPP_QUEUE === "sqs" ? " (replies need the worker running)" : ""}` : "off (webhook answers 404)",
+        agent: config.AGENT_ENABLED,
+        logLevel: logger.level,
+        startupMs: Date.now() - started,
+      },
       "vaari api listening",
     );
+    for (const problem of whatsappSetupProblems(config)) logger.warn(problem);
   });
 }

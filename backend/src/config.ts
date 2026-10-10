@@ -12,6 +12,8 @@ const repoRoot = path.resolve(backendRoot, "..");
 const configSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().default(4000),
+  // Read by logger.ts directly (the logger exists before the config); listed here so a typo fails start-up.
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   AUTH_MODE: z.enum(["demo", "cognito"]).default("demo"),
   DEMO_MODE: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   DEMO_SESSION_SECRET: z.string().min(32).default("local-dev-only-demo-secret-change-me-0000"),

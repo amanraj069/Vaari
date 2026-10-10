@@ -15,6 +15,20 @@ import { createWorker, type WhatsAppWorker } from "./worker";
 
 export type WhatsAppRuntime = { queue: WebhookQueue; sender: WhatsAppSender; runner: AgentRunner | null; worker: WhatsAppWorker; notifier: Notifier };
 
+/**
+ * Settings that make WhatsApp quietly do nothing, named at start-up (the API and the worker log
+ * each as a warning) so a webhook that "never arrives" is explained before the first one does.
+ */
+export function whatsappSetupProblems(config: Config): string[] {
+  if (!config.WHATSAPP_ENABLED) return [];
+  const problems: string[] = [];
+  if (!config.WHATSAPP_APP_SECRET) problems.push("WHATSAPP_APP_SECRET is not set: every webhook POST will be refused with 401");
+  if (!config.WHATSAPP_VERIFY_TOKEN) problems.push("WHATSAPP_VERIFY_TOKEN is not set: Meta's webhook verification (GET) will be refused with 403");
+  if (!config.WHATSAPP_TOKEN || !config.WHATSAPP_PHONE_NUMBER_ID) problems.push("WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID is not set: replies cannot be sent");
+  if (config.WHATSAPP_QUEUE === "sqs" && !config.WHATSAPP_SQS_QUEUE_URL) problems.push("WHATSAPP_QUEUE=sqs but WHATSAPP_SQS_QUEUE_URL is not set: webhooks cannot be queued (500)");
+  return problems;
+}
+
 export function buildWhatsApp(
   deps: { config: Config; store: VaariStore; planner: Planner; engine: EngineClient },
   overrides: { sender?: WhatsAppSender; runner?: AgentRunner | null; queue?: WebhookQueue; now?: () => Date } = {},

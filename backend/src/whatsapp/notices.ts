@@ -32,16 +32,17 @@ export function createNotifier(deps: NotifierDeps) {
   };
   const running = new Set<Promise<void>>();
 
-  async function notify(chcId: string, fieldId: string, kind: NoticeKind) {
+  /** Sends one notice; returns what happened, counted in the "whatsapp notices" summary line. */
+  async function notify(chcId: string, fieldId: string, kind: NoticeKind): Promise<"sent" | "failed" | "no phone or consent" | "not an allowed test number" | "no template"> {
     const field = await store.getField(chcId, fieldId);
-    if (!field?.farmerPhone || !field.consentAt) return; // no phone or no consent: never contacted
+    if (!field?.farmerPhone || !field.consentAt) return "no phone or consent"; // never contacted
     const phone = fromWhatsAppNumber(field.farmerPhone);
-    if (!phone) return;
-    if (config.DEMO_MODE && !allowedTestNumbers(config, fromWhatsAppNumber).has(phone)) return;
+    if (!phone) return "no phone or consent";
+    if (config.DEMO_MODE && !allowedTestNumbers(config, fromWhatsAppNumber).has(phone)) return "not an allowed test number";
     const template = templates[kind];
     if (!template) {
       logger.warn({ kind }, "whatsapp notice skipped: no template name configured");
-      return;
+      return "no template";
     }
     const language = (await store.getFarmer(field.farmerId))?.language ?? "pa";
     const view = await buildOneFarmerField(planner, store, field, language);
@@ -53,9 +54,12 @@ export function createNotifier(deps: NotifierDeps) {
       const slotToken = config.WHATSAPP_TEMPLATE_SLOT_BUTTON ? await mintSlotToken(config, field) : undefined;
       const messageId = await sender.template(phone, template, language, [promiseWords(view.promise, language), view.reason.text], slotToken);
       await store.putOutboundNotice({ ...base, messageId, status: "accepted", error: null });
+      return "sent";
     } catch (error) {
-      logger.warn({ phone: maskPhone(phone), kind }, "whatsapp notice failed");
-      await store.putOutboundNotice({ ...base, messageId: `local-${randomUUID()}`, status: "failed", error: error instanceof Error ? error.message : "send failed" });
+      const reason = error instanceof Error ? error.message : "send failed";
+      logger.warn({ phone: maskPhone(phone), kind, template, err: reason }, "whatsapp notice failed");
+      await store.putOutboundNotice({ ...base, messageId: `local-${randomUUID()}`, status: "failed", error: reason });
+      return "failed";
     }
   }
 
@@ -66,7 +70,12 @@ export function createNotifier(deps: NotifierDeps) {
       ...changes.broken.map((item): [string, NoticeKind] => [item.fieldId, "date_changed"]),
       ...changes.rePromised.map((item): [string, NoticeKind] => [item.fieldId, "date_changed"]),
     ];
-    for (const [fieldId, kind] of work) await notify(chcId, fieldId, kind);
+    const outcomes: Record<string, number> = {};
+    for (const [fieldId, kind] of work) {
+      const outcome = await notify(chcId, fieldId, kind);
+      outcomes[outcome] = (outcomes[outcome] ?? 0) + 1;
+    }
+    if (work.length > 0) logger.info({ chcId, notices: work.length, ...outcomes }, "whatsapp notices after plan approval");
   }
 
   return {
@@ -74,7 +83,7 @@ export function createNotifier(deps: NotifierDeps) {
     planPublished(chcId: string, changes: PlanChanges) {
       if (!config.WHATSAPP_ENABLED) return;
       const work = run(chcId, changes)
-        .catch((error: unknown) => logger.error({ err: error instanceof Error ? error.message : "unknown" }, "whatsapp notices failed"))
+        .catch((error: unknown) => logger.error({ chcId, err: error }, "whatsapp notices failed"))
         .finally(() => running.delete(work));
       running.add(work);
     },
