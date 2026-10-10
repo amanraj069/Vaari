@@ -1,9 +1,9 @@
 /**
  * A farmer signs in with their phone and a one-time code; a new one then gives their name and
  * consent; then they book fields for their own phone. Codes: six digits, 10 minutes, 5 tries, once;
- * a new one at most every 30 seconds. Delivery is on screen in DEMO_MODE, or a WhatsApp
- * authentication template. Test numbers: +91 90000 00xxx (DEMO delivery sends nothing anywhere) or
- * Ofcom's fiction range.
+ * a new one at most every 30 seconds. A demo farmer's phone sees its code on screen; every other
+ * phone gets it in a WhatsApp authentication template. Test numbers: +91 90000 00xxx (listed as demo
+ * farmer phones in vitest.config.ts, so nothing is sent anywhere) or Ofcom's fiction range.
  */
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -37,7 +37,7 @@ async function register(app: App, phone: string, name = "Paramjit Kaur"): Promis
   return verified.body.sessionToken as string;
 }
 
-describe("farmer sign-in with a code shown on screen (DEMO_MODE)", () => {
+describe("farmer sign-in with a code shown on screen (demo farmer phones)", () => {
   let app: App;
   let runtime: Runtime;
 
@@ -210,10 +210,10 @@ describe("a farmer books for their own phone", () => {
 });
 
 describe("sign-in codes on WhatsApp", () => {
-  const allowed = testPhone(301);
+  const allowed = testPhone(301); // a real farmer's number (not a demo phone)
 
   it("sends the code in the authentication template, never in the answer", async () => {
-    const wa = await whatsappRuntime({ config: { FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_TEMPLATE_OTP: "vaari_code", WHATSAPP_ALLOWED_TEST_NUMBERS: allowed, PROXY_SHARED_SECRET: PROXY_SECRET } });
+    const wa = await whatsappRuntime({ config: { FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_TEMPLATE_OTP: "vaari_code", PROXY_SHARED_SECRET: PROXY_SECRET } });
     const answer = farmerOtpSentSchema.parse((await askCode(wa.app, allowed, "pa").expect(200)).body);
     expect(answer).toEqual({ channel: "whatsapp", expiresInSeconds: 600, resendInSeconds: 30, demoCode: null });
     const sent = wa.sender.sent.at(-1);
@@ -222,9 +222,12 @@ describe("sign-in codes on WhatsApp", () => {
     if (sent?.type === "authCode") await sendCode(wa.app, allowed, sent.code).expect(200);
   });
 
-  it("in DEMO_MODE writes only to the test numbers; a failed send leaves no code behind", async () => {
-    const wa = await whatsappRuntime({ config: { FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_TEMPLATE_OTP: "vaari_code", WHATSAPP_ALLOWED_TEST_NUMBERS: allowed, PROXY_SHARED_SECRET: PROXY_SECRET } });
-    expect((await askCode(wa.app, testPhone(302)).expect(403)).body.error).toBe("NUMBER_NOT_ALLOWED");
+  it("shows a demo farmer's code on screen even with WhatsApp on; a failed send leaves no code behind", async () => {
+    const wa = await whatsappRuntime({ config: { FARMER_OTP_DELIVERY: "whatsapp", WHATSAPP_TEMPLATE_OTP: "vaari_code", PROXY_SHARED_SECRET: PROXY_SECRET } });
+    const demo = farmerOtpSentSchema.parse((await askCode(wa.app, DEMO_FARMER_PHONE).expect(200)).body);
+    expect(demo.channel).toBe("demo");
+    expect(demo.demoCode).toMatch(/^\d{6}$/);
+    expect(wa.sender.sent.filter((message) => message.type === "authCode" && message.to === DEMO_FARMER_PHONE)).toHaveLength(0);
     wa.sender.failing = true;
     expect((await askCode(wa.app, allowed).expect(503)).body.error).toBe("OTP_SEND_FAILED");
     expect(await wa.runtime.dependencies.store.getOtpChallenge(allowed)).toBeNull();

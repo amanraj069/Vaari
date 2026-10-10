@@ -40,11 +40,12 @@ import { exchangeFarmerLogin, mintFarmerLoginLink, verifyFarmerSession, type Far
 import { createFarmerAccount, createFarmerOtp, isRefusal } from "./auth/farmer-otp";
 import { assertCurrentLink, mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { authorize, fieldResource, type Action, type Resource } from "./authz/cedar";
-import { DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
+import { DEMO_CHC_ID, DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
 import { NotFoundError } from "./domain/planner";
 import { bookFieldForPhone } from "./domain/farmer-booking";
 import type { FieldRecord } from "./store/types";
-import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
+import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOfficerOverview, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
+import { loadDistrictOutlines } from "./data/boundaries";
 import { explainField as explainFieldFor } from "./domain/why";
 import { clientRateLimit } from "./http/client-ip";
 
@@ -78,6 +79,12 @@ function requireChc(principal: Principal): string {
 const bearerOf = (request: Request): string => {
   const header = request.headers.authorization ?? "";
   return header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+};
+
+/** ?date=YYYY-MM-DD: which plan day the lanes show (anything else is ignored). */
+const dateOf = (request: Request): string | undefined => {
+  const date = request.query.date;
+  return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
 };
 
 /** The language for server-phrased sentences (?lang=en|pa|hi; English if missing or unknown). */
@@ -134,7 +141,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         chc.villageIds.forEach((id) => villageIds.add(id));
       }
       response.json({
-        today: config.DEMO_TODAY,
+        today: config.DATE_TODAY,
         seasonStartDate: config.SEASON_START_DATE,
         optimumLastDate: config.OPTIMUM_LAST_DATE,
         chcCount: chcs.length,
@@ -173,17 +180,14 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
-  // Demo personas, only when DEMO_MODE is on. Facilitator, operator and officer get a session for
-  // their seeded user. The farmer has no account: they get a one-time phone login link, minted by
-  // the same function the WhatsApp bot will call, and the web follows it like a farmer would.
+  // Demo accounts, for anyone who wants to try Vaari (rate-limited; the data they see is simulated).
+  // Facilitator, operator and officer get a session for their seeded user. The farmer has no
+  // account: they get a one-time phone login link, minted by the same function the WhatsApp bot
+  // calls, and the web follows it like a farmer would.
   router.post(
     "/auth/demo",
     demoLimiter,
     asyncHandler(async (request, response) => {
-      if (!config.DEMO_MODE) {
-        response.status(404).json({ error: "NOT_FOUND" });
-        return;
-      }
       const { role: persona } = z.object({ role: demoPersonaSchema }).parse(request.body);
       if (persona === "farmer") {
         const link = await mintFarmerLoginLink(config, dependencies.store, DEMO_FARMER_PHONE);
@@ -203,12 +207,16 @@ export function buildRoutes(dependencies: AppDependencies): Router {
   const needsOnboarding = (principal: Principal) => !principal.role || (principal.role !== "officer" && !principal.chcId);
 
   const meFor = async (principal: Principal): Promise<Me> => {
-    const user = await dependencies.store.getUser(principal.userId);
+    const [user, chc] = await Promise.all([
+      dependencies.store.getUser(principal.userId),
+      principal.chcId ? dependencies.store.getChc(principal.chcId) : Promise.resolve(null),
+    ]);
     return {
       userId: principal.userId,
       name: principal.name,
       role: principal.role,
       chcId: principal.chcId,
+      chcName: chc?.name ?? null,
       language: user?.language ?? "en",
       demo: principal.demo,
       needsOnboarding: needsOnboarding(principal),
@@ -246,7 +254,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const { principal } = request;
       if (principal.demo) throw new ForbiddenError(["demo personas cannot change their profile"]);
       const input = onboardingInputSchema.parse(request.body);
-      if (input.role === "operator" && !config.DEMO_MODE && principal.role !== "operator") {
+      // Operator access comes only from the Cognito "operator" group (team decision, 2026-10-10).
+      if (input.role === "operator" && principal.role !== "operator") {
         throw new ForbiddenError(["operator access needs the Cognito operator group"]);
       }
       const chc = await dependencies.store.getChc(input.chcId);
@@ -333,6 +342,23 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       for (const field of fields) requireCedar(request.farmer, "ViewField", fieldResource(field));
       const home = await buildFarmerPhoneHome(dependencies.planner, dependencies.store, fields, localeOf(request));
       response.json(account ? { ...home, registered: true, farmerName: account.name } : home);
+    }),
+  );
+
+  // Who this phone session belongs to, for the dashboard's frame: a name once there is one. Never
+  // the phone number (the browser never needs it back).
+  router.get(
+    "/farmer/me",
+    authenticateFarmer,
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const account = await dependencies.store.getFarmerAccount(request.farmer.phone);
+      if (account) {
+        response.json({ name: account.name, registered: true });
+        return;
+      }
+      // A phone a helper booked for is known by that booking's name until it registers.
+      const booked = await dependencies.store.listFieldsByPhone(request.farmer.phone);
+      response.json({ name: booked[0]?.farmerName ?? null, registered: booked.length > 0 });
     }),
   );
 
@@ -558,6 +584,26 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // --- Officer ------------------------------------------------------------------------------
+
+  // The district at a glance: counts per centre, per village and per day ahead. Cedar is asked for
+  // every centre (ViewAggregates); a centre the officer may not see is left out, never half shown.
+  router.get(
+    "/officer/overview",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
+      const chcs = (await dependencies.store.listChcs()).filter((chc) => authorize(principal, "ViewAggregates", { type: "Chc", id: chc.id }).allowed);
+      response.json(
+        await buildOfficerOverview(dependencies.planner, dependencies.store, chcs, {
+          optimumLastDate: config.OPTIMUM_LAST_DATE,
+          districts: loadDistrictOutlines(config.DATA_DIR),
+        }),
+      );
+    }),
+  );
+
   // --- Operator -----------------------------------------------------------------------------
 
   router.get(
@@ -566,7 +612,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ViewBoard", { type: "Chc", id: chcId });
-      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
+      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId, dateOf(request)));
     }),
   );
 
@@ -587,7 +633,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ViewBoard", { type: "Chc", id: chcId });
-      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
+      response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId, dateOf(request)));
     }),
   );
 
@@ -674,7 +720,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const chcId = requireChc(request.principal);
       requireCedar(request.principal, "ResetDemo", { type: "Chc", id: chcId });
-      if (!config.DEMO_MODE) throw new ForbiddenError(["demo mode off"]);
+      // Only the demo centre has a demo season to reset; a real centre's records are never wiped.
+      if (chcId !== DEMO_CHC_ID) throw new ForbiddenError(["only the demo centre can be reset"]);
       await dependencies.resetDemo();
       response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
     }),

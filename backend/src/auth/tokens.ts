@@ -3,7 +3,7 @@
  * attached from an httpOnly cookie (the browser never sees it).
  * - Cognito access tokens (AUTH_MODE=cognito), verified with aws-jwt-verify (signature, issuer,
  *   client id, expiry, token use). The role is the user's Cognito group.
- * - Demo sessions (DEMO_MODE=true), short-lived and signed here, so judges get one-click personas
+ * - Demo sessions, short-lived and signed here, so anyone can try a demo account in one click
  *   and the product runs with no AWS account. Both can be on at the same time.
  * Farmers are not principals here: they have no account and use a phone session
  * (auth/farmer-session.ts), which only the /farmer routes accept.
@@ -51,7 +51,7 @@ export async function mintDemoToken(config: Config, user: { userId: string }): P
 
 export function createTokenVerifier(config: Config, store: VaariStore): TokenVerifier {
   // Demo sessions and Cognito tokens are accepted side by side: judges use one-click demo
-  // personas (DEMO_MODE=true) while real users sign in with Google through Cognito.
+  // accounts while real users sign in with Google through Cognito.
   const demoSecret = new TextEncoder().encode(config.DEMO_SESSION_SECRET);
   const cognitoVerifier =
     config.AUTH_MODE === "cognito" && config.COGNITO_USER_POOL_ID && config.COGNITO_CLIENT_ID
@@ -100,7 +100,6 @@ export function createTokenVerifier(config: Config, store: VaariStore): TokenVer
         throw new AuthError("malformed token");
       }
       if (issuer === DEMO_ISSUER) {
-        if (!config.DEMO_MODE) throw new AuthError("demo sessions are switched off");
         return verifyDemo(token);
       }
       if (!cognitoVerifier) throw new AuthError("Cognito sign-in is not configured");

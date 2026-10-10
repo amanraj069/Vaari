@@ -81,7 +81,7 @@ describe("WhatsApp in production", () => {
   });
 
   it(".env.example names every WhatsApp and agent setting (with no values for the secrets)", () => {
-    for (const name of [...Object.keys(WHATSAPP), "WHATSAPP_QUEUE", "WHATSAPP_SQS_QUEUE_URL", "WHATSAPP_ALLOWED_TEST_NUMBERS", "AGENT_ENABLED", "BEDROCK_MODEL_ID", "WEB_BASE_URL"]) {
+    for (const name of [...Object.keys(WHATSAPP), "WHATSAPP_QUEUE", "WHATSAPP_SQS_QUEUE_URL", "AGENT_ENABLED", "BEDROCK_MODEL_ID", "WEB_BASE_URL"]) {
       expect(exampleValues[name], name).toBeDefined();
     }
     for (const secret of ["WHATSAPP_TOKEN", "WHATSAPP_APP_SECRET", "WHATSAPP_VERIFY_TOKEN"]) expect(exampleValues[secret]).toBe("");
@@ -89,10 +89,16 @@ describe("WhatsApp in production", () => {
 });
 
 describe("farmer sign-in codes", () => {
-  it("shows codes on screen in DEMO_MODE, and is off without it unless WhatsApp sends them", () => {
-    expect(loadConfig({ NODE_ENV: "test" }).FARMER_OTP_DELIVERY).toBe("demo");
-    expect(loadConfig({ NODE_ENV: "test", DEMO_MODE: "false" }).FARMER_OTP_DELIVERY).toBe("off");
-    expect(() => loadConfig({ NODE_ENV: "test", DEMO_MODE: "false", FARMER_OTP_DELIVERY: "demo" })).toThrow("needs DEMO_MODE=true");
+  it("are off unless WhatsApp can send them (demo farmers' codes show on screen either way), and never 'demo' for everyone", () => {
+    expect(loadConfig({ NODE_ENV: "test" }).FARMER_OTP_DELIVERY).toBe("off");
+    expect(loadConfig({ NODE_ENV: "test", WHATSAPP_ENABLED: "true", WHATSAPP_TEMPLATE_OTP: "vaari_code" }).FARMER_OTP_DELIVERY).toBe("whatsapp");
+    expect(() => loadConfig({ NODE_ENV: "test", FARMER_OTP_DELIVERY: "demo" })).toThrow();
+  });
+
+  it("starts the season clock at DATE_TODAY, which must fall inside the season", () => {
+    expect(loadConfig({ NODE_ENV: "test", DATE_TODAY: "2026-11-02" }).DATE_TODAY).toBe("2026-11-02");
+    expect(() => loadConfig({ NODE_ENV: "test", DATE_TODAY: "2026-09-01" })).toThrow("DATE_TODAY must fall inside the season");
+    expect(() => loadConfig({ NODE_ENV: "test", DATE_TODAY: "24 October" })).toThrow();
   });
 
   it("sends codes on WhatsApp only with WhatsApp on and an authentication template", () => {

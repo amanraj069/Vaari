@@ -1,6 +1,6 @@
 /**
  * A farmer signs in on the web with their phone and a one-time code, sent on WhatsApp (an
- * authentication template) or, in DEMO_MODE, shown on screen. There is no "register" or "log in"
+ * authentication template), or shown on screen for a demo farmer's phone (demo/phones.ts). There is no "register" or "log in"
  * choice: every farmer types their number and gets a code. A right code ends in the same 7-day
  * phone session as a login link (mintFarmerSession), and says whether Vaari knows the phone: a new
  * farmer then gives their name and consent (POST /farmer/account, createFarmerAccount below).
@@ -15,11 +15,12 @@
  */
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import type { z } from "zod";
-import { allowedTestNumbers, type Config } from "../config";
+import type { Config } from "../config";
+import { isDemoFarmerPhone } from "../demo/phones";
 import { logger } from "../logger";
 import type { FarmerOtpSent, farmerOtpRequestSchema } from "../shared";
 import type { FarmerAccountRecord, VaariStore } from "../store/types";
-import { fromWhatsAppNumber, maskPhone } from "../whatsapp/phone";
+import { maskPhone } from "../whatsapp/phone";
 import type { WhatsAppSender } from "../whatsapp/sender";
 import { PhoneRateLimiter } from "../whatsapp/worker";
 import { mintFarmerSession } from "./farmer-session";
@@ -44,11 +45,10 @@ export function createFarmerOtp(deps: () => OtpDeps) {
 
   async function request(input: z.output<typeof farmerOtpRequestSchema>, now: Date = new Date()): Promise<FarmerOtpSent | OtpRefusal> {
     const { config, store, sender } = deps();
-    const delivery = config.FARMER_OTP_DELIVERY;
-    if (delivery === "off") return { status: 503, error: "OTP_OFF" };
     const { phone } = input;
-    // A demo WhatsApp number may only write to its test numbers (like the notices).
-    if (delivery === "whatsapp" && config.DEMO_MODE && !allowedTestNumbers(config, fromWhatsAppNumber).has(phone)) return { status: 403, error: "NUMBER_NOT_ALLOWED" };
+    // A demo farmer's code is shown on screen; every real farmer's goes to WhatsApp (or nowhere).
+    const delivery = isDemoFarmerPhone(config, phone) ? "demo" : config.FARMER_OTP_DELIVERY;
+    if (delivery === "off") return { status: 503, error: "OTP_OFF" };
 
     const previous = await store.getOtpChallenge(phone);
     if (previous) {

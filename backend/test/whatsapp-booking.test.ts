@@ -35,7 +35,7 @@ const from = (phone: string) => phone.slice(1);
 const operatorHeaders = async () => ({ authorization: `Bearer ${(await request(runtime.app).post("/auth/demo").send({ role: "operator" }).expect(200)).body.accessToken as string}` });
 
 beforeAll(async () => {
-  runtime = await whatsappRuntime({ config: { AGENT_ENABLED: true, DEMO_MODE: true, WHATSAPP_ALLOWED_TEST_NUMBERS: GURPREET, ...TEMPLATES }, runner });
+  runtime = await whatsappRuntime({ config: { AGENT_ENABLED: true, ...TEMPLATES }, runner });
   // As /farmer/signin registers a farmer: the account and the farmer record (whose language notices use).
   await createFarmerAccount(runtime.runtime.dependencies.store, GURPREET, "Gurpreet Singh", "en");
 });

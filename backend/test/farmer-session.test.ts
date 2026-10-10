@@ -1,7 +1,7 @@
 /**
  * Farmers have no account. A one-time login link (typ "farmer-login", 15 minutes, single use)
  * becomes a 7-day phone session that reads every field booked with that phone, across CHCs, and
- * nothing else. In DEMO_MODE the farmer persona signs in with the same kind of link.
+ * nothing else. The demo farmer ("Try as farmer") signs in with the same kind of link.
  */
 import request from "supertest";
 import { SignJWT } from "jose";
@@ -118,8 +118,4 @@ describe("demo farmer persona", () => {
     expect(home.farmerName).toBe("Jaswinder Singh");
   });
 
-  it("is off when DEMO_MODE is off", async () => {
-    const off = createApp({ ...runtime.dependencies, config: { ...runtime.dependencies.config, DEMO_MODE: false } });
-    await request(off).post("/auth/demo").send({ role: "farmer" }).expect(404);
-  });
 });

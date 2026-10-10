@@ -98,9 +98,9 @@ export class Planner {
     private readonly config: Config,
   ) {}
 
-  /** The demo runs on a simulated season clock (DEMO_TODAY), labelled as such in the UI. */
+  /** Today is DATE_TODAY (simulated, labelled as such in the UI; fixed per deployment). */
   today(): number {
-    return dateToDay(this.config.SEASON_START_DATE, this.config.DEMO_TODAY);
+    return dateToDay(this.config.SEASON_START_DATE, this.config.DATE_TODAY);
   }
 
   dayToIso(day: number): string {

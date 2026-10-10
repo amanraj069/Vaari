@@ -1,6 +1,7 @@
 /**
  * A new Google user (no Cognito group, no profile) is "pending": /me says onboarding is needed,
- * Cedar refuses everything, and after picking a role and CHC on /welcome the app works for them.
+ * Cedar refuses everything, and after picking a CHC on /welcome the app works for them. Operator
+ * access comes only from the Cognito "operator" group: nobody can make themselves an operator.
  * The Cognito verifier is replaced by a stand-in that resolves the role the same way: stored profile.
  */
 import request from "supertest";
@@ -19,7 +20,9 @@ beforeAll(async () => {
   const stubVerifier: TokenVerifier = {
     async verify(token): Promise<Principal> {
       const user = await store.getUser(token);
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? null, chcId: user?.chcId ?? null, demo: false };
+      // Tokens starting "google-operator" stand for members of the Cognito "operator" group.
+      const groupRole = token.startsWith("google-operator") ? ("operator" as const) : null;
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, demo: false };
     },
   };
   app = createApp({ ...dependencies, store, verifier: stubVerifier });
@@ -37,7 +40,11 @@ describe("onboarding a Google user", () => {
     expect(response.body[0]).toMatchObject({ id: "chc-balian", machineCount: 4 });
   });
 
-  it("an operator who picks a CHC can open its board", async () => {
+  it("nobody outside the Cognito operator group can make themselves an operator", async () => {
+    await request(app).post("/me/profile").set(bearer("google-new")).send({ name: "Aman", role: "operator", chcId: "chc-balian", language: "en" }).expect(403);
+  });
+
+  it("an operator (Cognito group) who picks a CHC can open its board", async () => {
     const response = await request(app)
       .post("/me/profile")
       .set(bearer("google-operator"))
@@ -56,7 +63,7 @@ describe("onboarding a Google user", () => {
   });
 
   it("rejects unknown CHCs and roles without pages", async () => {
-    await request(app).post("/me/profile").set(bearer("google-x")).send({ name: "X", role: "operator", chcId: "nope", language: "en" }).expect(404);
+    await request(app).post("/me/profile").set(bearer("google-operator-x")).send({ name: "X", role: "operator", chcId: "nope", language: "en" }).expect(404);
     await request(app).post("/me/profile").set(bearer("google-x")).send({ name: "X", role: "officer", chcId: "chc-balian", language: "en" }).expect(400);
   });
 });
