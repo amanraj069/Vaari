@@ -21,8 +21,10 @@ On the host, `deploy.sh`:
 2. checks `.env`;
 3. runs the new image's config check (`dist/check-config.js`);
 4. checks that the containers can reach DynamoDB;
-5. starts the containers and waits for both health checks;
+5. starts the containers and waits for their health checks (api, engine, and the worker when it runs);
 6. if they are not healthy, rolls back to the previous release.
+
+The worker is healthy while SQS answers it: it touches `/tmp/vaari-worker-alive` after every answered poll and every handled message, and its health check fails when that file is missing or older than 180 s. A worker that cannot read the queue (AccessDenied, a wrong `WHATSAPP_SQS_QUEUE_URL`) keeps running and logging `sqs receive failed`, so without this check a deploy would look fine.
 
 The pipeline uses GitHub OIDC (no AWS keys anywhere) and SSM (no SSH port).
 
@@ -78,6 +80,21 @@ aws iam put-role-policy --role-name vaari-github-deploy --policy-name vaari-depl
 
 The role can push only `vaari-api` and `vaari-engine`, and run commands only on this one instance. It can be assumed only from `main` or the `production` environment of this repo.
 
+**e. Voice notes (optional).** Transcribe reads each note from S3 with the instance role's own permissions, so the bucket must be in the same region and the role needs to read, write and delete under the prefix. Notes are deleted right after their job; the lifecycle rule removes any leftover after a day.
+
+```bash
+export VOICE_BUCKET=vaari-voice-$ACCOUNT_ID            # any free bucket name
+aws s3api create-bucket --bucket $VOICE_BUCKET --region $AWS_REGION --create-bucket-configuration LocationConstraint=$AWS_REGION
+aws s3api put-public-access-block --bucket $VOICE_BUCKET --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api put-bucket-lifecycle-configuration --bucket $VOICE_BUCKET --lifecycle-configuration \
+  '{"Rules":[{"ID":"voice-notes-1-day","Status":"Enabled","Filter":{"Prefix":"whatsapp-voice/"},"Expiration":{"Days":1}}]}'
+sed "s/VOICE_BUCKET/$VOICE_BUCKET/g" instance-voice-policy.json > /tmp/vaari-voice.json
+aws iam put-role-policy --role-name $INSTANCE_ROLE --policy-name vaari-voice-notes --policy-document file:///tmp/vaari-voice.json
+```
+
+Then add `VOICE_ENABLED=true` and `VOICE_S3_BUCKET=<the bucket>` to `backend/.env` on the host (voice needs `AGENT_ENABLED=true` too), and run `./deploy/deploy.sh current`. Its config check prints `VOICE_ENABLED=true VOICE_S3_BUCKET=…`, or a warning naming what is missing.
+
 ### 2. GitHub repository variables
 
 Settings > Secrets and variables > Actions > **Variables** (not secrets; nothing here is secret):
@@ -128,7 +145,9 @@ aws ssm describe-instance-information --filters Key=InstanceIds,Values=$INSTANCE
 
 ### 4. First deploy (switches from the old systemd service)
 
-Merge to `main`, or run the workflow by hand (Actions > backend > Run workflow). After all its checks pass, `deploy.sh` stops and disables the old `vaari-backend` systemd service, so the API is down for seconds, not minutes. If the containers do not become healthy, it brings that service back.
+Merge to `main`, or run the workflow by hand (Actions > backend > Run workflow). After all its checks pass, `deploy.sh` stops and disables the old systemd services, `vaari-backend` and (if the host has one) `vaari-worker`, so the API is down for seconds, not minutes. A leftover `vaari-worker` would read the same SQS queue as the worker container and answer some farmers with old code. If the containers do not become healthy, it brings back the services it stopped.
+
+Do not use `sudo systemctl restart vaari-backend vaari-worker` after this: those services run an old `dist/` build, and `vaari-backend` would fight the api container for the port. Containers restart with `./deploy/deploy.sh current` (below).
 
 To do the same on the host without the pipeline (it builds the images there, about 5 minutes):
 
@@ -141,11 +160,12 @@ cd ~/Vaari/backend && ./deploy/deploy.sh
 | Task | Command (on the host, in `~/Vaari/backend`) |
 |---|---|
 | Deploy | push to `main`, or Actions > backend > Run workflow |
-| What is running | `docker compose ps` and `cat deploy/.deployed-release` |
+| What is running | `docker compose ps` (api, engine and, with SQS, worker: all `healthy`) and `cat deploy/.deployed-release` |
+| Old services are gone | `systemctl is-active vaari-backend vaari-worker` (both `inactive`) |
 | Logs | `docker compose logs -f api` (or `engine`, `worker`) |
 | Changed `.env` | `./deploy/deploy.sh current` (checks it, then recreates the containers) |
 | Roll back | `./deploy/deploy.sh <older commit sha>` (any of the last 10 in ECR) |
-| Restart without changes | `docker compose restart api` |
+| Restart without changes | `docker compose restart api` (or `worker`) |
 | Build from this checkout, no registry | `./deploy/deploy.sh` |
 
 Do not run `docker compose up` by hand after a pipeline deploy: without `IMAGE_TAG` it builds a `local` image instead of using the release. Use `./deploy/deploy.sh current`.
@@ -164,5 +184,6 @@ Container logs to CloudWatch (`/vaari/backend`, one stream per container): add `
 | `ResourceNotFoundException` | no tables for `TABLE_PREFIX` in `AWS_REGION` | check both in `.env`, or create the tables (`npm run db:create` from a laptop) |
 | `could not sign in to ECR` | instance role lacks ECR read | step 1b |
 | `did not become healthy` | the app crashed at start | the log lines printed above it; the previous release is running again |
+| `worker is unhealthy` | the worker cannot read SQS | `sqs receive failed` in its log lines: check `WHATSAPP_SQS_QUEUE_URL`, `AWS_REGION` and the instance role's SQS rights |
 
 In the Actions log, `InvalidInstanceId` from SSM means the instance is not registered with SSM. Do step 1b, then restart the agent (step 3).

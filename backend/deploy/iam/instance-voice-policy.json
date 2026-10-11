@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "VoiceNotesInS3",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::VOICE_BUCKET/whatsapp-voice/*"
+    },
+    {
+      "Sid": "TranscribeVoiceNotes",
+      "Effect": "Allow",
+      "Action": ["transcribe:StartTranscriptionJob", "transcribe:GetTranscriptionJob", "transcribe:DeleteTranscriptionJob"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SpeakReplies",
+      "Effect": "Allow",
+      "Action": ["polly:SynthesizeSpeech"],
+      "Resource": "*"
+    }
+  ]
+}
