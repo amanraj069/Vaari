@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { DEMO_FARMER_PHONE } from "../src/demo/seed";
 import type { AgentRunner } from "../src/whatsapp/agent";
 import { words } from "../src/whatsapp/messages";
-import { toDevanagari } from "../src/whatsapp/language";
+import { phoneLanguage, toDevanagari } from "../src/whatsapp/language";
 import { FakeSpeech, ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers";
 
 const JASWINDER = "447700900017";
@@ -142,9 +142,22 @@ describe("a voice note is part of the conversation", () => {
 
     let history: Parameters<AgentRunner["run"]>[0]["history"] = [];
     runner.current = { run: async (input) => ((history = input.history), "") };
-    // A message with no letters keeps the farmer's remembered language (Punjabi, which later tests expect).
+    // A message with no letters keeps the farmer's remembered language (Hindi, from the voice note).
     await runtime.deliver(messageBody({ from: JASWINDER, text: "4" }));
     expect(history.at(-1)).toEqual({ farmer: "मुझे मशीन चाहिए", vaari: question });
+    // Switch Jaswinder back to Punjabi, which later failure tests expect.
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮੇਰੀ ਤਰੀਕ" }));
+  });
+
+  it("a voice note in Hindi switches the farmer's remembered language to Hindi, and phoneLanguage uses it", async () => {
+    const { store } = runtime.runtime.dependencies;
+    speech.heard = { text: "मेरी मशीन कब आएगी?", locale: "hi" };
+    runner.current = new ScriptedRunner(async (tool) => (await tool("get_slot").run({ fieldRef: 1 }), ""));
+    await sendNote();
+    expect(await phoneLanguage(store, DEMO_FARMER_PHONE)).toBe("hi");
+    // Switch Jaswinder back to Punjabi for failure tests
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮੇਰੀ ਤਰੀਕ" }));
+    expect(await phoneLanguage(store, DEMO_FARMER_PHONE)).toBe("pa");
   });
 });
 

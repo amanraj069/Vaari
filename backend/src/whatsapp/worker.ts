@@ -173,6 +173,9 @@ export function createWorker(deps: WorkerDeps) {
       const before = index < records.length ? records[index]! : null;
       if (!before || before.language !== written || !before.languageChosen) await store.putFarmer(record);
     }
+    if (account && account.language !== written) {
+      await store.putFarmerAccount({ ...account, language: written });
+    }
     return remembered;
   }
 
@@ -473,7 +476,7 @@ export function createWorker(deps: WorkerDeps) {
    * heard. The farmer first reads what was heard (a misheard word shows, and a booking or change still
    * needs their Confirm tap); then the turn's replies; then the same replies spoken.
    */
-  async function voiceTurn(message: InboundMessage, principal: FarmerPhonePrincipal, fallback: Locale, accountName: string | null): Promise<string> {
+  async function voiceTurn(message: InboundMessage, principal: FarmerPhonePrincipal, fallback: Locale, account: FarmerAccountRecord | null): Promise<string> {
     const phone = principal.phone;
     let heard: Heard | null = null;
     try {
@@ -488,13 +491,15 @@ export function createWorker(deps: WorkerDeps) {
       await sendMenu(session, said.voiceNotUnderstood);
       return "voice note: not understood; sent the menu";
     }
+    const found = await farmerRecords(session, account);
+    await rememberLanguage(found, account, heard.locale);
     const heardText = heard.text;
     await sender.text(phone, said.heard(heardText));
     // The answer starts after "I heard": only the answer is spoken, and remembered with the heard words.
     const turn = currentTurn.getStore()!;
     turn.farmerWords = heardText;
     turn.sent.length = 0;
-    const answered = await agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null);
+    const answered = await agentTurn(session, heardText, account ? said.noBookingsYet(account.name) : null);
     const voiced = await speakReply(session, turn.sent);
     return `voice note (${heard.locale}), ${answered}${voiced ? ", spoken" : ", text only"}`;
   }
@@ -548,7 +553,7 @@ export function createWorker(deps: WorkerDeps) {
     }
     if (message.kind === "audio") {
       if (config.VOICE_ENABLED && speech && config.AGENT_ENABLED && deps.runner && message.mediaId) {
-        return voiceTurn(message, session.principal, session.locale, account?.name ?? null);
+        return voiceTurn(message, session.principal, session.locale, account);
       }
       await sendMenu(session, words(session.locale).voiceNotSupported);
       return "voice note: sent 'please type' and the menu";
