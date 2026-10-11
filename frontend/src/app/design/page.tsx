@@ -64,12 +64,12 @@ function Specimen() {
   const [slider, setSlider] = useState(6);
   const slotStates: [string, SlotState][] = [
     ["loading", { kind: "loading" }],
-    ["firm", { kind: "ready", field: SAMPLE_FIELDS.firm, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop }],
-    ["window", { kind: "ready", field: SAMPLE_FIELDS.window, today: SAMPLE_TODAY, why: { kind: "loading" }, onCannotWait: noop }],
-    ["no promise", { kind: "ready", field: SAMPLE_FIELDS.noPromise, today: SAMPLE_TODAY, why: { kind: "error" }, onCannotWait: noop }],
-    ["moved (broken promise)", { kind: "ready", field: SAMPLE_FIELDS.broken, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop }],
-    ["on the way", { kind: "ready", field: SAMPLE_FIELDS.onTheWay, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop }],
-    ["done", { kind: "ready", field: SAMPLE_FIELDS.done, today: SAMPLE_TODAY, why: { kind: "loading" }, onCannotWait: noop }],
+    ["firm", { kind: "ready", field: SAMPLE_FIELDS.firm, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
+    ["window", { kind: "ready", field: SAMPLE_FIELDS.window, today: SAMPLE_TODAY, why: { kind: "loading" }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
+    ["no promise", { kind: "ready", field: SAMPLE_FIELDS.noPromise, today: SAMPLE_TODAY, why: { kind: "error" }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
+    ["moved (broken promise)", { kind: "ready", field: SAMPLE_FIELDS.broken, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
+    ["on the way", { kind: "ready", field: SAMPLE_FIELDS.onTheWay, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
+    ["done", { kind: "ready", field: SAMPLE_FIELDS.done, today: SAMPLE_TODAY, why: { kind: "loading" }, onCannotWait: noop, changeBase: "slot/sample", onChanged: () => undefined }],
     ["tampered link (401)", { kind: "invalid" }],
     ["someone else's field (403)", { kind: "forbidden" }],
     ["field removed (404)", { kind: "notFound" }],

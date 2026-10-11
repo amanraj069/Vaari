@@ -26,6 +26,7 @@ export type AppDependencies = {
   verifier: TokenVerifier;
   planner: Planner;
   resetDemo: () => Promise<void>;
+  startNextDay: () => Promise<void>;
   whatsapp: WhatsAppRuntime;
 };
 
@@ -66,6 +67,10 @@ export function createApp(dependencies: AppDependencies) {
   app.use(express.json({ limit: "100kb" }));
   app.get("/healthz", (_request, response) => {
     response.json({ status: "ok" });
+  });
+  // Today moves when an operator starts the next day: every request reads the season clock first.
+  app.use((_request: Request, _response: Response, next: NextFunction) => {
+    dependencies.planner.refreshClock().then(() => next(), next);
   });
   app.use(buildRoutes(dependencies));
 

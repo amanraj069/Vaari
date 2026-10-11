@@ -14,7 +14,9 @@ import {
   type Lane,
   type Locale,
   type MachineView,
+  type DayView,
   type OperatorBoard,
+  type OperatorMachines,
   type OfficerCentre,
   type OfficerCounts,
   type OfficerOverview,
@@ -30,9 +32,12 @@ import {
   type SolveResponse,
 } from "../shared";
 import { slotReasonText } from "../explain/slot-reasons";
+import { DEMO_CHC_ID } from "../demo/seed";
 import type { ChcRecord, FieldRecord, MachineRecord, PlanChanges, PlanRecord, PromiseRecord, VaariStore, VillageRecord } from "../store/types";
 import { countChanges, currentPromise, promiseStatus } from "./promises";
 import { groupPromises, logsByMachine, onTrack, type Planner } from "./planner";
+import { machineOff, ownMachines } from "./machines";
+import { centreOutlook, forecastLots, MAX_LEND_KM, playOutlook, suggestMoves, type CentreOutlookInput, type OutlookAssumptions, type ReadyShare } from "./outlook";
 
 const HORIZON_DAYS = 10;
 
@@ -56,13 +61,17 @@ export function riskOf(field: FieldRecord, today: number): { risk: Risk; slackDa
   return { risk: burnDeadline < today + 1 + HORIZON_DAYS ? "at_risk" : "unplanned", slackDays: burnDeadline - today };
 }
 
-function machineView(planner: Planner, machine: MachineRecord, planDay: number, logs: { acres: number; hours: number }[]): MachineView {
+function machineView(planner: Planner, machine: MachineRecord, planDay: number, logs: { acres: number; hours: number }[], centreNames: ReadonlyMap<string, string>): MachineView {
   const rate = learnRate(logs);
+  const { loan } = machine;
   return {
+    loan: loan
+      ? { direction: loan.direction, centreName: centreNames.get(loan.otherChcId) ?? loan.otherChcId, startDate: planner.dayToIso(loan.startDay), endDate: planner.dayToIso(loan.endDay) }
+      : null,
     id: machine.id,
     name: machine.name,
     kind: machine.kind,
-    status: machine.downDays.includes(planDay) ? "down" : "working",
+    status: machine.downDays.includes(planDay) ? "down" : machineOff(machine, planDay) ? "away" : "working",
     downDates: machine.downDays.filter((day) => day >= planDay).map((day) => planner.dayToIso(day)),
     promiseAcresPerDay: Math.round(rate.promiseAcresPerHour * machine.hoursPerDay * 10) / 10,
     planAcresPerDay: Math.round(rate.planAcresPerHour * machine.hoursPerDay * 10) / 10,
@@ -83,7 +92,10 @@ async function loadChcState(planner: Planner, store: VaariStore, chcId: string) 
   ]);
   const historyByField = groupPromises(promiseRecords);
   const heldByField = new Map<string, PromiseRecord | null>(fields.map((field) => [field.id, currentPromise(historyByField.get(field.id) ?? [])]));
-  return { chc, machines, fields, promiseRecords, historyByField, heldByField, machineLogs: logsByMachine(workLogs) };
+  // The names of the centres this one lends to or borrows from, for "lent to Bhikhi CHC".
+  const loanCentreIds = [...new Set(machines.flatMap((machine) => (machine.loan ? [machine.loan.otherChcId] : [])))];
+  const centreNames = new Map((await Promise.all(loanCentreIds.map((id) => store.getChc(id)))).flatMap((other) => (other ? [[other.id, other.name] as const] : [])));
+  return { chc, machines, fields, promiseRecords, historyByField, heldByField, machineLogs: logsByMachine(workLogs), centreNames };
 }
 type ChcState = Awaited<ReturnType<typeof loadChcState>>;
 
@@ -94,8 +106,8 @@ function lanesFor(planner: Planner, state: ChcState, solve: SolveResponse | null
   return state.machines.map((machine) => {
     const route = solve?.routes.find((item) => item.machineId === machine.id && item.day === planDay);
     return {
-      machine: machineView(planner, machine, planDay, state.machineLogs.get(machine.id) ?? []),
-      down: machine.downDays.includes(planDay),
+      machine: machineView(planner, machine, planDay, state.machineLogs.get(machine.id) ?? [], state.centreNames),
+      down: machineOff(machine, planDay),
       stops: (route?.stops ?? []).map((stop) => {
         const field = fieldsById.get(stop.fieldId);
         return {
@@ -143,7 +155,7 @@ function daySummaries(planner: Planner, state: ChcState, solve: SolveResponse | 
       return {
         machineId: machine.id,
         name: machine.name,
-        down: machine.downDays.includes(day),
+        down: machineOff(machine, day),
         fields: new Set(stops.map((stop) => stop.fieldId)).size,
         acres: Math.round(acres * 10) / 10,
         busyMinutes: route && stops.length > 0 ? Math.max(0, route.endMinute - DAY_START_MINUTE) : 0,
@@ -280,7 +292,7 @@ function queueItems(planner: Planner, fields: FieldRecord[], heldByField: Map<st
 function promiseHealth(state: ChcState, active: FieldRecord[]): { promised: FieldRecord[]; onTrackCount: number } {
   const promised = active.filter((field) => state.heldByField.get(field.id)?.promise);
   const downOnPlannedDay = (field: FieldRecord) =>
-    field.plannedDay !== null && Boolean(state.machines.find((machine) => machine.id === field.plannedMachineId)?.downDays.includes(field.plannedDay));
+    field.plannedDay !== null && Boolean(state.machines.find((machine) => machine.id === field.plannedMachineId && machineOff(machine, field.plannedDay!)));
   const onTrackCount = promised.filter((field) => onTrack(state.heldByField.get(field.id)!.promise!, field.plannedDay) && !downOnPlannedDay(field)).length;
   return { promised, onTrackCount };
 }
@@ -326,6 +338,7 @@ export async function buildBoard(planner: Planner, store: VaariStore, chcId: str
     selectedDate: planner.dayToIso(selectedDay),
     lanes,
     atRisk: queue.filter((item) => item.risk === "at_risk" || item.risk === "tight"),
+    day: await buildDayView(planner, state, draft !== null),
     solver: published ? solverView(published.solve) : null,
   };
 }
@@ -360,7 +373,8 @@ export async function buildPlanView(planner: Planner, store: VaariStore, chcId: 
       machines: state.machines.map((machine) => ({
         id: machine.id,
         name: machine.name,
-        downDates: machine.downDays.filter((day) => planDays.includes(day)).map((day) => planner.dayToIso(day)),
+        // Days the machine cannot take a field: in the workshop, or away on a loan.
+        downDates: planDays.filter((day) => machineOff(machine, day)).map((day) => planner.dayToIso(day)),
       })),
       dates: planDays.map((day) => planner.dayToIso(day)),
       rainDates: state.chc.rainDays.filter((day) => planDays.includes(day)).map((day) => planner.dayToIso(day)),
@@ -532,25 +546,36 @@ export async function buildBookedFields(planner: Planner, store: VaariStore, fie
 
 const roundAcres = (acres: number) => Math.round(acres * 10) / 10;
 
+/** What the district outlook needs besides the stores: each village's ready share and the simulator's assumptions. */
+export type OutlookContext = { sharesByVillage: ReadonlyMap<string, ReadyShare>; districtShare: ReadyShare; assumptions: OutlookAssumptions };
+
 /**
  * /officer/overview: every machine centre in the district, counted the way the operator's board
  * counts (riskOf, promiseHealth), then summed. An officer decides where machines and attention are
- * needed, so the answer is counts per centre, per village and per day ahead; it never carries a
- * farmer's name, phone, token or field id. Read-only: it does not finish a pending publish.
+ * needed, so the answer is counts per centre, per village and per day ahead, and the outlook
+ * (domain/outlook.ts: a forecast of acres past their last waiting day, and where lending or adding
+ * a machine changes it); it never carries a farmer's name, phone, token or field id. Read-only: it
+ * does not finish a pending publish.
  */
 export async function buildOfficerOverview(
   planner: Planner,
   store: VaariStore,
   chcs: ChcRecord[],
-  context: { optimumLastDate: string; districts: OfficerOverview["districts"] },
+  context: { optimumLastDate: string; districts: OfficerOverview["districts"]; outlook: OutlookContext },
 ): Promise<OfficerOverview> {
   const villagesById = villageNames(planner);
   const today = planner.today();
-  const centres: OfficerCentre[] = [];
+  const planDays = planner.planDays();
+  const firstDay = planDays[0]!;
+  const centres: Omit<OfficerCentre, "outlook">[] = [];
+  const outlookInputs: CentreOutlookInput[] = [];
+  const centreExtras: { capacityAcresPerDay: number; waitingAcres: number }[] = [];
   // Keyed by centre and village: one village could in principle be served by two centres.
   const villageRows = new Map<string, OfficerVillage>();
-  const aheadByDay = new Map<number, { fields: number; acres: number }>();
   const servedVillageIds = new Set<string>();
+  const loans: OfficerOverview["outlook"]["loans"] = [];
+  const districtDays = planDays.map((day) => ({ date: planner.dayToIso(day), readyBookedAcres: 0, readyExpectedAcres: 0, capacityAcres: 0, plannedAcres: 0, waitingAcres: 0 }));
+  const { assumptions } = context.outlook;
 
   for (const chc of chcs) {
     chc.villageIds.forEach((villageId) => servedVillageIds.add(villageId));
@@ -561,7 +586,7 @@ export async function buildOfficerOverview(
     const { promised, onTrackCount } = promiseHealth(state, active);
 
     const counts: OfficerCounts = {
-      machinesWorking: state.machines.filter((machine) => !machine.downDays.includes(planDay)).length,
+      machinesWorking: state.machines.filter((machine) => !machineOff(machine, planDay)).length,
       machinesTotal: state.machines.length,
       fieldsActive: active.length,
       acresActive: 0,
@@ -575,7 +600,9 @@ export async function buildOfficerOverview(
       waitingForDate: active.length - promised.length,
     };
 
+    const bookedAcresByReadyDay = new Map<number, number>();
     for (const field of state.fields) {
+      bookedAcresByReadyDay.set(field.readyDay, (bookedAcresByReadyDay.get(field.readyDay) ?? 0) + field.acres);
       const rowKey = `${chc.id}/${field.villageId}`;
       let row = villageRows.get(rowKey);
       if (!row) {
@@ -609,20 +636,77 @@ export async function buildOfficerOverview(
         row.tight += 1;
         counts.tight += 1;
       }
-      // What the published plans put on each coming day (the plan never sows today).
-      if (field.plannedDay !== null && field.plannedDay > today && field.plannedDay <= today + HORIZON_DAYS) {
-        const day = aheadByDay.get(field.plannedDay) ?? { fields: 0, acres: 0 };
-        day.fields += 1;
-        day.acres += field.acres;
-        aheadByDay.set(field.plannedDay, day);
-      }
+      // What the published plans sow on each coming day (the plan never sows today).
+      const dayIndex = field.plannedDay === null ? -1 : field.plannedDay - firstDay;
+      if (dayIndex >= 0 && dayIndex < districtDays.length) districtDays[dayIndex]!.plannedAcres += field.acres;
     }
     counts.acresActive = roundAcres(counts.acresActive);
+
+    // The outlook's inputs: booked fields not sown yet, the forecast of fields not booked yet, and
+    // what the machines can sow each day at the cautious (promise) speed; nothing on a rain day.
+    const shares = chc.villageIds.map((villageId) => context.outlook.sharesByVillage.get(villageId) ?? context.outlook.districtShare);
+    // Demand follows the centre's own fleet (a machine lent away still has its farmers; a borrowed one brings none).
+    const homeFleet = state.machines.filter((machine) => machine.loan?.direction !== "in").length;
+    const forecast = forecastLots(shares, homeFleet * assumptions.acresPerMachineSeason, bookedAcresByReadyDay, planDays, assumptions);
+    const acresPerMachineDay =
+      state.machines.length === 0
+        ? 0
+        : state.machines.reduce((sum, machine) => sum + learnRate(state.machineLogs.get(machine.id) ?? []).promiseAcresPerHour * machine.hoursPerDay, 0) / state.machines.length;
+    const workingByDay = planDays.map((day) => (chc.rainDays.includes(day) ? 0 : state.machines.filter((machine) => !machineOff(machine, day)).length));
+    const bookedLots = active.map((field) => ({ readyDay: field.readyDay, lastDay: field.readyDay + field.waitingLimitDays, acres: field.acres }));
+    const input: CentreOutlookInput = {
+      id: chc.id,
+      lat: chc.base.lat,
+      lon: chc.base.lon,
+      // Lending counts only machines not already on loan either way.
+      machinesTotal: ownMachines(state.machines).length,
+      lots: [...bookedLots, ...forecast.lots],
+      acresPerMachineDay,
+      workingByDay,
+    };
+    outlookInputs.push(input);
+    centreExtras.push({
+      capacityAcresPerDay: roundAcres(workingByDay[0]! * acresPerMachineDay),
+      waitingAcres: roundAcres(active.filter((field) => field.readyDay <= today).reduce((sum, field) => sum + field.acres, 0)),
+    });
+    const played = playOutlook(input.lots, firstDay, workingByDay.map((working) => working * acresPerMachineDay));
+    planDays.forEach((day, index) => {
+      const row = districtDays[index]!;
+      row.readyBookedAcres += active.filter((field) => field.readyDay === day).reduce((sum, field) => sum + field.acres, 0);
+      row.readyExpectedAcres += forecast.expectedByDay[index]!;
+      row.capacityAcres += workingByDay[index]! * acresPerMachineDay;
+      row.waitingAcres += played.days[index]!.waitingAcres;
+    });
+
+    for (const machine of state.machines) {
+      if (machine.loan?.direction !== "out") continue;
+      loans.push({
+        id: machine.loan.loanId,
+        fromChcId: chc.id,
+        toChcId: machine.loan.otherChcId,
+        machineName: machine.name,
+        startDate: planner.dayToIso(machine.loan.startDay),
+        endDate: planner.dayToIso(machine.loan.endDay),
+      });
+    }
+
+    const home = state.machines.filter((machine) => machine.loan?.direction !== "in");
+    const fleet = {
+      own: home.length,
+      superSeeders: home.filter((machine) => machine.kind === "super_seeder").length,
+      happySeeders: home.filter((machine) => machine.kind === "happy_seeder").length,
+      inWorkshop: state.machines.filter((machine) => machine.downDays.includes(planDay)).length,
+      lentOut: state.machines.filter((machine) => machine.loan?.direction === "out").length,
+      borrowedIn: state.machines.filter((machine) => machine.loan?.direction === "in").length,
+      acresBookedSeason: roundAcres(state.fields.reduce((sum, field) => sum + field.acres, 0)),
+    };
 
     centres.push({
       ...counts,
       id: chc.id,
       name: chc.name,
+      district: context.districts.find((district) => insideRings(chc.base.lon, chc.base.lat, district.rings))?.name ?? null,
+      fleet,
       villageCount: chc.villageIds.length,
       lat: chc.base.lat,
       lon: chc.base.lon,
@@ -631,6 +715,20 @@ export async function buildOfficerOverview(
       maxDelayVsQueueDays: published ? published.solve.metrics.maxDelayVsQueueDays : null,
     });
   }
+
+  const centresWithOutlook: OfficerCentre[] = centres.map((centre, index) => {
+    const outlook = centreOutlook(outlookInputs[index]!, firstDay);
+    return {
+      ...centre,
+      outlook: {
+        lateAcres: roundAcres(outlook.lateAcres),
+        lateIfOneDownAcres: outlook.lateIfOneDownAcres === null ? null : roundAcres(outlook.lateIfOneDownAcres),
+        lateIfOneMoreAcres: roundAcres(outlook.lateIfOneMoreAcres),
+        ...centreExtras[index]!,
+      },
+    };
+  });
+  const { moves, extra } = suggestMoves(outlookInputs, firstDay);
 
   const totals = emptyCounts();
   const countKeys = Object.keys(totals) as (keyof OfficerCounts)[];
@@ -641,21 +739,49 @@ export async function buildOfficerOverview(
     .map((row) => ({ ...row, acresActive: roundAcres(row.acresActive) }))
     .sort((left, right) => right.burnRisk - left.burnRisk || right.tight - left.tight || right.fieldsActive - left.fieldsActive || left.name.localeCompare(right.name));
 
-  const sowingAhead = Array.from({ length: HORIZON_DAYS }, (_, index) => {
-    const day = today + 1 + index;
-    const planned = aheadByDay.get(day) ?? { fields: 0, acres: 0 };
-    return { date: planner.dayToIso(day), fields: planned.fields, acres: roundAcres(planned.acres) };
-  });
-
+  const meanAcresPerMachineDay = outlookInputs.length === 0 ? 0 : outlookInputs.reduce((sum, input) => sum + input.acresPerMachineDay, 0) / outlookInputs.length;
   return {
     today: planner.dayToIso(today),
     optimumLastDate: context.optimumLastDate,
     totals: { ...totals, centres: centres.length, villages: servedVillageIds.size },
-    centres,
+    centres: centresWithOutlook,
     villages,
-    sowingAhead,
+    outlook: {
+      days: districtDays.map((day) => ({
+        date: day.date,
+        readyBookedAcres: roundAcres(day.readyBookedAcres),
+        readyExpectedAcres: roundAcres(day.readyExpectedAcres),
+        capacityAcres: roundAcres(day.capacityAcres),
+        plannedAcres: roundAcres(day.plannedAcres),
+        waitingAcres: roundAcres(day.waitingAcres),
+      })),
+      lateAcres: roundAcres(centresWithOutlook.reduce((sum, centre) => sum + centre.outlook.lateAcres, 0)),
+      moves,
+      extraMachines: extra,
+      loans,
+      assumptions: {
+        acresPerMachineSeason: assumptions.acresPerMachineSeason,
+        waitingLimitMinDays: assumptions.waitingLimitMinDays,
+        waitingLimitMaxDays: assumptions.waitingLimitMaxDays,
+        acresPerMachineDay: roundAcres(meanAcresPerMachineDay),
+        maxLendKm: MAX_LEND_KM,
+      },
+    },
     districts: context.districts,
   };
+}
+
+/** Even-odd ray casting over every ring of an outline (the simulator's rule, sim/district.py). */
+function insideRings(lon: number, lat: number, rings: [number, number][][]): boolean {
+  let crossings = 0;
+  for (const ring of rings) {
+    for (let index = 0; index + 1 < ring.length; index += 1) {
+      const [lonA, latA] = ring[index]!;
+      const [lonB, latB] = ring[index + 1]!;
+      if (latA > lat !== latB > lat && lon < lonA + ((lat - latA) * (lonB - lonA)) / (latB - latA)) crossings += 1;
+    }
+  }
+  return crossings % 2 === 1;
 }
 
 function emptyCounts(): OfficerCounts {
@@ -672,5 +798,56 @@ function emptyCounts(): OfficerCounts {
     burnRisk: 0,
     tight: 0,
     waitingForDate: 0,
+  };
+}
+
+/**
+ * /operator/machines: the centre's fleet, each machine with its status tomorrow, its loan if any,
+ * its learned speed and what the approved plan gives it over the plan's days. A machine can be
+ * removed here only if it is the centre's own, not on loan, and not the last one.
+ */
+export async function buildMachinesView(planner: Planner, store: VaariStore, chcId: string): Promise<OperatorMachines> {
+  const state = await loadChcState(planner, store, chcId);
+  const latest = await planner.latestPlan(chcId);
+  const planDays = planner.planDays();
+  const [firstDay, lastDay] = [planDays[0]!, planDays[planDays.length - 1]!];
+  const ownCount = ownMachines(state.machines).length;
+  return {
+    chc: { id: state.chc.id, name: state.chc.name },
+    today: planner.dayToIso(planner.today()),
+    machines: state.machines.map((machine) => {
+      const planned = state.fields.filter((field) => field.state !== "done" && field.plannedMachineId === machine.id && field.plannedDay !== null && field.plannedDay >= firstDay && field.plannedDay <= lastDay);
+      return {
+        ...machineView(planner, machine, firstDay, state.machineLogs.get(machine.id) ?? [], state.centreNames),
+        plannedFields: planned.length,
+        plannedAcres: roundAcres(planned.reduce((sum, field) => sum + field.acres, 0)),
+        removable: !machine.loan && ownCount > 1,
+      };
+    }),
+    draftWaiting: latest?.status === "draft",
+  };
+}
+
+/** Today's work at the centre (see dayViewSchema): what to record, and whether tomorrow can start. */
+async function buildDayView(planner: Planner, state: ChcState, draftWaiting: boolean): Promise<DayView> {
+  const work = await planner.todaysWork(state.chc.id);
+  const villages = villageNames(planner);
+  const machineNames = new Map(state.machines.map((machine) => [machine.id, machine.name]));
+  const recorded = work.closed || work.stops.length === 0;
+  return {
+    date: planner.dayToIso(planner.today()),
+    nextDate: planner.dayToIso(planner.today() + 1),
+    closed: work.closed,
+    stops: work.stops.map((stop) => ({
+      fieldId: stop.field.id,
+      token: stop.field.token,
+      farmerName: stop.field.farmerName,
+      villageName: villages.get(stop.field.villageId)?.name ?? stop.field.villageId,
+      acres: stop.field.acres,
+      machineName: machineNames.get(stop.machineId) ?? stop.machineId,
+      hours: Math.round((stop.minutes / 60) * 10) / 10,
+    })),
+    blockedBy: !recorded ? "record" : draftWaiting ? "approve" : null,
+    canStart: state.chc.id === DEMO_CHC_ID,
   };
 }

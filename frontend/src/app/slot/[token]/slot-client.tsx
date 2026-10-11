@@ -6,6 +6,7 @@
  * approves a plan. "See all my fields" opens WhatsApp to ask Vaari for a link to every field booked
  * with the farmer's number.
  */
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -43,6 +44,7 @@ export function SlotPageClient({ whatsappNumber }: { whatsappNumber: string | nu
     // Only a promised date has a "why": a request waits for the operator's plan.
     enabled: slot.isSuccess && (slot.data.status === "firm" || slot.data.status === "window"),
   });
+  const [cancelled, setCancelled] = useState(false);
   const shorten = useMutation({
     mutationFn: (waitingLimitDays: number) =>
       api(`${path}/waiting-limit?lang=${locale}`, farmerFieldSchema, { method: "POST", body: JSON.stringify({ waitingLimitDays }) }, NO_REDIRECT),
@@ -54,7 +56,8 @@ export function SlotPageClient({ whatsappNumber }: { whatsappNumber: string | nu
   });
 
   let state: SlotState;
-  if (slot.isPending) state = { kind: "loading" };
+  if (cancelled) state = { kind: "cancelled" };
+  else if (slot.isPending) state = { kind: "loading" };
   else if (slot.isError) {
     const status = slot.error instanceof ApiError ? slot.error.status : 0;
     state = status === 401 ? { kind: "invalid" } : status === 403 ? { kind: "forbidden" } : status === 404 ? { kind: "notFound" } : { kind: "unavailable", onRetry: () => slot.refetch() };
@@ -74,6 +77,14 @@ export function SlotPageClient({ whatsappNumber }: { whatsappNumber: string | nu
       why: whyState,
       onCannotWait: async (days) => {
         await shorten.mutateAsync(days);
+      },
+      changeBase: path,
+      onChanged: (change) => {
+        if (change === "cancel") setCancelled(true);
+        else {
+          queryClient.invalidateQueries({ queryKey: ["slot", token] });
+          toast(t("updated"));
+        }
       },
     };
   }

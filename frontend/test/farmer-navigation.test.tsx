@@ -53,4 +53,16 @@ describe("Open WhatsApp", () => {
     // No line under the button explaining what it does.
     expect(container.querySelector("a + p")).toBeNull();
   });
+
+  it("shows the capabilities text on the signin page when fill/showDescription is true", () => {
+    renderWithIntl(<WhatsAppStart number="910000000000" fill />);
+    expect(screen.getByText(/No app to learn/)).toBeInTheDocument();
+  });
+
+  it("on sign-in (fill) shows the phone picture only beside the form, so above the form on phones the card stays short", () => {
+    renderWithIntl(<WhatsAppStart number="910000000000" fill />);
+    const pictureBox = screen.getByRole("img", { name: /Sat Sri Akal/ }).parentElement!;
+    expect(pictureBox.className).toContain("hidden lg:flex");
+    expect(pictureBox.className).not.toContain("sm:flex");
+  });
 });

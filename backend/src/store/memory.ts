@@ -47,6 +47,13 @@ export class MemoryStore implements VaariStore {
   private farmerAccounts = new Map<string, FarmerAccountRecord>();
   private otpChallenges = new Map<string, OtpChallengeRecord>();
 
+  private seasonDayOffset = 0;
+  async getSeasonDayOffset() {
+    return this.seasonDayOffset;
+  }
+  async setSeasonDayOffset(offset: number) {
+    this.seasonDayOffset = offset;
+  }
   async listChcs() {
     return copy([...this.chcs.values()].sort((left, right) => byString(left.id, right.id)));
   }
@@ -60,6 +67,9 @@ export class MemoryStore implements VaariStore {
   async listMachines(chcId: string) {
     return copy([...this.machines.values()].filter((machine) => machine.chcId === chcId).sort((left, right) => byString(left.id, right.id)));
   }
+  async deleteMachine(chcId: string, machineId: string) {
+    this.machines.delete(`${chcId}/${machineId}`);
+  }
   async putMachine(machine: MachineRecord) {
     this.machines.set(`${machine.chcId}/${machine.id}`, copy(machine));
   }
@@ -72,6 +82,9 @@ export class MemoryStore implements VaariStore {
   }
   async putField(field: FieldRecord) {
     this.fields.set(`${field.chcId}/${field.id}`, copy(field));
+  }
+  async deleteField(chcId: string, fieldId: string) {
+    this.fields.delete(`${chcId}/${fieldId}`);
   }
   async setFieldPlan(chcId: string, update: FieldPlanUpdate) {
     const field = this.fields.get(`${chcId}/${update.fieldId}`);

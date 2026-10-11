@@ -17,12 +17,14 @@ type Props = {
   // below: opens under the button, right-aligned (top bars); above: over it, left-aligned (the sidebar's foot).
   placement?: "below" | "above";
   className?: string;
+  // Shown before the button inside the same box, so the panel spans the whole box (the sidebar's
+  // foot: the profile link, then the menu's own button). A click on it counts as outside the menu.
+  leading?: ReactNode;
   children: (close: () => void) => ReactNode;
 };
 
-export function Dropdown({ label, buttonClassName, buttonContent, panelClassName = "w-64", placement = "below", className = "", children }: Props) {
+export function Dropdown({ label, buttonClassName, buttonContent, panelClassName = "w-64", placement = "below", className = "", leading, children }: Props) {
   const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
@@ -37,7 +39,8 @@ export function Dropdown({ label, buttonClassName, buttonContent, panelClassName
     const items = () => [...(panelRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])];
     items()[0]?.focus();
     function onPointerDown(event: PointerEvent) {
-      if (!wrapperRef.current?.contains(event.target as Node)) close(false);
+      const target = event.target as Node;
+      if (!panelRef.current?.contains(target) && !buttonRef.current?.contains(target)) close(false);
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -63,7 +66,8 @@ export function Dropdown({ label, buttonClassName, buttonContent, panelClassName
   }, [open, close]);
 
   return (
-    <div ref={wrapperRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
+      {leading}
       <button
         ref={buttonRef}
         type="button"

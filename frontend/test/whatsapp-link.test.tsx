@@ -6,7 +6,7 @@ import { MY_FIELDS_MESSAGE, myFieldsUrl } from "@/components/whatsapp-link";
 import { SAMPLE_FIELDS, SAMPLE_REASONS, SAMPLE_TODAY } from "@/lib/samples";
 import { renderWithIntl } from "./render";
 
-const ready: SlotState = { kind: "ready", field: SAMPLE_FIELDS.window, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: vi.fn() };
+const ready: SlotState = { kind: "ready", field: SAMPLE_FIELDS.window, today: SAMPLE_TODAY, why: { kind: "ready", reasons: SAMPLE_REASONS }, onCannotWait: vi.fn(), changeBase: "slot/sample", onChanged: vi.fn() };
 
 describe("slot page: See all my fields", () => {
   it("opens WhatsApp with Vaari's number and 'my fields' typed in", () => {

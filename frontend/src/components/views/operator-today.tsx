@@ -10,7 +10,7 @@
  * the workshop makes a re-plan at once; it waits on the Plan page for approval.
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarCheck2, ClipboardCheck, Inbox, RotateCcw } from "lucide-react";
+import { ArrowRight, CalendarCheck2, ClipboardCheck, CloudRain, CloudSun, Inbox, RotateCcw } from "lucide-react";
 import { LayoutGroup } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -20,6 +20,7 @@ import { AttentionList } from "@/components/attention-list";
 import { DashHeader, Meter, MetricStrip, NextStep, Panel, SplitBar, DayTransition } from "@/components/dashboard/kit";
 import { FuseBar } from "@/components/fuse-bar";
 import { MachineDownDialog } from "@/components/machine-down-dialog";
+import { DayClose } from "@/components/operator/day-close";
 import { MachineLane } from "@/components/machine-lane";
 import { DayStrip } from "@/components/operator/plan-calendar";
 import { WorkloadGrid } from "@/components/operator/workload-grid";
@@ -113,6 +114,14 @@ export function OperatorTodayView() {
     mutationFn: (machineId: string) => api(`operator/machines/${machineId}/up`, operatorPlanSchema, { method: "POST", body: "{}" }),
     onSuccess: refresh,
   });
+  // Rain expected on the picked day (or cleared): the API makes a draft that sows nothing that day.
+  const rain = useMutation({
+    mutationFn: (input: { date: string; rain: boolean }) => api("operator/rain", operatorBoardSchema, { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["operator-board"], next);
+      queryClient.invalidateQueries({ queryKey: ["operator-plan"] });
+    },
+  });
   const reset = useMutation({
     mutationFn: () => api("operator/demo/reset", operatorBoardSchema, { method: "POST", body: "{}" }),
     onSuccess: (next) => {
@@ -178,6 +187,7 @@ export function OperatorTodayView() {
       />
 
       <div className="mt-6 space-y-4">
+        <DayClose day={data.day} />
         <WhatNow board={data} />
         <AttentionList items={data.attention} />
       </div>
@@ -235,6 +245,18 @@ export function OperatorTodayView() {
           {data.days.length > 0 && selectedDate ? (
             <div className="border-b border-line p-4 sm:p-5">
               <DayStrip days={data.days} selected={selectedDate} onSelect={setPickedDate} />
+              {selectedDay ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className={`flex items-center gap-1.5 text-sm ${selectedDay.rain ? "text-sky" : "text-ink-muted"}`}>
+                    {selectedDay.rain ? <CloudRain aria-hidden className="size-4" strokeWidth={1.75} /> : null}
+                    {selectedDay.rain ? ts("rainOn", { date: dates.short(selectedDay.date) }) : ts("rainHint")}
+                  </p>
+                  <Button variant="secondary" disabled={rain.isPending || busy} onClick={() => rain.mutate({ date: selectedDay.date, rain: !selectedDay.rain })} className="px-3 text-sm">
+                    {selectedDay.rain ? <CloudSun aria-hidden className="size-4" strokeWidth={1.75} /> : <CloudRain aria-hidden className="size-4" strokeWidth={1.75} />}
+                    {selectedDay.rain ? ts("rainClear") : ts("rainMark", { date: dates.short(selectedDay.date) })}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
           {data.published ? (

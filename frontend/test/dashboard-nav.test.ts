@@ -15,9 +15,11 @@ const ROLES: DashboardRole[] = ["operator", "facilitator", "officer", "farmer"];
 
 describe("dashboard sections", () => {
   it("each role opens its own sections and nothing else", () => {
-    expect(ROLE_SECTIONS.operator).toEqual(["home", "plan", "queue", "proof", "profile"]);
+    expect(ROLE_SECTIONS.operator).toEqual(["home", "plan", "queue", "machines", "proof", "profile"]);
     expect(ROLE_SECTIONS.facilitator).toEqual(["home", "book", "proof", "profile"]);
-    expect(ROLE_SECTIONS.officer).toEqual(["home", "proof", "profile"]);
+    expect(ROLE_SECTIONS.officer).toEqual(["home", "centres", "machines", "proof", "profile"]);
+    expect(mayOpen("officer", "/dashboard/centres")).toBe(true);
+    expect(mayOpen("operator", "/dashboard/centres")).toBe(false);
     expect(ROLE_SECTIONS.farmer).toEqual(["home", "book", "profile"]);
     for (const role of ROLES) {
       expect(mayOpen(role, "/dashboard")).toBe(true);
@@ -36,9 +38,9 @@ describe("dashboard sections", () => {
   });
 
   it("the navigation lists exactly those sections, named for what home shows each role", () => {
-    expect(navItems("operator").map((item) => item.labelKey)).toEqual(["navToday", "navPlan", "navQueue", "navProof", "navProfile"]);
+    expect(navItems("operator").map((item) => item.labelKey)).toEqual(["navToday", "navPlan", "navQueue", "navMachines", "navProof", "navProfile"]);
     expect(navItems("facilitator").map((item) => item.labelKey)).toEqual(["navBookings", "navBook", "navProof", "navProfile"]);
-    expect(navItems("officer").map((item) => item.labelKey)).toEqual(["navDistrict", "navProof", "navProfile"]);
+    expect(navItems("officer").map((item) => item.labelKey)).toEqual(["navDistrict", "navCentres", "navMachines", "navProof", "navProfile"]);
     expect(navItems("farmer").map((item) => item.labelKey)).toEqual(["navMyFields", "navBook", "navProfile"]);
     for (const role of ROLES) for (const item of navItems(role)) expect(mayOpen(role, item.href)).toBe(true);
   });

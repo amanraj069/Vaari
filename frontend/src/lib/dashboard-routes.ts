@@ -6,12 +6,14 @@
  */
 export type DashboardRole = "operator" | "facilitator" | "officer" | "farmer";
 
-export type DashboardSection = "home" | "plan" | "queue" | "book" | "proof" | "profile";
+export type DashboardSection = "home" | "plan" | "queue" | "machines" | "centres" | "book" | "proof" | "profile";
 
 export const SECTION_PATH: Record<DashboardSection, string> = {
   home: "/dashboard",
   plan: "/dashboard/plan",
   queue: "/dashboard/queue",
+  machines: "/dashboard/machines",
+  centres: "/dashboard/centres",
   book: "/dashboard/book",
   proof: "/dashboard/proof",
   profile: "/dashboard/profile",
@@ -19,9 +21,9 @@ export const SECTION_PATH: Record<DashboardSection, string> = {
 
 /** In the order the navigation lists them. "home" is each role's own overview. */
 export const ROLE_SECTIONS: Record<DashboardRole, DashboardSection[]> = {
-  operator: ["home", "plan", "queue", "proof", "profile"],
+  operator: ["home", "plan", "queue", "machines", "proof", "profile"],
   facilitator: ["home", "book", "proof", "profile"],
-  officer: ["home", "proof", "profile"],
+  officer: ["home", "centres", "machines", "proof", "profile"],
   farmer: ["home", "book", "profile"],
 };
 

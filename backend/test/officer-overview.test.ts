@@ -51,10 +51,11 @@ describe("GET /officer/overview", () => {
     // Villages with burn risk come first.
     const risks = overview.villages.map((village) => village.burnRisk);
     expect(risks).toEqual([...risks].sort((left, right) => right - left));
-    // Ten days ahead, from tomorrow; together they hold every planned field inside the horizon.
-    expect(overview.sowingAhead).toHaveLength(10);
-    expect(overview.sowingAhead[0]!.date > overview.today).toBe(true);
-    expect(overview.sowingAhead.reduce((sum, day) => sum + day.fields, 0)).toBeGreaterThan(0);
+    // The outlook covers the plan's ten days from tomorrow, and what the published plans sow in them.
+    expect(overview.outlook.days).toHaveLength(10);
+    expect(overview.outlook.days[0]!.date > overview.today).toBe(true);
+    expect(overview.outlook.days.reduce((sum, day) => sum + day.plannedAcres, 0)).toBeGreaterThan(0);
+    expect(overview.outlook.days[0]!.capacityAcres).toBeGreaterThan(0);
     // The real district outlines travel with it, for the map.
     expect(overview.districts.length).toBeGreaterThan(0);
   });

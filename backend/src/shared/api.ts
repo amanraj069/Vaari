@@ -251,8 +251,11 @@ export const machineViewSchema = z.object({
   id: z.string(),
   name: z.string(),
   kind: z.enum(["super_seeder", "happy_seeder"]),
-  status: z.enum(["working", "down"]),
+  // "away": lent to another centre that day, or a borrowed machine outside its loan.
+  status: z.enum(["working", "down", "away"]),
   downDates: z.array(z.string()),
+  // A loan the district officer arranged: "out" lent to centreName, "in" borrowed from it.
+  loan: z.object({ direction: z.enum(["out", "in"]), centreName: z.string(), startDate: z.string(), endDate: z.string() }).nullable(),
   promiseAcresPerDay: z.number(),
   planAcresPerDay: z.number(),
   logsCount: z.number().int(),
@@ -269,7 +272,7 @@ export const laneSchema = z.object({
 });
 export type Lane = z.infer<typeof laneSchema>;
 
-export const planCauseSchema = z.enum(["generate", "breakdown", "machine_back", "rain", "manual_move", "farmer_update"]);
+export const planCauseSchema = z.enum(["generate", "breakdown", "machine_back", "rain", "manual_move", "farmer_update", "machine_added", "machine_removed", "loan_in", "loan_out", "loan_ended", "day_closed", "rain_day"]);
 export type PlanCause = z.infer<typeof planCauseSchema>;
 
 /**
@@ -347,6 +350,41 @@ export const planDaySchema = z.object({
 export type PlanDay = z.infer<typeof planDaySchema>;
 
 /** /operator: the published plan the machines follow, plus anything waiting for a decision. */
+/**
+ * The day at the centre: today's fields from the approved plan, whether the operator has recorded
+ * what was sown, and whether the season can move on to tomorrow (today recorded, no draft waiting).
+ */
+export const dayViewSchema = z.object({
+  date: z.string(),
+  nextDate: z.string(),
+  closed: z.boolean(),
+  stops: z.array(
+    z.object({
+      fieldId: z.string(),
+      token: z.number().int(),
+      farmerName: z.string(),
+      villageName: z.string(),
+      acres: z.number(),
+      machineName: z.string(),
+      hours: z.number(),
+    }),
+  ),
+  // Why tomorrow cannot start yet: today's work is not recorded, or a plan waits for approval.
+  blockedBy: z.enum(["record", "approve"]).nullable(),
+  // Only the demo centre's operator moves the shared season clock.
+  canStart: z.boolean(),
+});
+export type DayView = z.infer<typeof dayViewSchema>;
+
+/** POST …/harvest: the farmer's harvest moved to this day. */
+export const harvestInputSchema = z.object({ readyDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
+
+/** POST /operator/rain: rain expected on a plan day (or cleared). */
+export const rainInputSchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), rain: z.boolean() });
+
+/** POST /operator/day/record: today's fields, sown or not. */
+export const recordDayInputSchema = z.object({ outcomes: z.array(z.object({ fieldId: z.string().min(1), sown: z.boolean() })).max(200) });
+
 export const operatorBoardSchema = z.object({
   chc: z.object({ id: z.string(), name: z.string() }),
   today: z.string(),
@@ -375,6 +413,7 @@ export const operatorBoardSchema = z.object({
   lanes: z.array(laneSchema),
   atRisk: z.array(queueItemSchema),
   solver: solverViewSchema.nullable(),
+  day: dayViewSchema,
 });
 export type OperatorBoard = z.infer<typeof operatorBoardSchema>;
 
@@ -469,6 +508,30 @@ export const officerCentreSchema = officerCountsSchema.extend({
   draftWaiting: z.boolean(),
   // Worst delay of any field against first-come-first-served in the published plan.
   maxDelayVsQueueDays: z.number().int().nullable(),
+  // The district the centre's base lies in (real outlines, OpenStreetMap); null if outside them.
+  district: z.string().nullable(),
+  // The fleet: the centre's own machines by kind, tomorrow's workshop count, loans either way, and
+  // the acres booked with the centre so far this season (sown and waiting), for load per machine.
+  fleet: z.object({
+    own: z.number().int(),
+    superSeeders: z.number().int(),
+    happySeeders: z.number().int(),
+    inWorkshop: z.number().int(),
+    lentOut: z.number().int(),
+    borrowedIn: z.number().int(),
+    acresBookedSeason: z.number(),
+  }),
+  // FORECAST (domain/outlook.ts): acres past their last waiting day over the plan's days with the
+  // centre's machines, with one machine fewer (null with only one), and with one more.
+  outlook: z.object({
+    lateAcres: z.number(),
+    lateIfOneDownAcres: z.number().nullable(),
+    lateIfOneMoreAcres: z.number(),
+    // Acres the working machines can sow tomorrow at the cautious speed.
+    capacityAcresPerDay: z.number(),
+    // Acres ready today and not sown yet.
+    waitingAcres: z.number(),
+  }),
 });
 export type OfficerCentre = z.infer<typeof officerCentreSchema>;
 
@@ -493,12 +556,66 @@ export const officerOverviewSchema = z.object({
   centres: z.array(officerCentreSchema),
   // Villages with at least one booked field, most fields at burn risk first.
   villages: z.array(officerVillageSchema),
-  // Fields and acres each published plan puts on each of the next days, all centres together.
-  sowingAhead: z.array(z.object({ date: z.string(), fields: z.number().int(), acres: z.number() })),
+  /**
+   * The district outlook over the plan's days, all centres together (a FORECAST; see
+   * domain/outlook.ts): acres becoming ready (booked, and expected but not booked yet), acres the
+   * working machines can sow at the cautious speed, acres the published plans sow, and acres
+   * still waiting at the day's end if machines sow the earliest last waiting day first.
+   */
+  outlook: z.object({
+    days: z.array(
+      z.object({
+        date: z.string(),
+        readyBookedAcres: z.number(),
+        readyExpectedAcres: z.number(),
+        capacityAcres: z.number(),
+        plannedAcres: z.number(),
+        waitingAcres: z.number(),
+      }),
+    ),
+    lateAcres: z.number(),
+    // Lend one machine between centres (nearest centre that stays on time without it).
+    moves: z.array(z.object({ fromCentreId: z.string(), toCentreId: z.string(), distanceKm: z.number(), lateBeforeAcres: z.number(), lateAfterAcres: z.number() })),
+    // Still late after lending: the fewest added machines that clear it.
+    extraMachines: z.array(z.object({ centreId: z.string(), machines: z.number().int(), lateAcres: z.number() })),
+    // Loans the officer has arranged (the outlook above already counts them).
+    loans: z.array(z.object({ id: z.string(), fromChcId: z.string(), toChcId: z.string(), machineName: z.string(), startDate: z.string(), endDate: z.string() })),
+    assumptions: z.object({
+      acresPerMachineSeason: z.number(),
+      waitingLimitMinDays: z.number().int(),
+      waitingLimitMaxDays: z.number().int(),
+      acresPerMachineDay: z.number(),
+      maxLendKm: z.number(),
+    }),
+  }),
   // Real district outlines (OpenStreetMap, data/boundaries.json): rings of [lon, lat].
   districts: z.array(z.object({ name: z.string(), rings: z.array(z.array(z.tuple([z.number(), z.number()]))) })),
 });
 export type OfficerOverview = z.infer<typeof officerOverviewSchema>;
+
+/** POST /officer/loans: lend one machine from a centre to another, from tomorrow, for a number of days. */
+export const arrangeLoanInputSchema = z.object({
+  fromChcId: z.string().min(1),
+  toChcId: z.string().min(1),
+  // From tomorrow, for this many days (at most the plan's ten; the machine travels today).
+  days: z.number().int().min(1).max(10).default(10),
+});
+
+/** POST /operator/machines: a machine the centre bought or rented in. */
+export const addMachineInputSchema = z.object({ name: z.string().trim().min(1).max(40), kind: z.enum(["super_seeder", "happy_seeder"]) });
+
+/**
+ * GET /operator/machines: the centre's fleet over the plan's days. Each machine with its status
+ * tomorrow, its workshop days, a loan if the district officer arranged one, its learned speed, and
+ * what the approved plan gives it over the plan's days.
+ */
+export const operatorMachinesSchema = z.object({
+  chc: z.object({ id: z.string(), name: z.string() }),
+  today: z.string(),
+  machines: z.array(machineViewSchema.extend({ plannedFields: z.number().int(), plannedAcres: z.number(), removable: z.boolean() })),
+  draftWaiting: z.boolean(),
+});
+export type OperatorMachines = z.infer<typeof operatorMachinesSchema>;
 
 /**
  * POST /fields. A facilitator books for a farmer (who has no account): the farmer's name, their

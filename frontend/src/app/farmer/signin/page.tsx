@@ -1,8 +1,8 @@
 /**
  * /farmer/signin, in AuthSplitLayout: on the left the other way in (do it all on WhatsApp, an
  * example chat); on the right the sign-in itself (mobile number and consent, the code, then the
- * name if the number is new). On phones the form comes first, then the WhatsApp card (the phone
- * picture hidden) with its "Open WhatsApp" button. Staff sign in on /signin. `next` may only send the farmer to their pages
+ * name if the number is new). On phones and tablets the WhatsApp card comes first (its "Open WhatsApp"
+ * button, the phone picture hidden), then the form. Staff sign in on /signin. `next` may only send the farmer to their pages
  * (their dashboard). `link` says why they are here: a used or expired WhatsApp link, or a sign-in that ended.
  */
 import Link from "next/link";
@@ -31,7 +31,7 @@ export default async function FarmerSignInPage({ searchParams }: { searchParams:
       <main className={`pb-16 pt-8 sm:pt-10 ${PAGE_FRAME}`}>
         {/* Without WHATSAPP_BUSINESS_NUMBER (on Amplify: the build spec's .env.production) there is no
             chat to open: the form stands alone instead of beside an empty half. */}
-        <AuthSplitLayout visual={whatsappNumber ? <WhatsAppStart number={whatsappNumber} fill /> : null} visualBelow compact>
+        <AuthSplitLayout visual={whatsappNumber ? <WhatsAppStart number={whatsappNumber} fill /> : null} visualAbove compact>
           <div className="mx-auto w-full max-w-md">
             <PageHeader back={<BackButton fallback="/" />} title={t("title")} description={t("subtitle")} shortDescription={t("subtitleShort")} />
             {linkProblem ? (

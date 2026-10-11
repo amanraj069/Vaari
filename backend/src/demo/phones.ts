@@ -15,4 +15,7 @@ export function demoFarmerPhones(config: Config): Set<string> {
   return new Set([DEMO_FARMER_PHONE, ...listed]);
 }
 
-export const isDemoFarmerPhone = (config: Config, phone: string): boolean => demoFarmerPhones(config).has(phone);
+export const isDemoFarmerPhone = (config: Config, phone: string): boolean => {
+  if (config.DEMO_FARMER_PHONES.split(",").map((s) => s.trim()).includes("*")) return true;
+  return demoFarmerPhones(config).has(phone);
+};

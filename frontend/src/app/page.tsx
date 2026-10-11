@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { useDates } from "@/lib/dates";
 import { DemoButton } from "@/components/demo-buttons";
 import { FireSeasonChart, fireSeasonFacts } from "@/components/fire-season-chart";
+import { FireEmbers } from "@/components/fire-embers";
 import { LandingPhoto } from "@/components/landing-photo";
 import { PAGE_FRAME } from "@/components/page-shell";
 import { CountUp, DrawLine, HeroParallax, HeroScrollFade, InViewState, Reveal, RevealImage, Stagger, StaggerItem, Stamp, TokenArrive } from "@/components/landing-motion";
@@ -212,8 +213,14 @@ function Problem() {
           </Stagger>
           <RevealImage className="relative aspect-[4/3] overflow-hidden rounded-card border border-line">
             {/* Burning stubble: the photo's fire line runs right of centre, so keep that in frame. */}
-            <LandingPhoto name="smoke" position="62% center" sizes="(min-width: 768px) 50vw, 100vw" />
+            <LandingPhoto
+              name="smoke"
+              position="62% center"
+              imgClassName="scale-[1.14] origin-[62%_60%]"
+              sizes="(min-width: 768px) 50vw, 100vw"
+            />
             <div aria-hidden className="ember-glow absolute inset-0" />
+            <FireEmbers />
           </RevealImage>
         </div>
 

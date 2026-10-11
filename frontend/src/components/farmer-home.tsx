@@ -13,9 +13,10 @@ import { KeyRound, Plus, Sprout } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { ApiError, api } from "@/lib/api";
-import { DateGuide } from "./farmer-aside";
+import { DateGuideButton } from "./farmer-aside";
 import { FarmerNameForm } from "./farmer-name-form";
 import { PageColumns, PageHeader } from "./page-shell";
+import { ChangeBooking } from "./change-booking";
 import { TokenCard } from "./token-card";
 import { Button, ButtonLink, Skeleton, StateMessage } from "./ui";
 import { SeeAllMyFields } from "./whatsapp-link";
@@ -86,6 +87,7 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
               description={t("readOnlyNote")}
               shortDescription={t("readOnlyNoteShort")}
               actions={newBooking}
+              help={<DateGuideButton />}
             />
             <PageColumns
               main={
@@ -102,18 +104,17 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
                           operatorPhone={field.operatorPhone || undefined}
                           whyPath={`farmer/fields/${field.chcId}/${field.id}/why`}
                         />
+                        {field.state !== "done" ? (
+                          <div className="mt-1 flex justify-end">
+                            <ChangeBooking base={`farmer/fields/${field.chcId}/${field.id}`} readyDate={field.readyDate} today={home.data.today} onDone={() => home.refetch()} />
+                          </div>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                 )
               }
-              aside={
-                // Tablets: the two help cards side by side under the task instead of one long column.
-                <div className="grid items-start gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-1">
-                  <WhatsAppStart number={whatsappNumber} />
-                  <DateGuide />
-                </div>
-              }
+              aside={<WhatsAppStart number={whatsappNumber} />}
             />
           </>
         )}

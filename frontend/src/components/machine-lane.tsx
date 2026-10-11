@@ -8,7 +8,7 @@
  * a clock), and says so to screen readers: risk is never colour alone. With `onSelectStop` each
  * stop is a button (the plan page uses it to move a field).
  */
-import { AlertTriangle, Clock3, Tractor, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Clock3, Tractor, Wrench } from "lucide-react";
 import { LockPin } from "./lock-pin";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
@@ -52,6 +52,10 @@ export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBac
   const startMinute = minutesOf(dayStart);
   const span = Math.max(60, minutesOf(lane.capacityEndTime) - startMinute);
   const percent = (minutes: number) => `${(minutes / span) * 100}%`;
+  // "away": lent to another centre that day, or a borrowed machine outside its loan. Not the
+  // workshop, so no workshop buttons: the district officer ends a loan, not the operator.
+  const away = lane.machine.status === "away";
+  const loan = lane.machine.loan;
   const colour = LANE_COLOURS[index % LANE_COLOURS.length];
   const tint = LANE_TINTS[index % LANE_TINTS.length];
 
@@ -73,8 +77,14 @@ export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBac
           <p className="mt-0.5 text-xs text-ink-muted tabular" title={t("rateHint")}>
             {t("rate", { promise: lane.machine.promiseAcresPerDay, plan: lane.machine.planAcresPerDay })}
           </p>
+          {loan ? (
+            <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-sky">
+              <ArrowLeftRight aria-hidden className="size-3.5" strokeWidth={1.75} />
+              {t(loan.direction === "out" ? "loanOut" : "loanIn", { centre: loan.centreName, range: dates.range(loan.startDate, loan.endDate) })}
+            </p>
+          ) : null}
         </div>
-        {lane.down && onMarkBack ? (
+        {away ? null : lane.down && onMarkBack ? (
           <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
             <Tractor aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markBack")}
@@ -89,7 +99,12 @@ export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBac
 
       <div className="overflow-x-auto rounded-chip" tabIndex={0} role="region" aria-label={t("laneTimeline", { machine: lane.machine.name })}>
         <div className="min-w-[32rem]">
-          {lane.down ? (
+          {away && loan ? (
+            <div className="flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-sky/40 bg-sky-soft/40 text-sm text-sky">
+              <ArrowLeftRight aria-hidden className="size-4" strokeWidth={1.75} />
+              {t(loan.direction === "out" ? "awayLent" : "awayNotHere", { centre: loan.centreName })}
+            </div>
+          ) : lane.down ? (
             <div className="hatched flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-line-strong text-ink-muted">
               <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
               {t("inWorkshop")}

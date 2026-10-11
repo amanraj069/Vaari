@@ -40,3 +40,9 @@ export async function POST(request: Request, context: Context) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   return forward(request, (await context.params).path);
 }
+
+export async function DELETE(request: Request, context: Context) {
+  // Removing a machine or ending a loan changes state: same guard as POST.
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  return forward(request, (await context.params).path);
+}

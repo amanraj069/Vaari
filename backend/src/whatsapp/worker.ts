@@ -552,6 +552,8 @@ export function createWorker(deps: WorkerDeps) {
   return {
     /** One queued webhook body. Never throws for one bad message; the rest are still handled. */
     async handle(body: string) {
+      // The season's today may have moved since the last message.
+      await deps.planner.refreshClock().catch(() => undefined);
       let parsed;
       try {
         parsed = parseWebhook(body);

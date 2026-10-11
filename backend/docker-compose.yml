@@ -10,6 +10,13 @@
 # A value containing "$" must be single-quoted in .env, or Compose reads it as a variable.
 name: vaari
 
+x-logging: &logging
+  driver: awslogs
+  options:
+    awslogs-region: ap-south-1
+    awslogs-group: /vaari/backend
+    awslogs-stream-prefix: vaari
+
 x-backend: &backend
   image: ${IMAGE_REGISTRY:-vaari}/vaari-api:${IMAGE_TAG:-local}
   build:
@@ -27,15 +34,11 @@ x-backend: &backend
   depends_on:
     engine:
       condition: service_healthy
-  logging: &logging
-    driver: json-file
-    options:
-      max-size: 10m
-      max-file: "5"
 
 services:
   api:
     <<: *backend
+    logging: *logging
     ports:
       - "${PORT:-4000}:4000"
     healthcheck:
@@ -47,6 +50,7 @@ services:
 
   worker:
     <<: *backend
+    logging: *logging
     command: ["node", "dist/worker.js"]
     profiles: ["worker"]
     # Healthy while SQS answers: src/worker.ts touches the file after every answered poll (one at

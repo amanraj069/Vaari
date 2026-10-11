@@ -74,7 +74,7 @@ describe("public footer", () => {
 describe("AuthSplitLayout", () => {
   it("puts the visual beside the content when there is one", () => {
     const { container } = renderWithIntl(
-      <AuthSplitLayout visual={<p>WhatsApp card</p>} visualBelow compact>
+      <AuthSplitLayout visual={<p>WhatsApp card</p>} visualAbove compact>
         <p>Form</p>
       </AuthSplitLayout>,
     );
@@ -83,9 +83,31 @@ describe("AuthSplitLayout", () => {
     expect(grid.className).toContain("lg:grid-cols-2");
   });
 
+  it("with visualAbove, puts the visual first on narrow screens and never hides it", () => {
+    const { container } = renderWithIntl(
+      <AuthSplitLayout visual={<p>WhatsApp card</p>} visualAbove compact>
+        <p>Form</p>
+      </AuthSplitLayout>,
+    );
+    const [visualCell, contentCell] = Array.from(container.firstElementChild!.children);
+    expect(visualCell).toHaveTextContent("WhatsApp card");
+    expect(contentCell).toHaveTextContent("Form");
+    // Source order is the order on every screen: no order-* classes reshuffle it, nothing hides the visual.
+    for (const cell of [visualCell!, contentCell!]) expect(cell.className).not.toMatch(/order-|hidden/);
+  });
+
+  it("without visualAbove, leaves the visual out below lg", () => {
+    const { container } = renderWithIntl(
+      <AuthSplitLayout visual={<p>WhatsApp card</p>}>
+        <p>Form</p>
+      </AuthSplitLayout>,
+    );
+    expect(container.firstElementChild!.children[0]!.className).toContain("hidden lg:block");
+  });
+
   it("shows the content alone, in one column, without a visual", () => {
     const { container } = renderWithIntl(
-      <AuthSplitLayout visual={null} visualBelow compact>
+      <AuthSplitLayout visual={null} visualAbove compact>
         <p>Form</p>
       </AuthSplitLayout>,
     );

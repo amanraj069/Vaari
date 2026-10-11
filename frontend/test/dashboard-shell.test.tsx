@@ -44,7 +44,7 @@ describe("DashboardShell", () => {
     renderShell(staff("operator", "Harpal Singh"));
     const sidebar = screen.getByRole("navigation", { name: "Main" });
     const links = within(sidebar).getAllByRole("link");
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/dashboard", "/dashboard/plan", "/dashboard/queue", "/dashboard/proof", "/dashboard/profile"]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/dashboard", "/dashboard/plan", "/dashboard/queue", "/dashboard/machines", "/dashboard/proof", "/dashboard/profile"]);
     expect(within(sidebar).getByRole("link", { name: "Plan" })).toHaveAttribute("aria-current", "page");
     expect(within(sidebar).getByRole("link", { name: "Today" })).not.toHaveAttribute("aria-current");
     // The workspace card says whose work this is.
@@ -53,14 +53,14 @@ describe("DashboardShell", () => {
     expect(within(aside).getAllByText("CHC operator").length).toBeGreaterThan(0);
     // The phone's bottom bar has the same pages, without the profile (it is in the account menu).
     const bottom = screen.getByRole("navigation", { name: "Dashboard pages" });
-    expect(within(bottom).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/dashboard", "/dashboard/plan", "/dashboard/queue", "/dashboard/proof"]);
+    expect(within(bottom).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/dashboard", "/dashboard/plan", "/dashboard/queue", "/dashboard/machines", "/dashboard/proof"]);
     expect(screen.getByRole("heading", { name: "Page" })).toBeInTheDocument();
   });
 
-  it("gives the officer a District page and the farmer only their fields and booking", () => {
+  it("gives the officer a District page and a Centres page, and the farmer only their fields and booking", () => {
     pathname.current = "/dashboard";
     const officer = renderShell(staff("officer", "District officer (demo)", null));
-    expect(within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link").map((link) => link.textContent)).toEqual(["District", "Proof", "Profile"]);
+    expect(within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link").map((link) => link.textContent)).toEqual(["District", "Centres", "Machines", "Proof", "Profile"]);
     officer.unmount();
     renderShell(farmer);
     const sidebar = screen.getByRole("navigation", { name: "Main" });
@@ -91,22 +91,39 @@ describe("AccountMenu", () => {
   /** Every item after the person's own name (the first item, which opens their profile). */
   const itemsAfterName = (menu: HTMLElement) => within(menu).getAllByRole("menuitem").slice(1).map((item) => item.textContent);
 
-  it("inside the dashboard: the name opens the profile; then profile, theme and sign out only", async () => {
+  it("sidebar card, every role: the name opens the profile and the menu lists only the options", async () => {
     pathname.current = "/dashboard/plan";
-    renderWithIntl(<AccountMenu viewer={staff("operator", "Harpal Singh")} trigger="card" />);
+    const viewers: [Viewer, string][] = [
+      [staff("operator", "Harpal Singh"), "Harpal Singh"],
+      [staff("facilitator", "Gurpreet Kaur"), "Gurpreet Kaur"],
+      [staff("officer", "District officer (demo)", null), "District officer (demo)"],
+      [farmer, "Jaswinder Singh"],
+    ];
+    for (const [viewer, name] of viewers) {
+      const view = renderWithIntl(<AccountMenu viewer={viewer} trigger="card" />);
+      expect(screen.getByRole("link", { name: new RegExp(name.replace(/[()]/g, "\\$&")) })).toHaveAttribute("href", "/dashboard/profile");
+      await userEvent.click(screen.getByRole("button", { name: "Account" }));
+      const menu = screen.getByRole("menu");
+      expect(within(menu).queryByText(name)).not.toBeInTheDocument();
+      expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Profile", "Switch to dark mode", "Sign out"]);
+      view.unmount();
+    }
+  });
+
+  it("folded sidebar: the avatar opens the menu, which starts with the name", async () => {
+    pathname.current = "/dashboard/plan";
+    renderWithIntl(<AccountMenu viewer={staff("operator", "Harpal Singh")} trigger="card" collapsed />);
     await userEvent.click(screen.getByRole("button", { name: "Account" }));
-    const menu = screen.getByRole("menu");
-    const name = within(menu).getAllByRole("menuitem")[0]!;
+    const name = within(screen.getByRole("menu")).getAllByRole("menuitem")[0]!;
     expect(name).toHaveTextContent("Harpal Singh");
     expect(name).toHaveAttribute("href", "/dashboard/profile");
-    expect(itemsAfterName(menu)).toEqual(["Profile", "Switch to dark mode", "Sign out"]);
   });
 
   it("on a public page it also lists the person's own pages (there is no sidebar there)", async () => {
     pathname.current = "/proof";
     renderWithIntl(<AccountMenu viewer={staff("operator", "Harpal Singh")} />);
     await userEvent.click(screen.getByRole("button", { name: "Account" }));
-    expect(itemsAfterName(screen.getByRole("menu"))).toEqual(["Today", "Plan", "Queue", "Proof", "Profile", "Switch to dark mode", "Sign out"]);
+    expect(itemsAfterName(screen.getByRole("menu"))).toEqual(["Today", "Plan", "Queue", "Machines", "Proof", "Profile", "Switch to dark mode", "Sign out"]);
   });
 
   it("shows clean initials for the demo officer and a farmer's pages for a farmer", async () => {
