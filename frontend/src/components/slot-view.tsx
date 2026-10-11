@@ -238,7 +238,11 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
               <p className="eyebrow text-xs font-medium text-ink-muted">{tf("token")}</p>
               <p className="mt-1 font-display text-[1.75rem] leading-none tabular sm:text-4xl">#{String(field.token).padStart(3, "0")}</p>
             </div>
-            {pill}
+            {/* The status, and under it the way to change the booking (not once the field is sown). */}
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              {pill}
+              {!done ? <ChangeBooking base={state.changeBase} readyDate={field.readyDate} today={state.today} onDone={state.onChanged} className="-mr-2 min-h-11 px-2 text-sm" /> : null}
+            </div>
           </div>
           <p className="mt-2 text-sm sm:text-base text-ink-muted">{tf("acresInVillage", { acres: tc("acres", { acres: field.acres }), village: field.villageName })}</p>
 
@@ -329,14 +333,7 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
           </section>
         ) : null}
 
-        {!done ? (
-          <div>
-            <CannotWait field={field} onCannotWait={state.onCannotWait} />
-            <div className="mt-2">
-              <ChangeBooking base={state.changeBase} readyDate={field.readyDate} today={state.today} onDone={state.onChanged} />
-            </div>
-          </div>
-        ) : null}
+        {!done ? <CannotWait field={field} onCannotWait={state.onCannotWait} /> : null}
 
         {whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : null}
 

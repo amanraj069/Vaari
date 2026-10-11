@@ -7,12 +7,13 @@
  * it is checked here and again by the API, which stores it as E.164 with the consent. One question
  * per step, large targets, works with keyboard and screen readers.
  */
-import { ArrowLeft, ArrowRight, Check, Copy, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Copy, Plus, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { toE164, type Booking, type BookingInput, type VillageOption } from "@/shared";
+import { type Booking, type BookingInput, type VillageOption } from "@/shared";
 import { copyText } from "@/lib/api";
 import { useDates } from "@/lib/dates";
+import { isMobile, mobileDigits, spacedMobile } from "./farmer-signin-form";
 import { AcresStep, ReadyStep, VillageStep, WaitStep, addDays, readyChoices } from "./field-steps";
 import { StackPanel } from "./stack-panel";
 import { StepProgress } from "./step-progress";
@@ -36,7 +37,8 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
   const steps = [t("stepFarmer"), t("stepPhone"), t("stepVillage"), t("stepAcres"), t("stepReady"), t("stepWait"), t("stepCheck")];
   const [step, setStep] = useState(0);
   const [farmerName, setFarmerName] = useState("");
-  const [farmerPhone, setFarmerPhone] = useState("");
+  // The ten digits after +91 (the prefix is fixed, as on the farmer's own sign-in).
+  const [phoneDigits, setPhoneDigits] = useState("");
   const [consent, setConsent] = useState(false);
   const [villageId, setVillageId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -48,9 +50,9 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
 
   const readyOptions = useMemo(() => readyChoices(today), [today]);
   const village = villages?.find((item) => item.id === villageId);
-  const phoneE164 = toE164(farmerPhone);
-  // Say the number is wrong only once something has been typed.
-  const phoneInvalid = farmerPhone.trim().length > 0 && phoneE164 === null;
+  const phoneE164 = isMobile(phoneDigits) ? `+91${phoneDigits}` : null;
+  // Say the number is wrong only once all ten digits are in, never while it is being typed.
+  const phoneInvalid = phoneDigits.length === 10 && phoneE164 === null;
   const canContinue = [farmerName.trim().length > 0, phoneE164 !== null && consent, Boolean(villageId), acres > 0, Boolean(readyDate), true, true][step];
   const link = booking ? `${origin ?? (typeof window !== "undefined" ? window.location.origin : "")}${booking.slot.path}` : "";
 
@@ -69,7 +71,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
     setBooking(null);
     setStep(0);
     setFarmerName("");
-    setFarmerPhone("");
+    setPhoneDigits("");
     setConsent(false);
     setVillageId(null);
     setSearch("");
@@ -90,25 +92,30 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
           <span className="sr-only">{t("copy")}</span>
           <input readOnly value={link} onFocus={(event) => event.currentTarget.select()} className="min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm shadow-control" />
         </label>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            variant="accent"
-            className="min-h-12"
-            onClick={async () => {
-              await copyText(link);
-              toast(t("copied"));
-            }}
-          >
-            <Copy aria-hidden className="size-5" strokeWidth={1.75} />
-            {t("copy")}
-          </Button>
-          {typeof navigator !== "undefined" && "share" in navigator ? (
-            <Button variant="secondary" className="min-h-12" onClick={() => navigator.share({ title: "Vaari", text: t("shareText"), url: link }).catch(() => undefined)}>
-              <Share2 aria-hidden className="size-5" strokeWidth={1.75} />
-              {t("share")}
+        {/* Copy and Share hand over this link; the next booking is a separate step, on the right
+            (below them on phones). */}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex gap-2">
+            <Button
+              variant="accent"
+              className="min-h-12 flex-1 sm:flex-none"
+              onClick={async () => {
+                await copyText(link);
+                toast(t("copied"));
+              }}
+            >
+              <Copy aria-hidden className="size-5" strokeWidth={1.75} />
+              {t("copy")}
             </Button>
-          ) : null}
-          <Button variant="quiet" className="min-h-12" onClick={reset}>
+            {typeof navigator !== "undefined" && "share" in navigator ? (
+              <Button variant="secondary" className="min-h-12 flex-1 sm:flex-none" onClick={() => navigator.share({ title: "Vaari", text: t("shareText"), url: link }).catch(() => undefined)}>
+                <Share2 aria-hidden className="size-5" strokeWidth={1.75} />
+                {t("share")}
+              </Button>
+            ) : null}
+          </div>
+          <Button variant="secondary" className="min-h-12 sm:ml-auto" onClick={reset}>
+            <Plus aria-hidden className="size-5" strokeWidth={1.75} />
             {t("another")}
           </Button>
         </div>
@@ -142,17 +149,23 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
           <div className="space-y-5">
             <label className="block">
               <span className="font-display text-2xl">{t("phoneQuestion", { name: farmerName.trim() })}</span>
-              <input
-                type="tel"
-                inputMode="tel"
-                value={farmerPhone}
-                onChange={(event) => setFarmerPhone(event.target.value)}
-                maxLength={32}
-                autoComplete="off"
-                aria-invalid={phoneInvalid}
-                aria-describedby="book-phone-help"
-                className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 tabular shadow-control"
-              />
+              {/* +91 is fixed and shown before the box; pasting a number with +91 or 0 keeps its ten digits. */}
+              <span className="mt-3 flex min-h-12 overflow-hidden rounded-control border border-line-strong bg-raised shadow-control focus-within:ring-2 focus-within:ring-ink">
+                <span aria-hidden className="flex items-center border-r border-line px-3 font-medium tabular text-ink-muted">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phoneDigits}
+                  onChange={(event) => setPhoneDigits(mobileDigits(event.target.value))}
+                  autoComplete="off"
+                  placeholder="98765 43210"
+                  aria-invalid={phoneInvalid}
+                  aria-describedby="book-phone-help"
+                  className="min-w-0 flex-1 bg-transparent px-3 tabular outline-none placeholder:text-ink-muted/60"
+                />
+              </span>
               <span id="book-phone-help" className={`mt-2 block text-base ${phoneInvalid ? "text-ember-deep" : "text-ink-muted"}`}>
                 {phoneInvalid ? t("phoneInvalid") : t("phoneHelp")}
               </span>
@@ -176,7 +189,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
             <dl className="mt-4 divide-y divide-line rounded-card border border-line bg-paper">
               {[
                 [t("stepFarmer"), farmerName.trim()],
-                [t("stepPhone"), phoneE164 ?? ""],
+                [t("stepPhone"), phoneE164 ? spacedMobile(phoneDigits) : ""],
                 [t("stepVillage"), village?.name ?? ""],
                 [t("stepAcres"), tc("acres", { acres })],
                 [t("stepReady"), readyDate ? dates.full(readyDate) : ""],

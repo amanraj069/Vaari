@@ -21,6 +21,7 @@ export function ChangeBooking({
   today,
   label,
   compact = false,
+  className = "",
   onDone,
 }: {
   base: string;
@@ -29,6 +30,8 @@ export function ChangeBooking({
   // Who the booking is for, in list rows (the button's name); omitted on a single field.
   label?: string;
   compact?: boolean;
+  // The text button's own sizing where it sits (under the status on a slot page's token).
+  className?: string;
   onDone: (change: "harvest" | "cancel") => void;
 }) {
   const t = useTranslations("changeBooking");
@@ -68,7 +71,7 @@ export function ChangeBooking({
           <PencilLine aria-hidden className="size-5" strokeWidth={1.75} />
         </button>
       ) : (
-        <Button variant="quiet" onClick={() => setOpen(true)} className="px-3 text-ink-muted">
+        <Button variant="quiet" onClick={() => setOpen(true)} className={`px-3 text-ink-muted ${className}`}>
           <PencilLine aria-hidden className="size-4" strokeWidth={1.75} />
           {t("open")}
         </Button>
@@ -80,8 +83,9 @@ export function ChangeBooking({
               <CalendarClock aria-hidden className="size-4 text-wheat-deep" strokeWidth={1.75} />
               {t("harvestTitle")}
             </h3>
-            <div className="mt-2 flex flex-wrap items-end gap-2">
-              <label className="min-w-0 flex-1">
+            {/* Phones: the date across the sheet and Save under it, full width; wider: side by side. */}
+            <div className="mt-2 grid gap-2 sm:flex sm:items-end">
+              <label className="min-w-0 sm:flex-1">
                 <span className="text-sm text-ink-muted">{t("harvestLabel")}</span>
                 <input
                   type="date"
@@ -91,7 +95,7 @@ export function ChangeBooking({
                   className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-raised px-3 text-base focus:border-ink/50 focus:outline-none shadow-control"
                 />
               </label>
-              <Button disabled={state === "saving" || !date || date === readyDate} onClick={() => send("harvest")}>
+              <Button className="min-h-11" disabled={state === "saving" || !date || date === readyDate} onClick={() => send("harvest")}>
                 {t("harvestSave")}
               </Button>
             </div>
@@ -105,19 +109,19 @@ export function ChangeBooking({
             {confirmCancel ? (
               <div className="mt-2 rounded-control border border-ember/30 bg-ember-soft/40 p-3">
                 <p className="text-sm">{t("cancelSure")}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button variant="secondary" onClick={() => setConfirmCancel(false)}>
+                <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
+                  <Button variant="secondary" className="min-h-11" onClick={() => setConfirmCancel(false)}>
                     {t("keep")}
                   </Button>
-                  <Button variant="danger" disabled={state === "saving"} onClick={() => send("cancel")}>
+                  <Button variant="danger" className="min-h-11" disabled={state === "saving"} onClick={() => send("cancel")}>
                     {t("cancelConfirm")}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="mt-2 grid gap-2 sm:flex sm:items-center sm:justify-between">
                 <p className="text-sm text-ink-muted">{t("cancelBody")}</p>
-                <Button variant="secondary" onClick={() => setConfirmCancel(true)}>
+                <Button variant="secondary" className="min-h-11 sm:shrink-0" onClick={() => setConfirmCancel(true)}>
                   {t("cancelAction")}
                 </Button>
               </div>

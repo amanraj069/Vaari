@@ -675,7 +675,7 @@
     "stepPhone": "Phone",
     "phoneQuestion": "{name}'s mobile number",
     "phoneHelp": "Vaari sends the farmer their date on WhatsApp at this number. It is never shown on the farmer's link or to anyone else.",
-    "phoneInvalid": "Type a 10-digit mobile number, or the full number with the country code.",
+    "phoneInvalid": "Type a 10-digit mobile number.",
     "consentLabel": "{name} agrees to get messages about this booking from Vaari on this number.",
     "consentRequired": "Ask the farmer first: Vaari cannot book without their agreement.",
     "reissueFor": "New link for {name}",
