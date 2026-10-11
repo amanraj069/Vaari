@@ -27,11 +27,11 @@ export function ShortfallPanel({ results }: { results: ProofResults }) {
     );
 
   return (
-    <section aria-labelledby="shortfall-title" className="mt-12 rounded-card border border-line bg-surface p-5 sm:p-6">
-      <h2 id="shortfall-title" className="font-display text-2xl">{t("shortfallTitle")}</h2>
+    <section aria-labelledby="shortfall-title" className="mt-12 rounded-card border border-line bg-surface p-4 sm:p-6">
+      <h2 id="shortfall-title" className="font-display text-xl sm:text-2xl">{t("shortfallTitle")}</h2>
       <p className="mt-2 max-w-3xl text-sm text-ink-muted">{t("shortfallBody", { machines: shortfall.machines, baseMachines: base.machines })}</p>
       <div className="relative mt-4 overflow-x-auto" tabIndex={0} role="region" aria-labelledby="shortfall-title">
-        <table className="w-full min-w-[28rem] text-sm">
+        <table className="w-full text-[0.8125rem] sm:min-w-[28rem] sm:text-sm">
           <caption className="sr-only">{t("metric_fieldsLate")}</caption>
           <thead>
             <tr className="border-b border-line text-left text-ink-muted">

@@ -53,12 +53,12 @@ export function FireSeasonChart({ framed = true, compact = false }: { framed?: b
   const percent = (day: number) => `${((day - FIRST_DAY) / span) * 100}%`;
 
   return (
-    <figure className={framed ? `rounded-card border border-line ${compact ? "bg-surface p-5" : "bg-surface/80 p-5 sm:p-6"}` : "p-5 sm:p-8"}>
+    <figure className={framed ? `rounded-card border border-line ${compact ? "bg-surface p-5" : "bg-surface/80 p-5 sm:p-6"}` : "p-4 sm:p-8"}>
       <figcaption>
-        <h3 className={compact ? "text-base font-semibold" : "font-display text-2xl"}>{t("chartTitle")}</h3>
-        <p className={compact ? "mt-0.5 text-sm text-ink-muted" : "mt-1 text-ink-muted"}>{t("chartBody")}</p>
+        <h3 className={compact ? "text-base font-semibold" : "font-display text-xl sm:text-2xl"}>{t("chartTitle")}</h3>
+        <p className={compact ? "mt-0.5 text-sm text-ink-muted" : "mt-1 text-sm text-ink-muted sm:text-base"}>{t("chartBody")}</p>
       </figcaption>
-      <div className="relative mt-6">
+      <div className="relative mt-5 sm:mt-6">
         <div
           aria-hidden
           className="chart-band absolute inset-y-0 rounded-chip border border-dashed border-field/60 bg-field/15"
@@ -89,7 +89,7 @@ export function FireSeasonChart({ framed = true, compact = false }: { framed?: b
           ))}
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[0.8125rem] sm:text-sm">
         <span className="inline-flex items-center gap-2">
           <span aria-hidden className="size-3 rounded-sm bg-ember" />
           {t("chartLegendFires")}
@@ -99,7 +99,7 @@ export function FireSeasonChart({ framed = true, compact = false }: { framed?: b
           {t("chartLegendOptimum")}
         </span>
       </div>
-      <p className={`mt-4 text-ink-muted ${compact ? "text-xs" : "text-sm"}`}>{t("chartSource")}</p>
+      <p className={`mt-4 text-ink-muted ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>{t("chartSource")}</p>
     </figure>
   );
 }

@@ -13,14 +13,14 @@ export function WhatsAppSignInCard() {
   return (
     <Link
       href="/farmer/signin"
-      className="group flex min-h-12 items-center gap-4 rounded-card border border-line bg-surface p-4 transition-colors duration-150 hover:border-ink/50 sm:p-5"
+      className="group flex min-h-12 items-center gap-3 rounded-card border border-line bg-surface p-4 transition-colors duration-150 hover:border-ink/50 sm:p-5"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-field-soft text-field">
-        <WhatsAppGlyph className="size-6" />
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-field-soft text-field sm:size-11">
+        <WhatsAppGlyph className="size-[1.375rem] sm:size-6" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-display text-xl leading-tight">{t("farmerPhoneAction")}</span>
-        <span className="block text-sm text-ink-muted">{t("farmerPhoneActionBody")}</span>
+        <span className="block font-display text-lg leading-tight sm:text-xl">{t("farmerPhoneAction")}</span>
+        <span className="mt-0.5 block text-[0.8125rem] text-ink-muted sm:text-sm">{t("farmerPhoneActionBody")}</span>
       </span>
       <ArrowRight aria-hidden className="size-5 shrink-0 text-ink-muted transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.75} />
     </Link>

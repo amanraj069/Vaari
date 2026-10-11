@@ -8,11 +8,9 @@
  */
 import { Check, Tractor } from "lucide-react";
 import { PAGE_TITLE } from "./page-shell";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ChcOption, Locale, Role } from "@/shared";
-import { useRefreshSession } from "@/lib/use-session";
 import { Button } from "./ui";
 
 const LANGUAGES: { code: Locale; label: string }[] = [
@@ -32,8 +30,6 @@ type Props = {
 
 export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRole = null }: Props) {
   const t = useTranslations("welcome");
-  const router = useRouter();
-  const refreshSession = useRefreshSession();
   const [name, setName] = useState(suggestedName);
   const [role, setRole] = useState<"operator">("operator");
   const [chcId, setChcId] = useState(chcs.length === 1 ? chcs[0]!.id : "");
@@ -54,19 +50,19 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRo
     }).catch(() => null);
     if (!response?.ok) return setState("failed");
     const { home } = (await response.json()) as { home: string };
-    await refreshSession();
-    router.push(home);
-    router.refresh();
+    // A full load, not router.push: the router cache may still hold "finish /welcome" redirects
+    // for dashboard pages prefetched before the role was set (see demo-buttons.tsx).
+    window.location.assign(home);
   }
 
   return (
-    <form onSubmit={submit} className="space-y-8 text-lg">
+    <form onSubmit={submit} className="space-y-6 text-base sm:space-y-8 sm:text-lg">
       <div>
         <h1 className={PAGE_TITLE}>{t("title")}</h1>
-        <p className="mt-2 text-ink-muted">{t("body")}</p>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-muted sm:mt-2 sm:text-base">{t("body")}</p>
       </div>
       {pickedRole ? (
-        <p role="note" className="rounded-control border border-wheat-deep/30 bg-wheat-soft/50 p-4 text-base">
+        <p role="note" className="rounded-control border border-wheat-deep/30 bg-wheat-soft/50 p-4 text-sm sm:text-base">
           {t("pickedNote", { role: pickedRole })}
         </p>
       ) : null}
@@ -93,7 +89,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRo
               disabled={!option.allowed}
               aria-pressed={role === option.value}
               onClick={() => setRole(option.value)}
-              className={`flex min-h-24 flex-col items-start gap-1 rounded-card border p-5 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex min-h-20 flex-col items-start gap-1 rounded-card border p-4 text-left sm:min-h-24 sm:p-5 disabled:cursor-not-allowed disabled:opacity-50 ${
                 role === option.value ? "border-ink bg-ink text-paper" : "border-line bg-surface hover:border-ink/50"
               }`}
             >
@@ -154,7 +150,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRo
       </fieldset>
 
       {state === "failed" ? <p role="alert" className="text-ember-deep">{t("failed")}</p> : null}
-      <Button type="submit" variant="accent" className="min-h-12 w-full text-lg" disabled={!name.trim() || !chcId || !operatorAllowed || state === "saving"}>
+      <Button type="submit" variant="accent" className="min-h-12 w-full sm:text-lg" disabled={!name.trim() || !chcId || !operatorAllowed || state === "saving"}>
         {state === "saving" ? t("saving") : t("continue")}
       </Button>
     </form>

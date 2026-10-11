@@ -2,11 +2,11 @@
  * Landing, in four parts that share one width and one heading pattern: a full-bleed hero says what
  * Vaari promises; the problem shows why it matters (the smoke, sourced numbers and a chart of real
  * NASA FIRMS detections in one panel); the fix shows how a promised date replaces the wait; the
- * close returns to the opening photo with the two demo roles. Fine print (yield cost, what is
- * simulated, credits) lives in the footer. Every number is from a cited source or
+ * close returns to the opening photo with the two demo roles. What is simulated is said in the hero,
+ * the close and the site footer. Every number is from a cited source or
  * computed from data/ (fire-season.json); photos are labelled AI-generated illustrations.
  */
-import { CalendarCheck2, ChevronDown, Cpu, Flame, FlaskConical, PhoneOff, Satellite, Sprout, Ticket, UserCheck, Wheat, Wind, type LucideIcon } from "lucide-react";
+import { CalendarCheck2, ChevronDown, Cpu, Flame, PhoneOff, Satellite, Sprout, Ticket, Tractor, UserCheck, Users, Wind, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useDates } from "@/lib/dates";
 import { DemoButton } from "@/components/demo-buttons";
@@ -32,21 +32,21 @@ function ExampleToken() {
         <div className="absolute -top-3.5 right-6 z-10 rotate-2 whitespace-nowrap rounded-full border border-dashed border-ink-muted/60 bg-paper px-2.5 py-0.5 text-xs text-ink-muted">
           {t("exampleLabel")}
         </div>
-        <div className="ticket-notch rounded-card border border-line bg-surface p-7 sm:p-8">
+        <div className="ticket-notch rounded-card border border-line bg-surface p-5 sm:p-8">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium eyebrow text-ink-muted">{tf("token")}</p>
-              <p className="font-display text-4xl leading-none tabular">#018</p>
+              <p className="mt-1 font-display text-[1.75rem] leading-none tabular sm:text-4xl">#018</p>
             </div>
             <Stamp>
               <Pill kind="firm" size="lg">{tf("firm")}</Pill>
             </Stamp>
           </div>
-          <div className="my-6 border-t border-dashed border-line-strong" />
-          <p className="text-ink-muted">{tf("machineComes")}</p>
-          <p className="font-display text-3xl">{dates.weekday(EXAMPLE_DATE)}</p>
-          <p className="font-display text-6xl leading-none tracking-tight">{dates.dayMonth(EXAMPLE_DATE)}</p>
-          <div className="mt-8">
+          <div className="my-4 border-t border-dashed border-line-strong sm:my-6" />
+          <p className="text-sm text-ink-muted sm:text-base">{tf("machineComes")}</p>
+          <p className="mt-1 font-display text-xl sm:text-3xl">{dates.weekday(EXAMPLE_DATE)}</p>
+          <p className="font-display text-[2.625rem] leading-[1.05] tracking-tight sm:text-6xl">{dates.dayMonth(EXAMPLE_DATE)}</p>
+          <div className="mt-6 sm:mt-8">
             <Timeline current="planned" />
           </div>
         </div>
@@ -97,7 +97,7 @@ function HeroTitle({ message }: { message: string }) {
 /** The platform's one page frame (page-shell.tsx): the landing lines up with the top bar and every app page. */
 const CONTAINER = PAGE_FRAME;
 /** Every section below the hero has the same vertical rhythm. */
-const SECTION_SPACE = "py-20 md:py-28";
+const SECTION_SPACE = "py-14 sm:py-20 md:py-28";
 
 const EYEBROW_TONE = { ember: "text-ember-deep", field: "text-field", wheat: "text-wheat-deep" } as const;
 
@@ -109,17 +109,17 @@ function SectionHeading({ id, icon: Icon, eyebrow, tone, title, body }: { id: st
   return (
     <>
       <StaggerItem>
-        <p className={`flex items-center gap-2 text-sm font-medium eyebrow ${EYEBROW_TONE[tone]}`}>
+        <p className={`flex items-center gap-2 text-xs font-medium eyebrow sm:text-sm ${EYEBROW_TONE[tone]}`}>
           <Icon aria-hidden className="size-4" strokeWidth={1.75} />
           {eyebrow}
         </p>
       </StaggerItem>
       <StaggerItem>
-        <h2 id={id} className="mt-4 max-w-2xl font-display text-4xl leading-[1.06] tracking-tight sm:text-5xl">{title}</h2>
+        <h2 id={id} className="mt-3 max-w-2xl font-display text-[1.875rem] leading-[1.1] tracking-tight sm:mt-4 sm:text-5xl sm:leading-[1.06]">{title}</h2>
       </StaggerItem>
       {body ? (
         <StaggerItem>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-muted">{body}</p>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-muted sm:mt-5 sm:text-lg">{body}</p>
         </StaggerItem>
       ) : null}
     </>
@@ -142,42 +142,33 @@ function Hero() {
       </HeroParallax>
       <div aria-hidden className="photo-wash-hero absolute inset-0" />
 
-      <HeroScrollFade className={`relative flex flex-1 flex-col justify-center pb-10 pt-36 sm:pt-40 ${CONTAINER}`}>
+      <HeroScrollFade className={`relative flex flex-1 flex-col justify-center pb-8 pt-28 sm:pb-10 sm:pt-40 ${CONTAINER}`}>
         <p className="hero-rise text-xs font-medium eyebrow text-wheat-deep sm:text-sm" style={{ ["--i" as string]: 0 }}>{t("eyebrow")}</p>
-        <h1 id="hero-title" className="mt-5 max-w-2xl font-display text-5xl leading-[1.02] tracking-tight sm:text-7xl lg:text-[5.5rem]">
+        <h1 id="hero-title" className="mt-4 max-w-2xl font-display text-[2.625rem] leading-[1.04] tracking-tight sm:mt-5 sm:text-7xl sm:leading-[1.02] lg:text-[5.5rem]">
           <HeroTitle message={t.raw("heroTitle") as string} />
         </h1>
         <p className="hero-rise mt-4 flex items-center gap-2 text-sm text-ink-muted" style={{ ["--i" as string]: 6 }}>
-          <span lang="pa" className="font-display text-2xl text-ink">ਵਾਰੀ</span>
+          <span lang="pa" className="font-display text-xl text-ink sm:text-2xl">ਵਾਰੀ</span>
           <span>{t("heroMeaning")}</span>
         </p>
-        <p className="hero-rise mt-6 max-w-xl text-lg leading-relaxed text-ink sm:text-xl" style={{ ["--i" as string]: 7 }}>{t("heroBody")}</p>
-        <div className="hero-rise mt-9 grid gap-4 sm:flex sm:flex-wrap sm:gap-5" style={{ ["--i" as string]: 8 }}>
-          <div className="flex flex-col gap-1.5">
-            <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" className="w-full sm:w-auto" />
-            <span className="text-center text-sm text-ink-muted">{t("tryFarmerHint")}</span>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <DemoButton role="operator" label={t("tryOperator")} className="w-full sm:w-auto" />
-            <span className="text-center text-sm text-ink-muted">{t("tryOperatorHint")}</span>
-          </div>
+        <p className="hero-rise mt-5 max-w-xl text-base leading-relaxed text-ink sm:mt-6 sm:text-xl" style={{ ["--i" as string]: 7 }}>{t("heroBody")}</p>
+        <div className="hero-rise mt-7 flex flex-wrap gap-3 sm:mt-9 sm:gap-4" style={{ ["--i" as string]: 8 }}>
+          <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" className="w-full sm:w-auto" />
+          <DemoButton role="operator" label={t("tryOperator")} className="w-full sm:w-auto" />
         </div>
-        <p className="hero-rise mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-muted" style={{ ["--i" as string]: 9 }}>
-          {t("tryNote")} <SimulatedBadge />
-        </p>
       </HeroScrollFade>
 
       <div className="relative">
         <span aria-hidden className="hero-rule absolute inset-x-0 top-0 block h-px bg-line" />
-        <ul className={`grid gap-5 py-6 sm:grid-cols-3 sm:gap-0 sm:py-7 ${CONTAINER}`}>
+        <ul className={`grid gap-4 py-5 sm:grid-cols-3 sm:gap-0 sm:py-7 ${CONTAINER}`}>
           {strip.map((item, index) => (
             <li key={item.title} className={`hero-rise flex items-center gap-4 ${index > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}`} style={{ ["--i" as string]: 10 + index }}>
-              <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-full border border-line-strong bg-surface/80 backdrop-blur-sm">
-                <item.icon className="size-6 text-wheat-deep" strokeWidth={1.5} />
+              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full border border-line-strong bg-surface/80 backdrop-blur-sm sm:size-12">
+                <item.icon className="size-5 text-wheat-deep sm:size-6" strokeWidth={1.5} />
               </span>
               <span>
-                <span className="block font-medium">{item.title}</span>
-                <span className="block text-sm text-ink-muted">{item.body}</span>
+                <span className="block text-[0.9375rem] font-medium sm:text-base">{item.title}</span>
+                <span className="block text-[0.8125rem] text-ink-muted sm:text-sm">{item.body}</span>
               </span>
             </li>
           ))}
@@ -208,13 +199,13 @@ function Problem() {
   return (
     <section id="problem" aria-labelledby="problem-title" className={`scroll-mt-4 ${SECTION_SPACE}`}>
       <div className={CONTAINER}>
-        <div className="grid items-center gap-10 md:grid-cols-2 lg:gap-16">
+        <div className="grid items-center gap-8 md:grid-cols-2 md:gap-10 lg:gap-16">
           <Stagger>
             <SectionHeading id="problem-title" icon={Flame} eyebrow={t("problemEyebrow")} tone="ember" title={t("problemTitle")} body={t("problemBody")} />
             <StaggerItem>
-              <blockquote className="relative mt-8 max-w-xl pl-5">
+              <blockquote className="relative mt-6 max-w-xl pl-4 sm:mt-8 sm:pl-5">
                 <DrawLine axis="y" className="absolute inset-y-0 left-0 w-0.5 bg-wheat" />
-                <p className="font-display text-2xl leading-snug">{t("fact1")}</p>
+                <p className="font-display text-xl leading-snug sm:text-2xl">{t("fact1")}</p>
                 <footer className="mt-2 text-sm text-ink-muted">{t("fact1Source")}</footer>
               </blockquote>
             </StaggerItem>
@@ -226,12 +217,12 @@ function Problem() {
           </RevealImage>
         </div>
 
-        <Reveal className="mt-14 overflow-hidden rounded-card border border-line bg-surface md:mt-20">
+        <Reveal className="mt-10 overflow-hidden rounded-card border border-line bg-surface sm:mt-14 md:mt-20">
           <Stagger as="dl" gap={0.1} className="grid grid-cols-2 gap-px border-b border-line bg-line lg:grid-cols-4">
             {stats.map((stat) => (
               <StaggerItem key={stat.label} className="flex flex-col bg-surface p-4 sm:p-7">
-                <dt className="order-2 mt-2 text-sm text-ink sm:text-base">{stat.label}</dt>
-                <dd className="order-1 font-display text-3xl leading-none tracking-tight text-ember-deep tabular sm:text-5xl">
+                <dt className="order-2 mt-2 text-[0.8125rem] leading-snug text-ink sm:text-base">{stat.label}</dt>
+                <dd className="order-1 font-display text-[1.75rem] leading-none tracking-tight text-ember-deep tabular sm:text-5xl">
                   <CountUp value={stat.value} suffix={stat.suffix} />
                 </dd>
                 <dd className="order-3 mt-2 text-xs text-ink-muted">
@@ -252,7 +243,7 @@ function Problem() {
         </Reveal>
 
         <Reveal>
-          <p className="mt-12 max-w-3xl font-display text-2xl leading-snug sm:text-3xl md:mt-16">{t("problemTurn")}</p>
+          <p className="mt-10 max-w-3xl font-display text-xl leading-snug sm:mt-12 sm:text-3xl md:mt-16">{t("problemTurn")}</p>
         </Reveal>
       </div>
     </section>
@@ -270,43 +261,43 @@ function Fix() {
   ];
   return (
     <section id="how" aria-labelledby="how-title" className={`scroll-mt-4 border-y border-line bg-surface/60 ${SECTION_SPACE}`}>
-      <div className={`grid items-center gap-14 md:grid-cols-2 lg:gap-16 ${CONTAINER}`}>
+      <div className={`grid items-center gap-12 md:grid-cols-2 md:gap-14 lg:gap-16 ${CONTAINER}`}>
         <Stagger>
           <SectionHeading id="how-title" icon={Ticket} eyebrow={t("fixEyebrow")} tone="field" title={t("fixTitle")} body={t("fixBody")} />
-          <StaggerItem className="mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
-            <div className="rounded-card border border-line bg-surface p-5">
+          <StaggerItem className="mt-6 grid max-w-xl gap-3 sm:mt-8 sm:grid-cols-2">
+            <div className="rounded-card border border-line bg-surface p-4 sm:p-5">
               <p className="flex items-center gap-2 text-sm text-ink-muted">
                 <PhoneOff aria-hidden className="size-4" strokeWidth={1.75} />
                 {t("beforeLabel")}
               </p>
-              <p className="mt-2 font-display text-xl">{t("beforeQuote")}</p>
+              <p className="mt-1.5 font-display text-lg leading-snug sm:mt-2 sm:text-xl">{t("beforeQuote")}</p>
             </div>
-            <div className="rounded-card border border-field/30 bg-field-soft/60 p-5">
+            <div className="rounded-card border border-field/30 bg-field-soft/60 p-4 sm:p-5">
               <p className="flex items-center gap-2 text-sm text-field">
                 <Ticket aria-hidden className="size-4" strokeWidth={1.75} />
                 {t("afterLabel")}
               </p>
-              <p className="mt-2 font-display text-xl">{t("afterQuote", { date: dates.short(EXAMPLE_DATE) })}</p>
+              <p className="mt-1.5 font-display text-lg leading-snug sm:mt-2 sm:text-xl">{t("afterQuote", { date: dates.short(EXAMPLE_DATE) })}</p>
             </div>
           </StaggerItem>
         </Stagger>
         <ExampleToken />
       </div>
 
-      <div className={`mt-16 md:mt-20 ${CONTAINER}`}>
+      <div className={`mt-12 sm:mt-16 md:mt-20 ${CONTAINER}`}>
         <Reveal>
-          <h3 className="font-display text-2xl sm:text-3xl">{t("howTitle")}</h3>
+          <h3 className="font-display text-xl sm:text-3xl">{t("howTitle")}</h3>
         </Reveal>
-        <Stagger as="ol" gap={0.15} className="mt-6 grid gap-8 md:grid-cols-3 md:gap-10">
+        <Stagger as="ol" gap={0.15} className="mt-5 grid gap-6 sm:mt-6 sm:gap-8 md:grid-cols-3 md:gap-10">
           {steps.map((step, index) => (
-            <StaggerItem as="li" key={step.title} className="relative pt-5">
+            <StaggerItem as="li" key={step.title} className="relative pt-4 sm:pt-5">
               <DrawLine className="absolute inset-x-0 top-0 h-0.5 bg-ink" />
               <p className="flex items-center gap-2 text-sm text-ink-muted">
                 <span className="tabular">0{index + 1}</span>
                 <step.icon aria-hidden className="size-4" strokeWidth={1.75} />
               </p>
-              <h4 className="mt-2 text-xl font-medium">{step.title}</h4>
-              <p className="mt-2 text-ink-muted">{step.body}</p>
+              <h4 className="mt-1.5 text-lg font-medium sm:mt-2 sm:text-xl">{step.title}</h4>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-muted sm:mt-2 sm:text-base">{step.body}</p>
             </StaggerItem>
           ))}
         </Stagger>
@@ -316,14 +307,32 @@ function Fix() {
 }
 
 /**
- * The close: back to the opening photo, with the two people the demo lets you be. Their cards are
- * the page's last call to action (they replace a separate roles section).
+ * The close: back to the opening photo, with the two people the demo lets you be. On the left the
+ * invitation (one click, and the simulated label); on the right one card per person: what you will
+ * see first, who you are, what you do, and the way in under a dashed tear line like a token's. The
+ * cards are the same height with their buttons on one line, whatever the text's length or language.
  */
 function Closing() {
   const t = useTranslations("landing");
   const roles = [
-    { title: t("farmerRoleTitle"), body: t("farmerRoleBody"), button: <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" className="w-full sm:w-auto" /> },
-    { title: t("operatorRoleTitle"), body: t("operatorRoleBody"), button: <DemoButton role="operator" label={t("tryOperator")} className="w-full sm:w-auto" /> },
+    {
+      key: "farmer",
+      icon: Sprout,
+      badge: "bg-wheat-soft text-wheat-deep",
+      hint: t("tryFarmerHint"),
+      title: t("farmerRoleTitle"),
+      body: t("farmerRoleBody"),
+      button: <DemoButton role="farmer" label={t("tryFarmer")} variant="accent" className="w-full" />,
+    },
+    {
+      key: "operator",
+      icon: Tractor,
+      badge: "bg-ink text-paper",
+      hint: t("tryOperatorHint"),
+      title: t("operatorRoleTitle"),
+      body: t("operatorRoleBody"),
+      button: <DemoButton role="operator" label={t("tryOperator")} className="w-full" />,
+    },
   ];
   return (
     <section aria-labelledby="closing-title" className={SECTION_SPACE}>
@@ -331,52 +340,41 @@ function Closing() {
         <Reveal className="relative isolate overflow-hidden rounded-card border border-line">
           <LandingPhoto name="hero" position="80% 70%" sizes="(min-width: 1280px) 1280px, 100vw" />
           <div aria-hidden className="photo-wash-closing absolute inset-0" />
-          <Stagger gap={0.12} className="relative grid items-end gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_1.15fr] lg:gap-12 lg:p-14">
-            <div>
-              <SectionHeading id="closing-title" icon={Sprout} eyebrow={t("rolesTitle")} tone="wheat" title={t("closingTitle")} body={t("closingBody")} />
+          <Stagger gap={0.12} className="relative grid items-center gap-7 p-4 sm:gap-10 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:gap-14 lg:p-14">
+            <div className="px-1 pt-2 sm:p-0">
+              <SectionHeading id="closing-title" icon={Users} eyebrow={t("rolesTitle")} tone="wheat" title={t("closingTitle")} body={t("closingBody")} />
+              <StaggerItem>
+                <p className="mt-5 sm:mt-7">
+                  <SimulatedBadge />
+                </p>
+              </StaggerItem>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4">
               {roles.map((role) => (
-                <StaggerItem as="article" key={role.title} className="lift-card flex flex-col rounded-card border border-line bg-surface/90 p-6 backdrop-blur-md">
-                  <h3 className="font-display text-2xl">{role.title}</h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-muted">{role.body}</p>
-                  <div className="mt-5">{role.button}</div>
+                <StaggerItem as="li" key={role.key} className="flex">
+                  <article
+                    aria-labelledby={`closing-role-${role.key}`}
+                    className="lift-card flex w-full flex-col rounded-card border border-line bg-surface/95 p-5 shadow-[0_24px_48px_-32px_rgb(0_0_0/0.5)] backdrop-blur-md sm:p-6"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span aria-hidden className={`grid size-11 shrink-0 place-items-center rounded-full ${role.badge}`}>
+                        <role.icon className="size-5" strokeWidth={1.75} />
+                      </span>
+                      <span className="min-w-0 text-xs font-medium leading-snug text-ink-muted">{role.hint}</span>
+                    </div>
+                    <h3 id={`closing-role-${role.key}`} className="mt-5 font-display text-xl leading-snug sm:text-[1.375rem]">
+                      {role.title}
+                    </h3>
+                    <p className="mt-2 flex-1 text-[0.8125rem] leading-relaxed text-ink-muted sm:text-sm">{role.body}</p>
+                    <div className="mt-5 border-t border-dashed border-line-strong pt-5 sm:mt-6">{role.button}</div>
+                  </article>
                 </StaggerItem>
               ))}
-            </div>
+            </ul>
           </Stagger>
         </Reveal>
       </div>
     </section>
-  );
-}
-
-/**
- * Fine print, kept on the page because honesty is part of the product: the yield cost behind the
- * dates, what is simulated, the fire map's status, and photo and data credits.
- */
-function LandingFooter() {
-  const t = useTranslations("landing");
-  const notes = [
-    { icon: Wheat, title: t("factsTitle"), body: t("fact2"), source: t("fact2Source") },
-    { icon: FlaskConical, title: t("honestyTitle"), body: t("honestyBody") },
-    { icon: Satellite, title: t("fireMapTitle"), body: t("fireMapPending") },
-  ];
-  return (
-    <footer className="border-t border-line bg-surface/30">
-      <Stagger gap={0.1} className={`grid gap-10 py-14 md:grid-cols-3 md:gap-12 ${CONTAINER}`}>
-        {notes.map((note) => (
-          <StaggerItem key={note.title}>
-            <h2 className="flex items-center gap-2 font-medium">
-              <note.icon aria-hidden className="size-4 text-wheat-deep" strokeWidth={1.75} />
-              {note.title}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-ink-muted">{note.body}</p>
-            {note.source ? <p className="mt-2 text-xs text-ink-muted">{note.source}</p> : null}
-          </StaggerItem>
-        ))}
-      </Stagger>
-    </footer>
   );
 }
 
@@ -392,7 +390,6 @@ export default function LandingPage() {
         <Fix />
         <Closing />
       </main>
-      <LandingFooter />
     </>
   );
 }

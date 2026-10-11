@@ -24,13 +24,16 @@ export default async function FarmerSignInPage({ searchParams }: { searchParams:
   const t = await getTranslations("farmerSignin");
   const { next, link } = await searchParams;
   const linkProblem = parseLinkProblem(link);
+  const whatsappNumber = serverConfig.whatsappBusinessNumber || null;
   return (
     <>
       <TopBar />
       <main className={`pb-16 pt-8 sm:pt-10 ${PAGE_FRAME}`}>
-        <AuthSplitLayout visual={<WhatsAppStart number={serverConfig.whatsappBusinessNumber || null} fill />} visualBelow>
+        {/* Without WHATSAPP_BUSINESS_NUMBER (on Amplify: the build spec's .env.production) there is no
+            chat to open: the form stands alone instead of beside an empty half. */}
+        <AuthSplitLayout visual={whatsappNumber ? <WhatsAppStart number={whatsappNumber} fill /> : null} visualBelow compact>
           <div className="mx-auto w-full max-w-md">
-            <PageHeader back={<BackButton fallback="/" />} title={t("title")} description={t("subtitle")} />
+            <PageHeader back={<BackButton fallback="/" />} title={t("title")} description={t("subtitle")} shortDescription={t("subtitleShort")} />
             {linkProblem ? (
               <div className="mt-5">
                 <FarmerLinkNotice problem={linkProblem} />

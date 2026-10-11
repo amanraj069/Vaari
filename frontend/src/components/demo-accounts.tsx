@@ -14,14 +14,14 @@ function DemoCard({ person }: { person: DemoPerson }) {
   const t = useTranslations("signin");
   const { state, go } = useDemoSignIn(person.role);
   return (
-    <li className="rounded-control border border-line bg-paper px-4 py-3">
+    <li className="rounded-control border border-line bg-paper px-3.5 py-3 sm:px-4">
       <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-medium leading-tight">{person.name}</span>
             <span className="rounded-full border border-wheat-deep/30 bg-wheat-soft/60 px-2 py-px text-xs font-medium text-wheat-deep">{t("demoTag")}</span>
           </span>
-          <span className="block text-sm text-ink-muted">{person.detail}</span>
+          <span className="mt-0.5 block text-[0.8125rem] text-ink-muted sm:text-sm">{person.detail}</span>
           {state === "failed" || state === "off" ? (
             <span role="alert" className="mt-1 block text-sm text-ember-deep">
               {state === "off" ? t("demoOff") : t("failed")}

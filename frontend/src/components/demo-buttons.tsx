@@ -1,31 +1,27 @@
 "use client";
 
 import { ArrowRight, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ApiError, signInAsDemo } from "@/lib/api";
-import { useRefreshSession } from "@/lib/use-session";
 
 export type DemoRole = "farmer" | "operator" | "facilitator" | "officer";
 
-/** Signs in as a seeded demo user and opens their page; `state` drives the button's words. */
+/**
+ * Signs in as a seeded demo user and opens their page; `state` drives the button's words.
+ * Always a full page load, never router.push: while signed out, the page prefetched dashboard links
+ * (the footer's Plan and Queue) and Next kept the middleware's "go to /signin" answers in its router
+ * cache. A client-side push would replay them, so the first click into the dashboard went back to
+ * sign-in. A fresh load starts with an empty cache and the new cookies.
+ */
 export function useDemoSignIn(role: DemoRole) {
-  const router = useRouter();
-  const refreshSession = useRefreshSession();
   const [state, setState] = useState<"idle" | "working" | "failed" | "off">("idle");
   async function go() {
     setState("working");
     try {
-      const home = await signInAsDemo(role);
-      // The demo farmer gets a one-time login link (a route handler that sets the phone session):
-      // load it as a page, the way a farmer opens it from WhatsApp.
-      if (home.startsWith("/farmer/login/")) {
-        window.location.assign(home);
-        return;
-      }
-      await refreshSession();
-      router.push(home);
+      // The demo farmer gets a one-time login link (a route handler that sets the phone session),
+      // opened the way a farmer opens it from WhatsApp; staff get their dashboard.
+      window.location.assign(await signInAsDemo(role));
     } catch (error) {
       // 404 means the API is up but demo sign-in is switched off; anything else means it is unreachable.
       setState(error instanceof ApiError && error.status === 404 ? "off" : "failed");
