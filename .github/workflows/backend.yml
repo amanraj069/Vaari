@@ -1,5 +1,7 @@
-# Backend pipeline: test -> build images -> push to ECR -> deploy on EC2 (Docker Compose).
-# Pull requests run the tests and build the images without pushing. A push to main also deploys.
+# Backend pipeline: tests and image builds in parallel; on main, images -> ECR -> deploy on EC2.
+# Pull requests run the engine tests, the API tests and both image builds side by side (merge only
+# green PRs). A push to main builds, pushes and deploys without waiting for the tests, which already
+# ran on the PR (about 9 min on a 2-core runner); they still run alongside, for the record.
 # AWS access is GitHub OIDC (no keys in the repo); the EC2 host is reached with SSM Run Command
 # (no SSH port open). One-time setup: backend/deploy/README.md.
 #
@@ -22,9 +24,30 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR cancels the older run; runs on main always finish.
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
-    name: Test
+  engine-tests:
+    name: Engine tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend/engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/engine/uv.lock
+      - run: uv sync --frozen
+      - run: uv run pytest -q
+
+  api-tests:
+    name: API tests
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -36,6 +59,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      # The API tests spawn the Python engine (LocalEngineClient), so it is installed here too.
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.19"
@@ -44,12 +68,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run engine:setup
-      - run: npm run test:engine
       - run: npm run test:api
 
   images:
     name: Build images
-    needs: test
     runs-on: ${{ vars.DOCKER_PLATFORM == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     permissions:
       contents: read
