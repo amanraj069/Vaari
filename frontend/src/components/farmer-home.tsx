@@ -35,7 +35,7 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
   });
   const noSession = home.isError && home.error instanceof ApiError && home.error.status === 401;
   const newBooking = (
-    <ButtonLink href="/dashboard/book" variant="accent" className="min-h-12">
+    <ButtonLink href="/dashboard/book" variant="accent" className="min-h-12 w-full sm:w-auto">
       <Plus aria-hidden className="size-5" strokeWidth={2} />
       {t("newBooking")}
     </ButtonLink>
@@ -43,7 +43,7 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
 
   return (
     <>
-      <div className="text-lg">
+      <div className="text-base sm:text-lg">
         {home.isPending ? (
           <div className="space-y-4" aria-busy="true">
             <span className="sr-only" role="status">{tc("loading")}</span>
@@ -81,9 +81,10 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
         ) : (
           <>
             <PageHeader
-              className="mb-6"
+              className="mb-6 sm:mb-8"
               title={home.data.farmerName ? t("greeting", { name: home.data.farmerName.split(" ")[0] ?? "" }) : t("allFieldsTitle")}
               description={t("readOnlyNote")}
+              shortDescription={t("readOnlyNoteShort")}
               actions={newBooking}
             />
             <PageColumns
@@ -91,18 +92,24 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
                 home.data.fields.length === 0 ? (
                   <StateMessage icon={Sprout} title={t("noFieldsTitle")} body={t("noFieldsBody")} action={newBooking} />
                 ) : (
-                  <ul className="space-y-5" aria-label={t("allFieldsTitle")}>
+                  <ul className="space-y-4 sm:space-y-5" aria-label={t("allFieldsTitle")}>
                     {home.data.fields.map((field) => (
                       <li key={`${field.chcId}/${field.id}`}>
-                        <p className="mb-2 text-sm text-ink-muted">{field.chcName}</p>
-                        <TokenCard field={field} today={home.data.today} operatorPhone={field.operatorPhone || undefined} whyPath={`farmer/fields/${field.chcId}/${field.id}/why`} />
+                        <TokenCard
+                          field={field}
+                          today={home.data.today}
+                          centreName={field.chcName}
+                          operatorPhone={field.operatorPhone || undefined}
+                          whyPath={`farmer/fields/${field.chcId}/${field.id}/why`}
+                        />
                       </li>
                     ))}
                   </ul>
                 )
               }
               aside={
-                <div className="space-y-5">
+                // Tablets: the two help cards side by side under the task instead of one long column.
+                <div className="grid items-start gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-1">
                   <WhatsAppStart number={whatsappNumber} />
                   <DateGuide />
                 </div>

@@ -42,12 +42,13 @@ export function WhatsAppGlyph({
 }
 
 /**
- * A phone showing the first exchange of the chat. It has one fixed size (17 x 34.5rem) in every
- * language and theme: the frame never grows, the chat is anchored at the bottom like a real one,
- * and longer Punjabi or Hindi text is clipped inside its bubble. Text sizes are fixed for the same
- * reason. Decorative content is hidden from screen readers; the figure has one label.
+ * A phone showing the first exchange of the chat. It has one fixed size (17 x 34.5rem, or 17 x 28rem
+ * when `short`) in every language and theme: the frame never grows, the chat is anchored at the
+ * bottom like a real one (a short phone shows less of its top), and longer Punjabi or Hindi text is
+ * clipped inside its bubble. Text sizes are fixed for the same reason. Decorative content is hidden
+ * from screen readers; the figure has one label.
  */
-function PhoneMockup() {
+function PhoneMockup({ short = false }: { short?: boolean }) {
   const t = useTranslations("whatsappStart");
   const tr = useTranslations("request");
   const time = "9:41";
@@ -56,7 +57,7 @@ function PhoneMockup() {
     <figure
       role="img"
       aria-label={t("illustrationLabel", { greeting })}
-      className="relative mx-auto h-[34.5rem] w-[17rem] shrink-0"
+      className={`relative mx-auto ${short ? "h-[28rem]" : "h-[34.5rem]"} w-[17rem] shrink-0`}
     >
       {/* Side buttons: silent switch and volume on the left, power on the right. */}
       <span
@@ -203,9 +204,9 @@ function PhoneMockup() {
 }
 
 /**
- * `fill`: the visual half of /farmer/signin. The card fills its column and centres the phone in it;
- * to keep that page short it drops the "Example chat" tag and the "Prefer to chat?" line, and keeps
- * the "Open WhatsApp" button (the way to the bot).
+ * "Do it all on WhatsApp": card with the header, phone mockup illustration, and Open WhatsApp action button.
+ * The date-specific body text, "Example chat" tag, and "Prefer to chat?" lead line are removed so the card is clean.
+ * No WHATSAPP_BUSINESS_NUMBER on the Next server: nothing (there is no chat to open).
  */
 export function WhatsAppStart({
   number,
@@ -221,40 +222,30 @@ export function WhatsAppStart({
   return (
     <section
       aria-labelledby="whatsapp-start-title"
-      className={`rounded-card border border-line bg-surface p-5 sm:p-6 ${fill ? "flex h-full flex-col" : ""} ${className}`}
+      className={`rounded-card border border-line bg-surface p-4 sm:p-6 ${fill ? "flex h-full flex-col" : ""} ${className}`}
     >
       <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-field-soft text-field">
-          <WhatsAppGlyph className="size-6" />
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-field-soft text-field sm:size-11">
+          <WhatsAppGlyph className="size-[1.375rem] sm:size-6" />
         </span>
         <h2
           id="whatsapp-start-title"
-          className="font-display text-2xl leading-tight"
+          className="font-display text-lg leading-tight sm:text-2xl"
         >
           {t("title")}
         </h2>
       </div>
-      <p className="mt-3 text-base text-ink-muted">
-        {t("body", { greeting: t("startMessage") })}
-      </p>
       {/* A picture of a phone is wasted space on a phone: from the small-tablet width up only. */}
       <div
-        className={`mt-5 hidden sm:block ${fill ? "sm:flex sm:flex-1 sm:flex-col sm:items-center sm:justify-center" : ""}`}
+        className={`${fill ? "mt-4" : "mt-5"} hidden sm:block ${fill ? "sm:flex sm:flex-1 sm:flex-col sm:items-center sm:justify-center" : ""}`}
       >
-        {fill ? null : (
-          <p className="mx-auto mb-3 w-fit rounded-full border border-line bg-paper px-3 py-0.5 text-sm text-ink-muted">
-            {t("exampleTag")}
-          </p>
-        )}
-        <PhoneMockup />
+        <PhoneMockup short={fill} />
       </div>
-      {/* Chatting, not signing in: an outline button, so it never competes with a form's own button. */}
-      {fill ? null : <p className="mt-5 text-base font-medium">{t("ctaLead")}</p>}
       <a
         href={whatsappStartUrl(number, t("startMessage"))}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${fill ? "mt-5" : "mt-2"} inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-field bg-transparent px-4 text-base font-medium text-field transition-colors duration-150 hover:bg-field-soft`}
+        className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-field bg-transparent px-4 text-base font-medium text-field transition-colors duration-150 hover:bg-field-soft"
       >
         <WhatsAppGlyph className="size-5" />
         {t("cta")}

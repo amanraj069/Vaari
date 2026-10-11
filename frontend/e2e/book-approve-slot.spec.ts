@@ -163,5 +163,6 @@ test("facilitator books, operator generates and approves, the slot link shows a 
   await expect(farmer.getByRole("alert").filter({ hasText: "This link does not work" })).toBeVisible();
   const reissued = (await (await facilitator.request.get(`/api/proxy/fields/${slot.id}/slot-link`)).json()) as { path: string };
   await farmer.goto(reissued.path);
-  await expect(farmer.getByText("The machine comes on")).toBeVisible();
+  // The same promise as before the reissue: a firm date or a window, whichever the plan gave.
+  await expect(farmer.getByText(slot.promise!.kind === "firm" ? "The machine comes on" : "The machine comes between")).toBeVisible();
 });

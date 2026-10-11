@@ -59,7 +59,9 @@ describe("/dashboard for a farmer (phone session)", () => {
     expect(fields.length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Balian Cooperative Society")).toBeInTheDocument();
     expect(screen.getByText("Other Society")).toBeInTheDocument();
-    expect(screen.getByText(/Every field booked with your phone number/)).toBeInTheDocument();
+    // The full lead from tablets up; one short line on phones.
+    expect(screen.getByText(/Every field booked with your phone number\. To change one/)).toHaveClass("hidden", "sm:inline");
+    expect(screen.getByText("Every field booked with your phone number.")).toHaveClass("sm:hidden");
     // A new field is booked on its own page; existing fields are changed from their own links.
     expect(screen.getByRole("link", { name: "Book a new field" })).toHaveAttribute("href", "/dashboard/book");
     expect(screen.queryByRole("button", { name: /cannot wait/i })).not.toBeInTheDocument();
@@ -73,15 +75,17 @@ describe("/dashboard for a farmer (phone session)", () => {
     expect(requests.at(-1)).toContain("/api/proxy/farmer/fields/chc-balian/f-new/why?lang=en");
   });
 
-  it("offers the WhatsApp way in: a chat that starts with 'Sat Sri Akal' to Vaari's number, the picture labelled as an example", async () => {
+  it("offers the WhatsApp way in: a link to Vaari's number with greeting typed in and phone illustration", async () => {
     serve({ status: 200, body: HOME });
     renderHome();
     const start = await screen.findByRole("link", { name: "Open WhatsApp" });
     expect(start).toHaveAttribute("href", "https://wa.me/910000000000?text=Sat%20Sri%20Akal");
-    expect(screen.getByText("Prefer to chat?")).toBeInTheDocument();
-    expect(screen.getByText("Example chat")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Do it all on WhatsApp" })).toBeInTheDocument();
     expect(start).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByRole("img", { name: /the farmer writes Sat Sri Akal/ })).toBeInTheDocument();
+    expect(screen.queryByText("Prefer to chat?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Example chat")).not.toBeInTheDocument();
+    expect(screen.queryByText(/No app to learn/)).not.toBeInTheDocument();
   });
 
   it("with no session, offers phone sign-in and WhatsApp 'my fields', and never redirects", async () => {

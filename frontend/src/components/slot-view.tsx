@@ -51,10 +51,10 @@ export function timelineStep(field: FarmerField, today: string | null): Timeline
 
 function Problem({ icon, title, body, action }: { icon: ReactNode; title: string; body: string; action?: ReactNode }) {
   return (
-    <div role="alert" className="mx-auto mt-10 max-w-xl rounded-card border border-line bg-surface p-6 text-center">
+    <div role="alert" className="mx-auto mt-6 max-w-xl rounded-card border border-line bg-surface px-5 py-7 text-base sm:text-lg text-center sm:mt-10 sm:p-8">
       <div aria-hidden className="mx-auto grid size-14 place-items-center rounded-full bg-wheat-soft text-wheat-deep">{icon}</div>
-      <h1 className="mt-4 font-display text-2xl">{title}</h1>
-      <p className="mx-auto mt-2 max-w-sm text-ink-muted">{body}</p>
+      <h1 className="mt-4 font-display text-xl leading-snug sm:text-2xl">{title}</h1>
+      <p className="mx-auto mt-2 max-w-sm text-sm sm:text-base text-ink-muted">{body}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -83,7 +83,7 @@ function CannotWait({ field, onCannotWait }: { field: FarmerField; onCannotWait:
 
   return (
     <>
-      <Button variant="secondary" className="min-h-12 w-full text-base" onClick={() => setOpen(true)}>
+      <Button variant="secondary" className="min-h-12 w-full text-[0.9375rem] sm:text-base" onClick={() => setOpen(true)}>
         <Hourglass aria-hidden className="size-5" strokeWidth={1.75} />
         {t("cannotWait")}
       </Button>
@@ -133,7 +133,7 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
 
   if (state.kind === "loading") {
     return (
-      <div className="mt-6 max-w-2xl space-y-4" aria-busy="true">
+      <div className="mt-5 max-w-2xl space-y-4 sm:mt-8" aria-busy="true">
         <span className="sr-only" role="status">{t("loading")}</span>
         <Skeleton className="h-8 w-1/3" />
         <Skeleton className="h-56" />
@@ -192,11 +192,11 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
 
   return (
     // Wide screens: the token on the left, what you can do about it on the right. Phones: one column.
-    <article className="mt-5 grid items-start gap-4 text-lg lg:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-12">
+    <article className="mt-4 grid items-start gap-4 text-base sm:text-lg sm:mt-6 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-12">
       <div className="min-w-0">
         <h1 className="sr-only">{t("title")}</h1>
         {field.notice?.kind === "broken" ? (
-          <p className="mb-4 flex items-start gap-2 rounded-card border border-ember/30 bg-ember-soft/60 p-4 text-base text-ember-deep">
+          <p className="mb-4 flex items-start gap-2 rounded-card border border-ember/30 bg-ember-soft/60 px-4 py-3 sm:p-4 text-sm sm:text-base text-ember-deep">
             <BellRing aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
             {tf("brokenNotice")}
           </p>
@@ -204,100 +204,103 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
         {/* A pending "I cannot wait longer" comes first: until the operator plans it, "no machine can
             reach you" would not be true yet. */}
         {field.soonerRequested && !done ? (
-          <div className="mb-4 flex items-start gap-3 rounded-card border border-wheat-deep/30 bg-wheat-soft/60 p-4">
+          <div className="mb-4 flex items-start gap-3 rounded-card border border-wheat-deep/30 bg-wheat-soft/60 px-4 py-3 sm:p-4">
             <Hourglass aria-hidden className="mt-0.5 size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
             <div>
               <p className="font-medium">{t("soonerTitle")}</p>
-              <p className="mt-1 text-base">{t("soonerBody", { date: dates.full(field.burnDeadlineDate) })}</p>
+              <p className="mt-1 text-sm sm:text-base">{t("soonerBody", { date: dates.full(field.burnDeadlineDate) })}</p>
             </div>
           </div>
         ) : late ? (
-          <div role="alert" className="mb-4 flex items-start gap-3 rounded-card border border-ember/40 bg-ember-soft/60 p-4 text-ember-deep">
+          <div role="alert" className="mb-4 flex items-start gap-3 rounded-card border border-ember/40 bg-ember-soft/60 px-4 py-3 sm:p-4 text-ember-deep">
             <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
             <div>
               <p className="font-medium">{t("lateTitle", { date: dates.full(field.burnDeadlineDate) })}</p>
-              <p className="mt-1 text-base">{t("lateBody")}</p>
+              <p className="mt-1 text-sm sm:text-base">{t("lateBody")}</p>
             </div>
           </div>
         ) : field.notice?.kind === "firmed" ? (
-          <p className="mb-4 flex items-start gap-2 rounded-card border border-field/30 bg-field-soft/60 p-4 text-base text-field">
+          <p className="mb-4 flex items-start gap-2 rounded-card border border-field/30 bg-field-soft/60 px-4 py-3 sm:p-4 text-sm sm:text-base text-field">
             <BellRing aria-hidden className="mt-0.5 size-5 shrink-0" strokeWidth={1.75} />
             {tf("firmedNotice")}
           </p>
         ) : null}
 
-        <section className="rounded-card border border-line bg-surface p-6">
+        <section className="rounded-card border border-line bg-surface p-4 sm:p-6">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="eyebrow text-xs font-medium text-ink-muted">{tf("token")}</p>
-              <p className="font-display text-4xl leading-none tabular">#{String(field.token).padStart(3, "0")}</p>
+              <p className="mt-1 font-display text-[1.75rem] leading-none tabular sm:text-4xl">#{String(field.token).padStart(3, "0")}</p>
             </div>
             {pill}
           </div>
-          <p className="mt-2 text-base text-ink-muted">{tf("acresInVillage", { acres: tc("acres", { acres: field.acres }), village: field.villageName })}</p>
+          <p className="mt-2 text-sm sm:text-base text-ink-muted">{tf("acresInVillage", { acres: tc("acres", { acres: field.acres }), village: field.villageName })}</p>
 
-          <div className="my-5 border-t border-dashed border-line-strong" />
+          <div className="my-4 border-t border-dashed border-line-strong sm:my-5" />
 
           <div aria-live="polite">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={done ? "done" : promise ? JSON.stringify(promise) : "none"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
                 {done ? (
                   <>
-                    <p className="font-display text-4xl">{t("doneTitle")}</p>
-                    <p className="mt-1 text-base text-ink-muted">{t("doneBody")}</p>
+                    <p className="font-display text-[2rem] leading-tight sm:text-4xl">{t("doneTitle")}</p>
+                    <p className="mt-1 text-sm sm:text-base text-ink-muted">{t("doneBody")}</p>
                   </>
                 ) : promise?.kind === "firm" ? (
                   <>
-                    <p className="flex items-center gap-2 text-base text-ink-muted">
+                    <p className="flex items-center gap-2 text-sm sm:text-base text-ink-muted">
                       <CalendarCheck2 aria-hidden className="size-5" strokeWidth={1.75} />
                       {tf("machineComes")}
                     </p>
-                    <p className="mt-1 font-display text-3xl leading-tight">{dates.weekday(promise.date)}</p>
-                    <p className="font-display text-6xl leading-none tracking-tight">{dates.dayMonth(promise.date)}</p>
+                    {/* The date is the biggest thing on the page, sized so the longest month still fits one line at 360px. */}
+                    <p className="mt-1 font-display text-xl leading-tight sm:text-3xl">{dates.weekday(promise.date)}</p>
+                    <p className="font-display text-[2.75rem] leading-[1.05] tracking-tight sm:text-6xl">{dates.dayMonth(promise.date)}</p>
                     <div className="mt-3">
                       <LockPin label={tf("firm")} />
                     </div>
                   </>
                 ) : promise?.kind === "window" ? (
                   <>
-                    <p className="flex items-center gap-2 text-base text-ink-muted">
+                    <p className="flex items-center gap-2 text-sm sm:text-base text-ink-muted">
                       <CalendarCheck2 aria-hidden className="size-5" strokeWidth={1.75} />
                       {tf("machineBetween")}
                     </p>
-                    <p className="mt-1 font-display text-5xl leading-tight tracking-tight">{dates.range(promise.startDate, promise.endDate)}</p>
-                    <p className="mt-2 text-base text-ink-muted">{tf("windowBody")}</p>
+                    <p className="mt-1 font-display text-[2.25rem] leading-[1.1] tracking-tight sm:text-5xl">{dates.range(promise.startDate, promise.endDate)}</p>
+                    <p className="mt-2 text-sm sm:text-base text-ink-muted">{tf("windowBody")}</p>
                   </>
                 ) : (
-                  <p className="font-display text-4xl">{requested ? t("requestedTitle") : t("noDateTitle")}</p>
+                  <p className="font-display text-[1.625rem] leading-tight sm:text-4xl">{requested ? t("requestedTitle") : t("noDateTitle")}</p>
                 )}
               </motion.div>
             </AnimatePresence>
             {/* Where this turn stands, in one plain sentence from the backend (stored facts only). */}
-            <p className="mt-3 text-base">{field.reason.text}</p>
+            <p className="mt-2 text-sm sm:text-base sm:mt-3">{field.reason.text}</p>
           </div>
 
           {promise && !done && field.fieldsAhead !== null ? (
-            <p className="mt-5 flex items-center gap-2">
-              <Users aria-hidden className="size-5 text-ink-muted" strokeWidth={1.75} />
+            <p className="mt-4 flex items-center gap-2 font-medium sm:mt-5">
+              <Users aria-hidden className="size-5 shrink-0 text-ink-muted" strokeWidth={1.75} />
               {tf("fieldsAhead", { count: field.fieldsAhead })}
             </p>
           ) : null}
 
-          <div className="mt-6">
+          <div className="-mx-1 mt-5 border-t border-line pt-4 sm:mx-0 sm:mt-6 sm:border-0 sm:pt-0">
             <Timeline current={step} />
           </div>
         </section>
       </div>
 
       <div className="min-w-0 space-y-4">
-        <p className={`flex items-center gap-2 text-base ${late ? "text-ember-deep" : "text-ink-muted"}`}>
-          <Hourglass aria-hidden className="size-5 shrink-0" strokeWidth={1.75} />
+        <p
+          className={`flex items-start gap-3 rounded-card border px-4 py-3 text-sm sm:text-base lg:items-center lg:border-0 lg:px-0 lg:py-0 ${late ? "border-ember/40 bg-ember-soft/40 text-ember-deep lg:bg-transparent" : "border-line bg-surface text-ink-muted lg:bg-transparent"}`}
+        >
+          <Hourglass aria-hidden className="mt-0.5 size-5 shrink-0 lg:mt-0" strokeWidth={1.75} />
           {t("canWaitUntil", { date: dates.full(field.burnDeadlineDate) })}
         </p>
 
         {!done && why.kind !== "none" ? (
-          <section aria-labelledby="slot-why" className="rounded-card border border-line bg-surface p-5">
-            <h2 id="slot-why" className="flex items-center gap-2 font-medium">
+          <section aria-labelledby="slot-why" className="rounded-card border border-line bg-surface p-4 sm:p-5">
+            <h2 id="slot-why" className="flex items-center gap-2 text-[0.9375rem] font-medium sm:text-base">
               <Sparkles aria-hidden className="size-5 text-wheat-deep" strokeWidth={1.75} />
               {t("reasonTitle")}
             </h2>
@@ -306,11 +309,11 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
                 <Spinner label={t("reasonLoading")} />
               </div>
             ) : why.kind === "error" ? (
-              <p className="mt-3 text-base text-ink-muted">{t("reasonUnavailable")}</p>
+              <p className="mt-3 text-sm sm:text-base text-ink-muted">{t("reasonUnavailable")}</p>
             ) : why.kind === "ready" ? (
               <ul className="mt-3 space-y-2">
                 {why.reasons.map((reason, index) => (
-                  <li key={index} className="flex gap-2 text-base">
+                  <li key={index} className="flex gap-2 text-sm sm:text-base">
                     <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-wheat-deep" />
                     {reason}
                   </li>
@@ -328,9 +331,9 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
 
         {whatsappNumber ? <SeeAllMyFields number={whatsappNumber} /> : null}
 
-        <div className="flex justify-center pt-2 lg:justify-start">
+        <div className="flex justify-center pt-1 lg:justify-start lg:pt-2">
           <SimulatedBadge />
-      </div>
+        </div>
       </div>
     </article>
   );

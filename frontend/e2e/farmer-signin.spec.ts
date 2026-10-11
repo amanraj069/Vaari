@@ -36,11 +36,25 @@ test("a farmer signs up with a code, books a field and sees it on their page", a
 
   await page.getByRole("link", { name: "Book a new field" }).first().click();
   await page.waitForURL(`${BASE}/dashboard/book`);
+  // The booking box keeps one size through every step and while the village list is searched (a
+  // phone, 390px wide): Back and Next never move under the farmer's thumb.
+  const ticket = page.locator("main section[aria-labelledby=ticket-title]");
+  await page.locator("main fieldset button[aria-pressed]").first().waitFor();
+  const heights = new Set<number>();
+  const measure = async () => heights.add(Math.round((await ticket.boundingBox())!.height));
+  await measure();
+  await page.getByRole("textbox", { name: "Search villages" }).fill("no such village");
+  await expect(page.getByText("No village by that name.")).toBeVisible();
+  await measure();
+  await page.getByRole("textbox", { name: "Search villages" }).fill("");
   await page.locator("main fieldset button[aria-pressed]").first().click();
   for (let step = 0; step < 4; step++) {
     if (step === 2) await page.getByRole("button", { name: /Today/ }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.waitForTimeout(400);
+    await measure();
   }
+  expect([...heights], "the booking box changed size between steps").toHaveLength(1);
   await page.getByRole("button", { name: "Book this field" }).click();
   await expect(page.getByText("Your turn is booked")).toBeVisible();
   await page.getByRole("link", { name: "See my fields" }).click();
