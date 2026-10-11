@@ -30,7 +30,12 @@
     "brandHome": "वारी मुख्य पृष्ठ",
     "githubLabel": "GitHub पर वारी",
     "contactLabel": "वारी टीम को लिखें",
-    "copyright": "© {year} वारी। सर्वाधिकार सुरक्षित।"
+    "copyright": "© {year} वारी। सर्वाधिकार सुरक्षित।",
+    "pagesLabel": "पन्ने",
+    "pageRange": "{total} में से {first}–{last}",
+    "pageOf": "पन्ना {page} / {pages}",
+    "pagePrevious": "पिछला पन्ना",
+    "pageNext": "अगला पन्ना"
   },
   "landing": {
     "eyebrow": "साफ़ खेत · साफ़ हवा · मज़बूत पंजाब",

@@ -30,7 +30,12 @@
     "brandHome": "ਵਾਰੀ ਮੁੱਖ ਪੰਨਾ",
     "githubLabel": "GitHub ਉੱਤੇ ਵਾਰੀ",
     "contactLabel": "ਵਾਰੀ ਟੀਮ ਨੂੰ ਲਿਖੋ",
-    "copyright": "© {year} ਵਾਰੀ। ਸਾਰੇ ਹੱਕ ਰਾਖਵੇਂ ਹਨ।"
+    "copyright": "© {year} ਵਾਰੀ। ਸਾਰੇ ਹੱਕ ਰਾਖਵੇਂ ਹਨ।",
+    "pagesLabel": "ਪੰਨੇ",
+    "pageRange": "{total} ਵਿੱਚੋਂ {first}–{last}",
+    "pageOf": "ਪੰਨਾ {page} / {pages}",
+    "pagePrevious": "ਪਿਛਲਾ ਪੰਨਾ",
+    "pageNext": "ਅਗਲਾ ਪੰਨਾ"
   },
   "landing": {
     "eyebrow": "ਸਾਫ਼ ਖੇਤ · ਸਾਫ਼ ਹਵਾ · ਮਜ਼ਬੂਤ ਪੰਜਾਬ",

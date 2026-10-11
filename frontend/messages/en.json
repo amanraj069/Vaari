@@ -30,7 +30,12 @@
     "brandHome": "Vaari home",
     "githubLabel": "Vaari on GitHub",
     "contactLabel": "Write to the Vaari team",
-    "copyright": "© {year} Vaari. All rights reserved."
+    "copyright": "© {year} Vaari. All rights reserved.",
+    "pagesLabel": "Pages",
+    "pageRange": "{first}–{last} of {total}",
+    "pageOf": "Page {page} of {pages}",
+    "pagePrevious": "Previous page",
+    "pageNext": "Next page"
   },
   "landing": {
     "eyebrow": "Clean fields · Clearer air · Stronger Punjab",

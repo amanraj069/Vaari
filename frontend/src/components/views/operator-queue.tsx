@@ -5,7 +5,8 @@
  * filter row counts the fields by risk (one place, not a second row of cards); a search finds a
  * farmer, village or token number. Each row: token, farmer and village, acres, the fuse from harvest-ready to the last
  * waiting day with the planned day pinned on it, the planned day, and the days to spare. Risk is
- * always an icon and a word.
+ * always an icon and a word. A whole season is hundreds of rows, so they are drawn a page at a time;
+ * the counts and the search still cover every field.
  */
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CircleDashed, Clock3, List, ShieldCheck, type LucideIcon } from "lucide-react";
@@ -15,9 +16,11 @@ import { z } from "zod";
 import { queueItemSchema, type Risk } from "@/shared";
 import { DashHeader, Panel, SearchBox, Segmented } from "@/components/dashboard/kit";
 import { FuseBar } from "@/components/fuse-bar";
+import { PaginationBar } from "@/components/pagination";
 import { Button, Pill, Skeleton, StateMessage } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useDates } from "@/lib/dates";
+import { usePagination } from "@/lib/use-pagination";
 
 const queueSchema = z.object({ today: z.string(), items: z.array(queueItemSchema) });
 const RISKS: { risk: Risk; icon: LucideIcon }[] = [
@@ -26,6 +29,7 @@ const RISKS: { risk: Risk; icon: LucideIcon }[] = [
   { risk: "safe", icon: ShieldCheck },
   { risk: "unplanned", icon: CircleDashed },
 ];
+const QUEUE_PAGE_SIZE = 25;
 
 export function OperatorQueueView() {
   const t = useTranslations("queue");
@@ -42,6 +46,7 @@ export function OperatorQueueView() {
   const items = all
     .filter((item) => filter === "all" || item.risk === filter)
     .filter((item) => !needle || item.farmerName.toLowerCase().includes(needle) || item.villageName.toLowerCase().includes(needle) || String(item.token).padStart(3, "0").includes(needle));
+  const pagination = usePagination(items, { pageSize: QUEUE_PAGE_SIZE, resetKey: `${filter}|${needle}` });
 
   return (
     <>
@@ -77,8 +82,8 @@ export function OperatorQueueView() {
               <span>{t("planned")}</span>
               <span className="text-right">{ts("colRisk")}</span>
             </div>
-            <ul className="divide-y divide-line">
-              {items.map((item) => (
+            <ul id="queue-list" className="scroll-mt-4 divide-y divide-line">
+              {pagination.pageItems.map((item) => (
                 <li key={item.fieldId} className="grid grid-cols-1 gap-3 px-5 py-3.5 md:grid-cols-[4rem_minmax(0,14rem)_4.5rem_minmax(0,1fr)_7.5rem_7rem] md:items-center md:gap-4">
                   <span className="font-mono text-sm text-ink-muted">#{String(item.token).padStart(3, "0")}</span>
                   <span className="min-w-0">
@@ -97,7 +102,11 @@ export function OperatorQueueView() {
                 </li>
               ))}
             </ul>
-            <p className="border-t border-line px-5 py-3 text-xs text-ink-muted">{ts("showing", { shown: items.length, total: all.length })}</p>
+            {pagination.pageCount > 1 ? (
+              <PaginationBar pagination={pagination} listId="queue-list" className="border-t border-line px-5 py-3" />
+            ) : (
+              <p className="border-t border-line px-5 py-3 text-xs text-ink-muted">{ts("showing", { shown: items.length, total: all.length })}</p>
+            )}
           </>
         )}
       </Panel>
