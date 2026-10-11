@@ -29,6 +29,8 @@ export const meSchema = z.object({
   chcId: z.string().nullable(),
   // The machine centre's name, for the dashboard's sidebar (null for officers and new users).
   chcName: z.string().nullable().default(null),
+  // An officer's district: they see only its centres (null for other roles and an unassigned officer).
+  district: z.string().nullable().default(null),
   language: localeSchema,
   demo: z.boolean(),
   needsOnboarding: z.boolean(),

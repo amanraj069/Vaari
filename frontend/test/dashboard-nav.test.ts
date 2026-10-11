@@ -52,7 +52,7 @@ describe("dashboard sections", () => {
   });
 
   it("a staff member without a role yet has no dashboard; a farmer always has one", () => {
-    const me = { userId: "u", name: "New Person", chcId: null, chcName: null, language: "en" as const, demo: false };
+    const me = { userId: "u", name: "New Person", chcId: null, chcName: null, district: null, language: "en" as const, demo: false };
     expect(dashboardRole({ kind: "staff", me: { ...me, role: null, needsOnboarding: true } })).toBeNull();
     expect(dashboardRole({ kind: "staff", me: { ...me, role: "officer", needsOnboarding: false } })).toBe("officer");
     expect(dashboardRole({ kind: "farmer", farmer: { name: null, registered: false } })).toBe("farmer");
