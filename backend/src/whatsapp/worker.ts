@@ -8,7 +8,8 @@
  *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language, then
  *       a button or list reply -> the tools directly (no model),
  *       text -> the agent when AGENT_ENABLED (its reply checked against this turn's tool results,
- *               else the template reply), otherwise the menu,
+ *               else the template reply; a reply with no tool call is sent only if it holds no
+ *               number or date: a question back, or "I can only help with ..."), otherwise the menu,
  *       a voice note -> with VOICE_ENABLED and the agent: Transcribe's words (and language) go
  *               through the same agent turn as text, the farmer first reads what was heard, and
  *               Polly reads back what that turn sent as a voice note after the text; otherwise
@@ -277,8 +278,11 @@ export function createWorker(deps: WorkerDeps) {
       logger.warn({ phone: maskPhone(phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp agent failed; template reply");
     }
     if (session.calls.length === 0) {
-      // No tool, no facts: either the model failed, or the question was not about their dates (a
-      // farmer with no field yet is shown how to book one).
+      // No tool, no facts. With no tool result the check allows no number or date at all, so a reply
+      // that passes is a question back ("which village, how many acres?") or "I can only help with
+      // ...": sent as it is. Otherwise the model failed or made something up: the menu (a farmer
+      // with no field yet is shown how to book one).
+      if (reply && checkReply(reply, []).ok) return sender.text(phone, reply);
       return sendMenu(session, failed ? said.agentUnavailable : (noFieldsLead ?? said.offTopic));
     }
     // A drafted change or booking is announced only by our own Confirm message: the model's words
