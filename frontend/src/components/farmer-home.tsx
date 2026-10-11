@@ -6,21 +6,26 @@
  * one-time link (WhatsApp, or "Try as farmer"); both leave a 7-day phone session. Each field is a
  * TokenCard with its date, status and history; changing a booking is that field's own slot link,
  * or the helper who booked it. If the session ends while the page is open, it offers phone sign-in
- * and "my fields" on WhatsApp. Beside the list: everything also works on WhatsApp.
+ * and "my fields" on WhatsApp. Beside the list: everything also works on WhatsApp. A phone's fields
+ * add up season after season, so the cards are drawn a page at a time.
  */
 import { useQuery } from "@tanstack/react-query";
 import { KeyRound, Plus, Sprout } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { farmerHomeSchema } from "@/shared";
 import { ApiError, api } from "@/lib/api";
+import { usePagination } from "@/lib/use-pagination";
 import { DateGuideButton } from "./farmer-aside";
 import { FarmerNameForm } from "./farmer-name-form";
+import { PaginationBar } from "./pagination";
 import { PageColumns, PageHeader } from "./page-shell";
 import { ChangeBooking } from "./change-booking";
 import { TokenCard } from "./token-card";
 import { Button, ButtonLink, Skeleton, StateMessage } from "./ui";
 import { SeeAllMyFields } from "./whatsapp-link";
 import { WhatsAppStart } from "./whatsapp-start";
+
+const FIELDS_PAGE_SIZE = 6;
 
 export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | null }) {
   const t = useTranslations("farmer");
@@ -34,6 +39,7 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
     refetchInterval: 15_000,
     retry: (count, error) => !(error instanceof ApiError && error.status === 401) && count < 2,
   });
+  const fieldPages = usePagination(home.data?.fields ?? [], { pageSize: FIELDS_PAGE_SIZE });
   const noSession = home.isError && home.error instanceof ApiError && home.error.status === 401;
   const newBooking = (
     <ButtonLink href="/dashboard/book" variant="accent" className="min-h-12 w-full sm:w-auto">
@@ -94,24 +100,27 @@ export function FarmerHomeView({ whatsappNumber }: { whatsappNumber: string | nu
                 home.data.fields.length === 0 ? (
                   <StateMessage icon={Sprout} title={t("noFieldsTitle")} body={t("noFieldsBody")} action={newBooking} />
                 ) : (
-                  <ul className="space-y-4 sm:space-y-5" aria-label={t("allFieldsTitle")}>
-                    {home.data.fields.map((field) => (
-                      <li key={`${field.chcId}/${field.id}`}>
-                        <TokenCard
-                          field={field}
-                          today={home.data.today}
-                          centreName={field.chcName}
-                          operatorPhone={field.operatorPhone || undefined}
-                          whyPath={`farmer/fields/${field.chcId}/${field.id}/why`}
-                        />
-                        {field.state !== "done" ? (
-                          <div className="mt-1 flex justify-end">
-                            <ChangeBooking base={`farmer/fields/${field.chcId}/${field.id}`} readyDate={field.readyDate} today={home.data.today} onDone={() => home.refetch()} />
-                          </div>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <ul id="farmer-fields" className="scroll-mt-4 space-y-4 sm:space-y-5" aria-label={t("allFieldsTitle")}>
+                      {fieldPages.pageItems.map((field) => (
+                        <li key={`${field.chcId}/${field.id}`}>
+                          <TokenCard
+                            field={field}
+                            today={home.data.today}
+                            centreName={field.chcName}
+                            operatorPhone={field.operatorPhone || undefined}
+                            whyPath={`farmer/fields/${field.chcId}/${field.id}/why`}
+                          />
+                          {field.state !== "done" ? (
+                            <div className="mt-1 flex justify-end">
+                              <ChangeBooking base={`farmer/fields/${field.chcId}/${field.id}`} readyDate={field.readyDate} today={home.data.today} onDone={() => home.refetch()} />
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                    <PaginationBar pagination={fieldPages} listId="farmer-fields" className="mt-5" />
+                  </>
                 )
               }
               aside={<WhatsAppStart number={whatsappNumber} />}

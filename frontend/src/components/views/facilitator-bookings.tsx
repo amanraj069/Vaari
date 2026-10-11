@@ -19,6 +19,8 @@ import { useBookedList } from "./facilitator-book";
 
 type Status = "firm" | "window" | "none";
 const STATUS_COLOUR: Record<Status, string> = { firm: "var(--color-season-ontime)", window: "var(--color-policy-nearest)", none: "var(--color-season-late)" };
+// A helper's bookings add up season after season; the list draws them a page at a time.
+const BOOKINGS_PAGE_SIZE = 20;
 const statusOf = (item: QueueItem): Status => (item.promise?.kind === "firm" ? "firm" : item.promise?.kind === "window" ? "window" : "none");
 
 export function FacilitatorBookingsView() {
@@ -96,7 +98,7 @@ export function FacilitatorBookingsView() {
               ]}
             />
           </div>
-          <BookedList bare state={shownState} onCopyLink={copyLink} onReissueLink={reissueLink} onChanged={() => booked.refetch()} today={booked.data?.today ?? null} />
+          <BookedList bare state={shownState} pageSize={BOOKINGS_PAGE_SIZE} resetKey={`${status}|${needle}`} onCopyLink={copyLink} onReissueLink={reissueLink} onChanged={() => booked.refetch()} today={booked.data?.today ?? null} />
         </Panel>
 
         <div className="space-y-6">
