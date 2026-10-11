@@ -49,6 +49,15 @@ services:
     <<: *backend
     command: ["node", "dist/worker.js"]
     profiles: ["worker"]
+    # Healthy while SQS answers: src/worker.ts touches the file after every answered poll (one at
+    # least every 20 s when idle) and every handled message. 180 s covers the slowest message (a
+    # voice note: Transcribe up to 60 s, then the agent and Polly). Missing or stale: unhealthy.
+    healthcheck:
+      test: ["CMD", "node", "-e", "try { process.exit(Date.now() - require('fs').statSync('/tmp/vaari-worker-alive').mtimeMs < 180000 ? 0 : 1) } catch { process.exit(1) }"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   engine:
     image: ${IMAGE_REGISTRY:-vaari}/vaari-engine:${IMAGE_TAG:-local}
