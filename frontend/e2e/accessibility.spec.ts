@@ -1,6 +1,6 @@
 /**
  * Accessibility matrix for / (landing), the dashboard (helper: bookings and booking; the demo farmer's
- * fields; the operator's Today, Plan and Queue; the officer's district; a profile), /slot/[token]
+ * fields; the operator's Today, Plan and Queue; the officer's district and centres; a profile), /slot/[token]
  * (valid and tampered), /proof, /privacy and /design:
  * English, Punjabi, Hindi x light, dark x 360px, 1280px. Each combination must have zero axe
  * WCAG 2.1 A/AA violations, no sideways scroll, a single-row header, and 44px touch targets.
@@ -66,8 +66,11 @@ const PAGES = [
   { name: "operator", role: "operator", path: () => "/dashboard", ready: "main h1" },
   { name: "operator-plan", role: "operator", path: () => "/dashboard/plan", ready: "main h1" },
   { name: "operator-queue", role: "operator", path: () => "/dashboard/queue", ready: "main h1" },
-  // The officer's district overview: counts, map, centres and charts.
+  { name: "operator-machines", role: "operator", path: () => "/dashboard/machines", ready: "main h1" },
+  // The officer's district: the map, what to do; and the centres page: numbers, the harvest wave, every centre.
   { name: "officer", role: "officer", path: () => "/dashboard", ready: "main h1" },
+  { name: "officer-centres", role: "officer", path: () => "/dashboard/centres", ready: "main h1" },
+  { name: "officer-machines", role: "officer", path: () => "/dashboard/machines", ready: "main h1" },
   { name: "profile", role: "operator", path: () => "/dashboard/profile", ready: "main h1" },
   // The evidence page, rendered from the committed data/sim/results.json.
   { name: "proof", role: undefined, path: () => "/proof", ready: "#replay-title" },

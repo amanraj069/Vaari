@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { QueueItem } from "@/shared";
 import { useDates } from "@/lib/dates";
+import { ChangeBooking } from "./change-booking";
 import { Dialog } from "./dialog";
 import { Button, Pill, Skeleton, Spinner, StateMessage } from "./ui";
 
@@ -42,6 +43,8 @@ export function BookedList({
   state,
   onCopyLink,
   onReissueLink,
+  onChanged,
+  today = null,
   bare = false,
 }: {
   state: BookedListState;
@@ -50,6 +53,9 @@ export function BookedList({
   onCopyLink: (item: QueueItem) => void;
   /** Makes a new slot link (the old one stops working). Resolves when the new link is copied. */
   onReissueLink?: (item: QueueItem) => Promise<void>;
+  /** The booking's harvest moved or it was cancelled (the "change booking" dialog): refresh the list. */
+  onChanged?: () => void;
+  today?: string | null;
 }) {
   const t = useTranslations("book");
   const tc = useTranslations("common");
@@ -121,6 +127,7 @@ export function BookedList({
                   <RefreshCw aria-hidden className="size-5" strokeWidth={1.75} />
                 </button>
               ) : null}
+              {onChanged ? <ChangeBooking compact base={`fields/${item.fieldId}`} readyDate={item.readyDate} today={today} label={item.farmerName} onDone={onChanged} /> : null}
             </li>
           ))}
         </ul>

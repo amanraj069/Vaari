@@ -42,13 +42,11 @@ export function WhatsAppGlyph({
 }
 
 /**
- * A phone showing the first exchange of the chat. It has one fixed size (17 x 34.5rem, or 17 x 28rem
- * when `short`) in every language and theme: the frame never grows, the chat is anchored at the
- * bottom like a real one (a short phone shows less of its top), and longer Punjabi or Hindi text is
- * clipped inside its bubble. Text sizes are fixed for the same reason. Decorative content is hidden
- * from screen readers; the figure has one label.
+ * A phone showing the first exchange of the chat. Properly proportioned to match a modern smartphone
+ * (15 x 30rem, ~2:1) with slim bezels, dynamic island, and authentic WhatsApp chat interface. Small
+ * enough that the sign-in page's WhatsApp card is no taller than the form card beside it.
  */
-function PhoneMockup({ short = false }: { short?: boolean }) {
+function PhoneMockup() {
   const t = useTranslations("whatsappStart");
   const tr = useTranslations("request");
   const time = "9:41";
@@ -57,35 +55,36 @@ function PhoneMockup({ short = false }: { short?: boolean }) {
     <figure
       role="img"
       aria-label={t("illustrationLabel", { greeting })}
-      className={`relative mx-auto ${short ? "h-[28rem]" : "h-[34.5rem]"} w-[17rem] shrink-0`}
+      className="relative mx-auto h-[30rem] w-[15rem] shrink-0"
     >
-      {/* Side buttons: silent switch and volume on the left, power on the right. */}
+      {/* Side buttons: sleek volume keys on left, power key on right. */}
       <span
         aria-hidden
-        className="absolute -left-[3px] top-24 h-6 w-[3px] rounded-l-sm bg-ink dark:bg-line-strong"
+        className="absolute -left-[2.5px] top-20 h-6 w-[2.5px] rounded-l-[1px] bg-ink/70 dark:bg-line-strong"
       />
       <span
         aria-hidden
-        className="absolute -left-[3px] top-36 h-11 w-[3px] rounded-l-sm bg-ink dark:bg-line-strong"
+        className="absolute -left-[2.5px] top-[7.5rem] h-10 w-[2.5px] rounded-l-[1px] bg-ink/70 dark:bg-line-strong"
       />
       <span
         aria-hidden
-        className="absolute -left-[3px] top-[12.5rem] h-11 w-[3px] rounded-l-sm bg-ink dark:bg-line-strong"
+        className="absolute -left-[2.5px] top-[10.5rem] h-10 w-[2.5px] rounded-l-[1px] bg-ink/70 dark:bg-line-strong"
       />
       <span
         aria-hidden
-        className="absolute -right-[3px] top-40 h-16 w-[3px] rounded-r-sm bg-ink dark:bg-line-strong"
+        className="absolute -right-[2.5px] top-[8.5rem] h-14 w-[2.5px] rounded-r-[1px] bg-ink/70 dark:bg-line-strong"
       />
 
+      {/* Outer chassis: slim modern bezel, smooth corners, and subtle drop shadow. */}
       <div
         aria-hidden
-        className="h-full w-full rounded-[2.75rem] bg-ink p-[0.55rem] ring-1 ring-ink/10 dark:bg-paper dark:ring-line-strong"
+        className="h-full w-full rounded-[2.75rem] bg-ink p-[7px] ring-1 ring-ink/20 shadow-xl shadow-ink/10 dark:bg-[#151515] dark:ring-white/10 dark:shadow-black/60"
       >
-        <div className="relative flex h-full flex-col overflow-hidden rounded-[2.25rem] bg-paper">
+        <div className="relative flex h-full flex-col overflow-hidden rounded-[2.35rem] bg-paper">
           {/* Status bar and the camera island, on WhatsApp's header colour. */}
           <div className="relative flex h-9 shrink-0 items-center justify-between bg-field px-6 text-[11px] font-semibold text-paper">
             <span className="tabular">{time}</span>
-            <span className="absolute left-1/2 top-2 h-[1.35rem] w-[5.5rem] -translate-x-1/2 rounded-full bg-ink dark:bg-paper" />
+            <span className="absolute left-1/2 top-2 h-[1.3rem] w-[4.5rem] -translate-x-1/2 rounded-full bg-ink dark:bg-black" />
             <span className="flex items-center gap-1">
               <svg
                 viewBox="0 0 16 10"
@@ -159,24 +158,24 @@ function PhoneMockup({ short = false }: { short?: boolean }) {
             <span className="mx-auto max-w-[70%] truncate rounded-md bg-surface px-2 py-0.5 text-[11px] text-ink-muted">
               {tr("today")}
             </span>
-            <div className="ml-auto flex max-w-[75%] items-end gap-1.5 rounded-xl rounded-tr-sm bg-field-soft px-3 py-1.5 text-ink">
+            <div className="ml-auto flex max-w-[80%] items-end gap-1.5 rounded-xl rounded-tr-sm bg-field-soft px-3 py-1.5 text-ink shadow-xs">
               <span className="truncate">{greeting}</span>
               <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-ink-muted">
                 {time}
                 <CheckCheck className="size-3.5 text-sky" strokeWidth={2} />
               </span>
             </div>
-            <div className="mr-auto w-[85%] rounded-xl rounded-tl-sm border border-line bg-surface px-3 py-2 text-ink">
+            <div className="mr-auto w-[85%] rounded-xl rounded-tl-sm border border-line bg-surface px-3 py-2 text-ink shadow-xs">
               <p className="line-clamp-3 h-[3.85em]">{t("chatBody")}</p>
               <p className="mt-0.5 text-right text-[10px] text-ink-muted">
                 {time}
               </p>
             </div>
-            <ul className="mr-auto w-[85%] space-y-1">
+            <ul className="mr-auto w-[85%] space-y-1.5">
               {[t("chatDate"), t("chatWhy"), t("chatWait")].map((label) => (
                 <li
                   key={label}
-                  className="flex h-9 items-center justify-center truncate rounded-xl border border-line bg-surface px-2 font-medium text-field"
+                  className="flex h-9 items-center justify-center truncate rounded-xl border border-field/30 bg-surface px-2.5 font-medium text-field shadow-xs transition-colors hover:bg-field-soft/40"
                 >
                   <span className="truncate">{label}</span>
                 </li>
@@ -191,12 +190,12 @@ function PhoneMockup({ short = false }: { short?: boolean }) {
               <span className="h-2 flex-1 rounded-full bg-line" />
               <Paperclip className="size-4 shrink-0" strokeWidth={1.75} />
             </span>
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-field text-paper">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-field text-paper shadow-xs">
               <Mic className="size-4" strokeWidth={2} />
             </span>
           </div>
           {/* Home indicator. */}
-          <span className="absolute bottom-1.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-ink/40" />
+          <span className="absolute bottom-1.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-ink/40 dark:bg-paper/40" />
         </div>
       </div>
     </figure>
@@ -204,48 +203,61 @@ function PhoneMockup({ short = false }: { short?: boolean }) {
 }
 
 /**
- * "Do it all on WhatsApp": card with the header, phone mockup illustration, and Open WhatsApp action button.
- * The date-specific body text, "Example chat" tag, and "Prefer to chat?" lead line are removed so the card is clean.
- * No WHATSAPP_BUSINESS_NUMBER on the Next server: nothing (there is no chat to open).
+ * "Do it all on WhatsApp": card with the header, phone mockup, and Open WhatsApp action button.
+ * The descriptive capabilities text is only shown on sign-in (when fill or showDescription is true);
+ * the dashboard aside card stays clean without it.
  */
 export function WhatsAppStart({
   number,
   className = "",
   fill = false,
+  showDescription,
 }: {
   number: string | null;
   className?: string;
   fill?: boolean;
+  showDescription?: boolean;
 }) {
   const t = useTranslations("whatsappStart");
   if (!number) return null;
+  const displayDescription = showDescription ?? fill;
   return (
     <section
       aria-labelledby="whatsapp-start-title"
-      className={`rounded-card border border-line bg-surface p-4 sm:p-6 ${fill ? "flex h-full flex-col" : ""} ${className}`}
+      className={`rounded-card border border-line bg-surface p-4 sm:p-6 ${
+        fill ? "flex h-full flex-col justify-between" : "flex flex-col"
+      } ${className}`}
     >
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-field-soft text-field sm:size-11">
-          <WhatsAppGlyph className="size-[1.375rem] sm:size-6" />
-        </span>
-        <h2
-          id="whatsapp-start-title"
-          className="font-display text-lg leading-tight sm:text-2xl"
-        >
-          {t("title")}
-        </h2>
+      <div>
+        <div className="flex items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-field-soft text-field sm:size-11">
+            <WhatsAppGlyph className="size-[1.375rem] sm:size-6" />
+          </span>
+          <h2
+            id="whatsapp-start-title"
+            className="font-display text-lg leading-tight sm:text-2xl"
+          >
+            {t("title")}
+          </h2>
+        </div>
+        {displayDescription ? (
+          <p className="mt-2.5 text-sm leading-relaxed text-ink-muted sm:text-[0.9375rem]">
+            {t("body", { greeting: t("startMessage") })}
+          </p>
+        ) : null}
       </div>
-      {/* A picture of a phone is wasted space on a phone: from the small-tablet width up only. */}
-      <div
-        className={`${fill ? "mt-4" : "mt-5"} hidden sm:block ${fill ? "sm:flex sm:flex-1 sm:flex-col sm:items-center sm:justify-center" : ""}`}
-      >
-        <PhoneMockup short={fill} />
+
+      {/* The picture of a phone: hidden on small phones. On sign-in (fill) only beside the form (lg up):
+          narrower, the card sits above the form and must stay short so the form is in reach. */}
+      <div className={`${fill ? "my-4 hidden lg:flex lg:justify-center" : `${displayDescription ? "my-5" : "my-4 sm:my-5"} hidden sm:flex sm:justify-center`}`}>
+        <PhoneMockup />
       </div>
+
       <a
         href={whatsappStartUrl(number, t("startMessage"))}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-field bg-transparent px-4 text-base font-medium text-field transition-colors duration-150 hover:bg-field-soft"
+        className={`${fill ? "mt-4 lg:mt-0" : "mt-4 sm:mt-0"} inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-field bg-transparent px-4 text-base font-medium text-field transition-colors duration-150 hover:bg-field-soft`}
       >
         <WhatsAppGlyph className="size-5" />
         {t("cta")}

@@ -13,6 +13,8 @@ const ready = (field: FarmerField, overrides: Partial<Extract<SlotState, { kind:
   today: SAMPLE_TODAY,
   why: { kind: "ready", reasons: SAMPLE_REASONS },
   onCannotWait: vi.fn().mockResolvedValue(undefined),
+  changeBase: "slot/sample",
+  onChanged: vi.fn(),
   ...overrides,
 });
 const currentStep = () => within(screen.getByRole("list", { name: "Progress of this turn" })).getByRole("listitem", { current: "step" });

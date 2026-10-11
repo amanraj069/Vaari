@@ -36,10 +36,10 @@ export function VillagesWatch({ villages, centreNames }: { villages: OfficerVill
             <th scope="col" className="px-2 py-2.5 text-right font-normal">
               {tr("at_risk")}
             </th>
-            <th scope="col" className="px-2 py-2.5 text-right font-normal">
+            <th scope="col" className="py-2.5 pl-2 pr-5 text-right font-normal sm:px-2">
               {tr("tight")}
             </th>
-            <th scope="col" className="w-[22%] py-2.5 pl-2 pr-5 font-normal">
+            <th scope="col" className="hidden w-[22%] py-2.5 pl-2 pr-5 font-normal sm:table-cell">
               <span className="sr-only">{t("colSplit")}</span>
             </th>
           </tr>
@@ -55,8 +55,8 @@ export function VillagesWatch({ villages, centreNames }: { villages: OfficerVill
                 </th>
                 <td className="px-2 py-3 text-right tabular">{village.fieldsActive}</td>
                 <td className={`px-2 py-3 text-right tabular ${village.burnRisk > 0 ? "font-semibold text-ember-deep" : "text-ink-muted"}`}>{village.burnRisk}</td>
-                <td className={`px-2 py-3 text-right tabular ${village.tight > 0 ? "text-wheat-deep" : "text-ink-muted"}`}>{village.tight}</td>
-                <td className="py-3 pl-2 pr-5">
+                <td className={`py-3 pl-2 pr-5 text-right tabular sm:px-2 ${village.tight > 0 ? "text-wheat-deep" : "text-ink-muted"}`}>{village.tight}</td>
+                <td className="hidden py-3 pl-2 pr-5 sm:table-cell">
                   <div aria-hidden className="flex h-1.5 gap-0.5">
                     {STATUS_ORDER.filter((status) => split[status] > 0).map((status) => (
                       <span key={status} className="h-full rounded-full" style={{ flexGrow: split[status], background: STATUS_COLOUR[status] }} />

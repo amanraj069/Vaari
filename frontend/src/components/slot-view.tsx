@@ -17,6 +17,7 @@ import { Dialog } from "./dialog";
 import { LockPin } from "./lock-pin";
 import { SimulatedBadge } from "./simulated-badge";
 import { Slider } from "./slider";
+import { ChangeBooking } from "./change-booking";
 import { Timeline, type TimelineStep } from "./timeline";
 import { Button, Pill, Skeleton, Spinner } from "./ui";
 import { SeeAllMyFields } from "./whatsapp-link";
@@ -35,7 +36,11 @@ export type SlotState =
       today: string | null;
       why: WhyState;
       onCannotWait: (waitingLimitDays: number) => Promise<void>;
-    };
+      // The booking's own address for "change booking", and what to do after a change.
+      changeBase: string;
+      onChanged: (change: "harvest" | "cancel") => void;
+    }
+  | { kind: "cancelled" };
 
 function addDays(iso: string, days: number): string {
   return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
@@ -152,6 +157,7 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
       />
     );
   if (state.kind === "forbidden") return <Problem icon={<ShieldAlert className="size-7" strokeWidth={1.75} />} title={t("forbiddenTitle")} body={t("forbiddenBody")} />;
+  if (state.kind === "cancelled") return <Problem icon={<LinkIcon className="size-7" strokeWidth={1.75} />} title={t("cancelledTitle")} body={t("cancelledBody")} />;
   if (state.kind === "notFound") return <Problem icon={<LinkIcon className="size-7" strokeWidth={1.75} />} title={t("notFoundTitle")} body={t("notFoundBody")} />;
   if (state.kind === "unavailable") {
     return (
@@ -326,6 +332,9 @@ export function SlotView({ state, whatsappNumber = null }: { state: SlotState; w
         {!done ? (
           <div>
             <CannotWait field={field} onCannotWait={state.onCannotWait} />
+            <div className="mt-2">
+              <ChangeBooking base={state.changeBase} readyDate={field.readyDate} today={state.today} onDone={state.onChanged} />
+            </div>
           </div>
         ) : null}
 

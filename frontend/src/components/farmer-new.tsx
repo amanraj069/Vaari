@@ -10,7 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { bookingSchema, farmerBookingOptionsSchema, type FieldRequestInput } from "@/shared";
 import { ApiError, api } from "@/lib/api";
 import { BackButton } from "./back-button";
-import { DateGuide } from "./farmer-aside";
+import { DateGuideButton } from "./farmer-aside";
 import { FarmerTicketForm } from "./farmer-ticket-form";
 import { PageColumns, PageHeader } from "./page-shell";
 import { Button, ButtonLink, Skeleton, StateMessage } from "./ui";
@@ -55,16 +55,17 @@ export function FarmerNewView({ whatsappNumber }: { whatsappNumber: string | nul
           <StateMessage tone="error" title={tc("errorTitle")} body={tc("errorBody")} action={<Button onClick={() => options.refetch()}>{tc("retry")}</Button>} />
         ) : (
           <>
-            <PageHeader className="mb-6" back={<BackButton fallback="/dashboard" />} title={t("title")} description={t("subtitle")} shortDescription={t("subtitleShort")} />
+            <PageHeader
+              className="mb-6"
+              back={<BackButton fallback="/dashboard" />}
+              title={t("title")}
+              description={t("subtitle")}
+              shortDescription={t("subtitleShort")}
+              help={<DateGuideButton />}
+            />
             <PageColumns
               main={options.isPending ? <Skeleton className="h-96" /> : <FarmerTicketForm villages={options.data.villages} today={options.data.today} onSubmit={book} />}
-              aside={
-                // Tablets: the two help cards side by side under the task instead of one long column.
-                <div className="grid items-start gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-1">
-                  <WhatsAppStart number={whatsappNumber} />
-                  <DateGuide />
-                </div>
-              }
+              aside={<WhatsAppStart number={whatsappNumber} />}
             />
           </>
         )}

@@ -5,7 +5,9 @@
  * label), then the pages of their dashboard they can open (operator: Today, Plan, Queue; helper:
  * Bookings, Book a field; officer: District; farmer: My fields, Book a field), the proof, their
  * profile and sign out. A new staff member who has not finished /welcome gets "Finish setting up".
- * `trigger="card"` is the sidebar's foot (avatar, name and role, opening upwards).
+ * `trigger="card"` is the sidebar's foot: the avatar, name and role open the profile, and the
+ * button beside them opens the menu upwards with only the options (the name is already on screen).
+ * Folded sidebar: the avatar alone opens the menu, which then starts with the name.
  */
 import { ChevronRight, ChevronsUpDown, FlaskConical, LogOut, Moon, Settings2, Sun } from "lucide-react";
 import Link from "next/link";
@@ -52,56 +54,61 @@ export function AccountMenu({ viewer, trigger = "avatar", collapsed = false }: {
   const inDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const profileHref = role ? "/dashboard/profile" : "/welcome";
 
-  const buttonContent =
-    trigger === "card" ? (
-      <>
-        <Avatar name={name} size="sm" />
-        {collapsed ? null : (
-          <>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block truncate text-sm font-medium">{displayName}</span>
-              {/* The role alone: the centre is already in the sidebar's workspace card. */}
-              <span className="block truncate text-xs text-ink-muted">{roleLine.split(" · ")[0]}</span>
-            </span>
-            <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-ink-muted" strokeWidth={2} />
-          </>
-        )}
-      </>
-    ) : (
-      <Avatar name={name} />
-    );
+  // The sidebar's open card shows who this is, so the menu need not say it again.
+  const nameOnCard = trigger === "card" && !collapsed;
+  const onProfile = pathname === profileHref;
+
+  const buttonContent = nameOnCard ? <ChevronsUpDown aria-hidden className="size-4" strokeWidth={2} /> : <Avatar name={name} size={trigger === "card" ? "sm" : "md"} />;
+
+  const profileLink = nameOnCard ? (
+    <Link href={profileHref} aria-current={onProfile ? "page" : undefined} className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-chip p-1 text-ink transition-colors hover:bg-ink/5 aria-[current=page]:bg-wheat-soft/60">
+      <Avatar name={name} size="sm" />
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-sm font-medium">{displayName}</span>
+        {/* The role alone: the centre is already in the sidebar's workspace card. */}
+        <span className="block truncate text-xs text-ink-muted">{roleLine.split(" · ")[0]}</span>
+      </span>
+    </Link>
+  ) : null;
 
   return (
     <Dropdown
       label={t("accountMenu")}
       placement={trigger === "card" ? "above" : "below"}
-      className={trigger === "card" ? "w-full" : ""}
+      className={nameOnCard ? "flex w-full items-center gap-1 rounded-control border border-line bg-paper/60 p-1.5" : trigger === "card" ? "w-full" : ""}
       panelClassName={trigger === "card" ? (collapsed ? "w-64" : "w-full min-w-60") : "w-72"}
       buttonClassName={
-        trigger === "card"
-          ? `flex min-h-14 w-full items-center gap-3 rounded-control text-ink transition-colors ${collapsed ? "justify-center p-1.5 hover:bg-paper" : "border border-line bg-paper/60 p-2.5 hover:border-line-strong hover:bg-paper aria-expanded:border-line-strong aria-expanded:bg-paper"}`
-          : "grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-paper hover:ring-2 hover:ring-line-strong aria-expanded:ring-2 aria-expanded:ring-wheat"
+        nameOnCard
+          ? "grid size-11 shrink-0 place-items-center rounded-chip text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink aria-expanded:bg-ink/5 aria-expanded:text-ink"
+          : trigger === "card"
+            ? "flex min-h-14 w-full items-center justify-center rounded-control p-1.5 text-ink transition-colors hover:bg-paper"
+            : "grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-paper hover:ring-2 hover:ring-line-strong aria-expanded:ring-2 aria-expanded:ring-wheat"
       }
       buttonContent={buttonContent}
+      leading={profileLink}
     >
       {(close) => (
         <>
-          <Link href={profileHref} role="menuitem" onClick={close} className="group flex items-center gap-3 rounded-chip px-2.5 pb-2.5 pt-2 hover:bg-ink/5 focus-visible:bg-ink/5 focus-visible:outline-none">
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2">
-                <span className="min-w-0 truncate font-medium">{displayName}</span>
-                {demo ? (
-                  <span title={t("demoAccount")} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-ink-muted/50 px-2 py-0.5 text-xs text-ink-muted">
-                    <FlaskConical aria-hidden className="size-3" strokeWidth={2} />
-                    {td("demoShort")}
-                  </span>
-                ) : null}
+          {nameOnCard ? null : (
+            <>
+            <Link href={profileHref} role="menuitem" onClick={close} className="group flex items-center gap-3 rounded-chip px-2.5 pb-2.5 pt-2 hover:bg-ink/5 focus-visible:bg-ink/5 focus-visible:outline-none">
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="min-w-0 truncate font-medium">{displayName}</span>
+                  {demo ? (
+                    <span title={t("demoAccount")} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-ink-muted/50 px-2 py-0.5 text-xs text-ink-muted">
+                      <FlaskConical aria-hidden className="size-3" strokeWidth={2} />
+                      {td("demoShort")}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block text-sm text-ink-muted">{roleLine}</span>
               </span>
-              <span className="mt-0.5 block text-sm text-ink-muted">{roleLine}</span>
-            </span>
-            <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-muted group-hover:text-ink" strokeWidth={2} />
-          </Link>
-          <div className="my-1 border-t border-line" />
+              <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-muted group-hover:text-ink" strokeWidth={2} />
+            </Link>
+            <div className="my-1 border-t border-line" />
+            </>
+          )}
           {role && !inDashboard ? (
             <>
               <p className="px-3 pb-1 pt-1.5 text-xs text-ink-muted">{td("menuDashboard")}</p>

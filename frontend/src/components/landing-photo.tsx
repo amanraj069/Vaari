@@ -28,14 +28,39 @@ export function findPhoto(name: PhotoName): string | null {
   return null;
 }
 
-export function LandingPhoto({ name, priority = false, zoom = false, position = "center", sizes = "100vw" }: { name: PhotoName; priority?: boolean; zoom?: boolean; position?: string; sizes?: string }) {
+export function LandingPhoto({
+  name,
+  priority = false,
+  zoom = false,
+  position = "center",
+  sizes = "100vw",
+  className = "",
+  imgClassName = "",
+}: {
+  name: PhotoName;
+  priority?: boolean;
+  zoom?: boolean;
+  position?: string;
+  sizes?: string;
+  className?: string;
+  imgClassName?: string;
+}) {
   const src = findPhoto(name);
   return (
-    <div aria-hidden className="absolute inset-0 overflow-hidden rounded-[inherit]">
+    <div aria-hidden className={`absolute inset-0 overflow-hidden rounded-[inherit] ${className}`}>
       {src ? (
-        <Image src={src} alt="" fill priority={priority} sizes={sizes} quality={80} className={`object-cover ${zoom ? "slow-zoom" : ""}`} style={{ objectPosition: position }} />
+        <Image
+          src={src}
+          alt=""
+          fill
+          priority={priority}
+          sizes={sizes}
+          quality={80}
+          className={`object-cover ${zoom ? "slow-zoom" : ""} ${imgClassName}`}
+          style={{ objectPosition: position }}
+        />
       ) : (
-        <div className={`absolute inset-0 ${FALLBACK[name]} ${zoom ? "slow-zoom" : ""}`} />
+        <div className={`absolute inset-0 ${FALLBACK[name]} ${zoom ? "slow-zoom" : ""} ${imgClassName}`} />
       )}
     </div>
   );

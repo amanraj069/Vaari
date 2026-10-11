@@ -29,7 +29,7 @@ const stop = (overrides: Partial<LaneStop> = {}): LaneStop => ({
 });
 
 const lane = (stops: LaneStop[]): Lane => ({
-  machine: { id: "m1", name: "Super Seeder 1", kind: "super_seeder", status: "working", downDates: [], promiseAcresPerDay: 6.6, planAcresPerDay: 8.6, logsCount: 0 },
+  machine: { id: "m1", name: "Super Seeder 1", kind: "super_seeder", status: "working", downDates: [], loan: null, promiseAcresPerDay: 6.6, planAcresPerDay: 8.6, logsCount: 0 },
   down: false, stops, endTime: "12:00", capacityEndTime: "16:00", travelKm: 4.2,
 });
 

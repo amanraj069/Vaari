@@ -34,6 +34,7 @@ export function PageHeader({
   description,
   shortDescription,
   actions,
+  help,
   back,
   className = "",
 }: {
@@ -44,26 +45,30 @@ export function PageHeader({
   /** The lead on phones: one short line under the title; `description` from sm up. */
   shortDescription?: ReactNode;
   actions?: ReactNode;
+  help?: ReactNode;
   back?: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`flex flex-wrap items-end justify-between gap-4 ${className}`}>
-      <div className="min-w-0">
+    <div className={`flex flex-wrap items-start justify-between gap-4 ${className}`}>
+      <div className="min-w-0 flex-1">
         {context || badge ? (
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {context ? <p className="text-sm text-ink-muted">{context}</p> : null}
             {badge}
           </div>
         ) : null}
-        {back ? (
-          <div className="flex items-center gap-1">
-            {back}
-            <h1 className={`min-w-0 ${PAGE_TITLE}`}>{title}</h1>
-          </div>
-        ) : (
-          <h1 className={PAGE_TITLE}>{title}</h1>
-        )}
+        <div className="flex items-center justify-between gap-3">
+          {back ? (
+            <div className="flex min-w-0 items-center gap-1">
+              {back}
+              <h1 className={`min-w-0 ${PAGE_TITLE}`}>{title}</h1>
+            </div>
+          ) : (
+            <h1 className={PAGE_TITLE}>{title}</h1>
+          )}
+          {help ? <div className="shrink-0 sm:hidden">{help}</div> : null}
+        </div>
         {/* Phones: a small lead, so it stays two or three lines under the title; wider screens inherit the page's size. */}
         {description ? (
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:mt-2 sm:text-[1em] sm:leading-normal">
@@ -78,7 +83,12 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions}
+      {actions || help ? (
+        <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+          {actions}
+          {help ? <div className="hidden shrink-0 sm:block">{help}</div> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

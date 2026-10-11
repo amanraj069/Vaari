@@ -28,9 +28,9 @@
   --color-on-action: #ffffff;
   --color-field: #2f6b3f;
   --color-field-soft: #dcebdc;
-  --color-ember: #c8452b;
-  --color-ember-deep: #a8361f;
-  --color-ember-soft: #f6ddd5;
+  --color-ember: #dc2626;
+  --color-ember-deep: #b91c1c;
+  --color-ember-soft: #fee2e2;
   --color-sky: #346685; /* 5.0:1 on sky-soft "Window" pills (was #3c6e8f: 4.41) */
   --color-sky-soft: #dde8ef;
 
@@ -48,7 +48,11 @@
   /* How a farmer's season ended on the replay maps: sown by the optimum, sown after it, burned (also a cross). Validated, all pairs. */
   --color-season-ontime: #2e7d4f;
   --color-season-late: #c48a12;
-  --color-season-burned: #c8452b;
+  --color-season-burned: #dc2626;
+  /* The officer's outlook chart: acres booked to become ready (solid) and expected but not booked
+     yet (the same hue lighter, always striped). Validated as a pair, light and dark (dataviz validator). */
+  --color-outlook-booked: #9a6a10;
+  --color-outlook-expected: #d9a22b;
 
   /* Fraunces for Latin; browsers fall back glyph by glyph to the Noto Serif faces for Gurmukhi and Devanagari. */
   --font-display: var(--font-fraunces), var(--font-serif-gurmukhi), var(--font-serif-devanagari), "Georgia", serif;
@@ -85,9 +89,9 @@ html.dark {
   --color-action: #9a6a10;
   --color-field: #72b886;
   --color-field-soft: #1d2d21;
-  --color-ember: #e5694c;
-  --color-ember-deep: #f2896f;
-  --color-ember-soft: #3b1f18;
+  --color-ember: #ef4444;
+  --color-ember-deep: #fa5252;
+  --color-ember-soft: #3d171b;
   --color-sky: #82b3d4;
   --color-sky-soft: #1a2a35;
   --color-lane-1: #86ad8c;
@@ -101,6 +105,8 @@ html.dark {
   --color-season-ontime: #30a07a;
   --color-season-late: #ae8c16;
   --color-season-burned: #c43a52;
+  --color-outlook-booked: #bd8720;
+  --color-outlook-expected: #86590a;
 }
 
 /*
@@ -481,6 +487,117 @@ html.dark .ornament-band {
   }
   to {
     opacity: 0.65;
+  }
+}
+
+/* Fire flicker layer: living flame light and heat radiance along the stubble fire line */
+.fire-flicker-layer {
+  background:
+    radial-gradient(ellipse 35% 20% at 52% 76%, rgba(255, 95, 10, 0.42), transparent 72%),
+    radial-gradient(ellipse 45% 24% at 68% 74%, rgba(255, 65, 0, 0.54), transparent 70%),
+    radial-gradient(ellipse 30% 18% at 84% 77%, rgba(255, 110, 15, 0.4), transparent 75%);
+  mix-blend-mode: screen;
+  animation: fire-flicker 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes fire-flicker {
+  0% {
+    opacity: 0.52;
+    transform: scaleY(0.98);
+    filter: brightness(1);
+  }
+  28% {
+    opacity: 0.84;
+    transform: scaleY(1.04) translateY(-1px);
+    filter: brightness(1.2);
+  }
+  55% {
+    opacity: 0.46;
+    transform: scaleY(0.96);
+    filter: brightness(0.95);
+  }
+  80% {
+    opacity: 0.92;
+    transform: scaleY(1.06) translateY(-2px);
+    filter: brightness(1.25);
+  }
+  100% {
+    opacity: 0.62;
+    transform: scaleY(1);
+    filter: brightness(1.05);
+  }
+}
+
+.fire-hearth-shimmer {
+  background: radial-gradient(ellipse 60% 12% at 66% 77%, rgba(255, 45, 0, 0.38), transparent 70%);
+  mix-blend-mode: color-dodge;
+  animation: fire-shimmer 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes fire-shimmer {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+/* Glowing red angaare (fire embers and sparks) rising from the flames and smoke */
+.angaare-particle {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation:
+    angaare-flight var(--dur, 3.8s) cubic-bezier(0.25, 0.1, 0.25, 1) var(--delay, 0s) infinite,
+    angaare-shimmer var(--pulse-dur, 1.2s) ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes angaare-flight {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    transform: translate3d(calc(var(--drift-x) * 0.12), calc(var(--rise-y) * -0.12), 0) scale(1.15);
+    opacity: var(--max-op, 0.95);
+  }
+  38% {
+    transform: translate3d(calc(var(--drift-x) * 0.38 + var(--sway, 6px)), calc(var(--rise-y) * -0.38), 0) scale(1);
+    opacity: calc(var(--max-op, 0.95) * 0.92);
+  }
+  65% {
+    transform: translate3d(calc(var(--drift-x) * 0.65 - var(--sway, 4px)), calc(var(--rise-y) * -0.65), 0) scale(0.85);
+    opacity: calc(var(--max-op, 0.95) * 0.7);
+  }
+  88% {
+    transform: translate3d(calc(var(--drift-x) * 0.88 + 2px), calc(var(--rise-y) * -0.88), 0) scale(0.55);
+    opacity: calc(var(--max-op, 0.95) * 0.35);
+  }
+  100% {
+    transform: translate3d(var(--drift-x), calc(var(--rise-y) * -1), 0) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes angaare-shimmer {
+  0% {
+    filter: brightness(0.9);
+  }
+  100% {
+    filter: brightness(1.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fire-flicker-layer,
+  .fire-hearth-shimmer,
+  .angaare-particle {
+    animation: none !important;
   }
 }
 

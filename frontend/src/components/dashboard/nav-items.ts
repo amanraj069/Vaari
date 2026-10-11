@@ -3,7 +3,7 @@
  * each with its icon and its words. The sidebar, the phone's bottom bar and the account menu all
  * read this, so they never disagree. "home" is named for what it shows to that role.
  */
-import { BarChart3, CalendarCheck2, ClipboardCheck, LandPlot, LayoutDashboard, ListOrdered, Plus, Sprout, UserRound, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, CalendarCheck2, Tractor, ClipboardCheck, LandPlot, LayoutDashboard, ListOrdered, Plus, Sprout, UserRound, Users, type LucideIcon } from "lucide-react";
 import { ROLE_SECTIONS, SECTION_PATH, sectionOf, type DashboardRole, type DashboardSection } from "@/lib/dashboard-routes";
 
 export type NavItem = {
@@ -26,6 +26,8 @@ const HOME: Record<DashboardRole, { labelKey: string; icon: LucideIcon }> = {
 const OTHER: Record<Exclude<DashboardSection, "home">, { labelKey: string; icon: LucideIcon; group: NavItem["group"] }> = {
   plan: { labelKey: "navPlan", icon: ClipboardCheck, group: "main" },
   queue: { labelKey: "navQueue", icon: ListOrdered, group: "main" },
+  machines: { labelKey: "navMachines", icon: Tractor, group: "main" },
+  centres: { labelKey: "navCentres", icon: Building2, group: "main" },
   book: { labelKey: "navBook", icon: Plus, group: "main" },
   proof: { labelKey: "navProof", icon: BarChart3, group: "more" },
   profile: { labelKey: "navProfile", icon: UserRound, group: "more" },

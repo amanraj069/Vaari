@@ -96,7 +96,7 @@ export function FacilitatorBookingsView() {
               ]}
             />
           </div>
-          <BookedList bare state={shownState} onCopyLink={copyLink} onReissueLink={reissueLink} />
+          <BookedList bare state={shownState} onCopyLink={copyLink} onReissueLink={reissueLink} onChanged={() => booked.refetch()} today={booked.data?.today ?? null} />
         </Panel>
 
         <div className="space-y-6">

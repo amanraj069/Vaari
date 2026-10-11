@@ -60,7 +60,7 @@ describe("/dashboard for a farmer (phone session)", () => {
     expect(screen.getByText("Balian Cooperative Society")).toBeInTheDocument();
     expect(screen.getByText("Other Society")).toBeInTheDocument();
     // The full lead from tablets up; one short line on phones.
-    expect(screen.getByText(/Every field booked with your phone number\. To change one/)).toHaveClass("hidden", "sm:inline");
+    expect(screen.getByText(/Every field booked with your phone number\. You can change a field/)).toHaveClass("hidden", "sm:inline");
     expect(screen.getByText("Every field booked with your phone number.")).toHaveClass("sm:hidden");
     // A new field is booked on its own page; existing fields are changed from their own links.
     expect(screen.getByRole("link", { name: "Book a new field" })).toHaveAttribute("href", "/dashboard/book");
@@ -86,6 +86,17 @@ describe("/dashboard for a farmer (phone session)", () => {
     expect(screen.queryByText("Prefer to chat?")).not.toBeInTheDocument();
     expect(screen.queryByText("Example chat")).not.toBeInTheDocument();
     expect(screen.queryByText(/No app to learn/)).not.toBeInTheDocument();
+  });
+
+  it("opens the 'How your date works' guide when clicking the question mark button", async () => {
+    serve({ status: 200, body: HOME });
+    renderHome();
+    const helpBtn = (await screen.findAllByRole("button", { name: "How your date works" }))[0]!;
+    expect(helpBtn).toBeInTheDocument();
+    await userEvent.click(helpBtn);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("A firm date is fixed. The machine comes that day.")).toBeInTheDocument();
+    expect(screen.getByText("A window is two or three days. It becomes a firm date two days before.")).toBeInTheDocument();
   });
 
   it("with no session, offers phone sign-in and WhatsApp 'my fields', and never redirects", async () => {
