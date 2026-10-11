@@ -470,6 +470,9 @@ export class DynamoStore implements VaariStore {
       throw error;
     }
   }
+  async putFarmerAccount(record: FarmerAccountRecord) {
+    await this.put("farmerAccounts", { ...record });
+  }
   async putOtpChallenge(record: OtpChallengeRecord) {
     await this.put("otpChallenges", { ...record, ttl: epochSeconds(record.expiresAt) + 3_600 });
   }

@@ -200,6 +200,8 @@ describe("book_field: code decides the village, the year and the days", () => {
 describe("a booking a piece at a time: code asks for exactly what is still missing", () => {
   const KULDEEP = "+447700900993"; // registered on the web in English, no field yet
   const hi = words("hi");
+  // A message in Latin letters only ("Atlantis", "Balian") is answered in English; Devanagari again, in Hindi.
+  const en = words("en");
 
   beforeAll(async () => {
     await createFarmerAccount(runtime.runtime.dependencies.store, KULDEEP, "Kuldeep Singh", "en");
@@ -242,7 +244,7 @@ describe("a booking a piece at a time: code asks for exactly what is still missi
 
   it("a village no centre serves is named in the reply and forgotten; the acres are kept", async () => {
     expect(await say("Atlantis", async (tool) => (await tool("book_field").run({ village: "Atlantis" }), ""))).toEqual([
-      expect.objectContaining({ body: hi.bookUnknownVillage("Atlantis") }),
+      expect.objectContaining({ body: en.bookUnknownVillage("Atlantis") }),
     ]);
     expect(await say("3 नवंबर तक", async (tool) => (await tool("book_field").run({ lastDayYouCanWait: { day: 3, month: 11 } }), ""))).toEqual([
       expect.objectContaining({ body: hi.bookNeeds(hi.bookDetail.village) }),
@@ -270,7 +272,7 @@ describe("a booking a piece at a time: code asks for exactly what is still missi
   it("what was said is forgotten after 15 quiet minutes", async () => {
     runtime.clock.now = new Date(runtime.clock.now.getTime() + 16 * 60_000);
     expect(await say("Balian", async (tool) => (await tool("book_field").run({ village: "Balian" }), ""))).toEqual([
-      expect.objectContaining({ body: hi.bookNeeds(`${hi.bookDetail.acres}, ${hi.bookDetail.lastDay}`) }),
+      expect.objectContaining({ body: en.bookNeeds(`${en.bookDetail.acres}, ${en.bookDetail.lastDay}`) }),
     ]);
   });
 });

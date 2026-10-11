@@ -142,8 +142,8 @@ describe("a voice note is part of the conversation", () => {
 
     let history: Parameters<AgentRunner["run"]>[0]["history"] = [];
     runner.current = { run: async (input) => ((history = input.history), "") };
-    // Latin letters: the farmer's remembered language (Punjabi, which later tests expect) stays.
-    await runtime.deliver(messageBody({ from: JASWINDER, text: "Balian" }));
+    // A message with no letters keeps the farmer's remembered language (Punjabi, which later tests expect).
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "4" }));
     expect(history.at(-1)).toEqual({ farmer: "मुझे मशीन चाहिए", vaari: question });
   });
 });

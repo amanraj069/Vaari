@@ -176,7 +176,12 @@ export type FireCheckRecord = {
   source: string;
 };
 
-export type FarmerRecord = { id: string; name: string; phone: string; language: Locale; facilitatorId: string | null };
+/**
+ * `languageChosen`: the farmer chose `language` (registered in it, or wrote to Vaari in its script).
+ * Without it the language is only a default (bookings made before 2026-10-11 stored Punjabi for
+ * everyone), and Vaari writes in English instead.
+ */
+export type FarmerRecord = { id: string; name: string; phone: string; language: Locale; languageChosen?: boolean; facilitatorId: string | null };
 
 /** A signed-in person (facilitator, operator, officer). Farmers have no user record. */
 export type UserRecord = {
@@ -363,6 +368,8 @@ export interface VaariStore {
   getFarmerAccount(phone: string): Promise<FarmerAccountRecord | null>;
   /** Creates the account unless one exists for that phone (a conditional write); returns the stored one. */
   createFarmerAccount(record: FarmerAccountRecord): Promise<FarmerAccountRecord>;
+  /** Writes the account as given, replacing any for that phone. Only the demo seed uses it, for its own phones. */
+  putFarmerAccount(record: FarmerAccountRecord): Promise<void>;
 
   /** Replaces any earlier code for that phone. */
   putOtpChallenge(record: OtpChallengeRecord): Promise<void>;

@@ -1,19 +1,44 @@
 /**
  * Scripts: the reply language (the script the farmer just wrote in, else their stored language, else
- * English), Gurmukhi -> Devanagari for the Hindi voice, and either script -> rough Latin letters for
- * matching what a farmer wrote or said against village names.
+ * English), a phone's own language for notices (storedLanguage, phoneLanguage), Gurmukhi ->
+ * Devanagari for the Hindi voice, and either script -> rough Latin letters for matching what a
+ * farmer wrote or said against village names.
  */
 import type { Locale } from "../shared";
+import type { FarmerAccountRecord, FarmerRecord, VaariStore } from "../store/types";
 
-export function scriptLocale(text: string | null | undefined): Locale | null {
+/**
+ * The language of what the farmer just wrote: Gurmukhi is Punjabi, Devanagari is Hindi, and Latin
+ * letters are English (team decision 2026-10-11: "Sat Shri Kal" typed in Latin letters is answered in
+ * English, not in the last language used). Null when there are no letters at all ("4", an emoji).
+ * `latinIsEnglish` is false for a tapped button or row: its title may hold a village's Latin name
+ * inside a Punjabi or Hindi list, so only Gurmukhi or Devanagari in it counts.
+ */
+export function scriptLocale(text: string | null | undefined, latinIsEnglish = true): Locale | null {
   if (!text) return null;
-  if (/[਀-੿]/.test(text)) return "pa"; // Gurmukhi
-  if (/[ऀ-ॿ]/.test(text)) return "hi"; // Devanagari
+  if (/[\u0A00-\u0A7F]/.test(text)) return "pa"; // Gurmukhi
+  if (/[\u0900-\u097F]/.test(text)) return "hi"; // Devanagari
+  if (latinIsEnglish && /[A-Za-z]/.test(text)) return "en"; // Latin
   return null;
 }
 
-export function chooseLocale(stored: Locale | null, text: string | null): Locale {
-  return scriptLocale(text) ?? stored ?? "en";
+/**
+ * The language a farmer chose, from their farmer records: a registered farmer's own record (the
+ * script they last wrote to Vaari in on WhatsApp), else the language they registered in; for a phone
+ * without an account, a language they wrote in. Null when they never chose one: Vaari then writes
+ * in English. A stored language nobody chose (an old booking's default) does not count.
+ */
+export function storedLanguage(records: FarmerRecord[], account: FarmerAccountRecord | null): Locale | null {
+  const chosen = (record: FarmerRecord | undefined) => (record?.languageChosen ? record.language : null);
+  if (account) return chosen(records.find((record) => record.id === account.farmerId)) ?? account.language;
+  return records.map(chosen).find((language) => language !== null) ?? null;
+}
+
+/** storedLanguage for one phone, read from the store; `farmerId` is the field's own farmer record. */
+export async function phoneLanguage(store: Pick<VaariStore, "getFarmerAccount" | "getFarmer">, phone: string, farmerId?: string): Promise<Locale | null> {
+  const account = await store.getFarmerAccount(phone);
+  const record = await store.getFarmer(account?.farmerId ?? farmerId ?? "");
+  return storedLanguage(record ? [record] : [], account);
 }
 
 const GURMUKHI_ADDAK = 0x0a71;

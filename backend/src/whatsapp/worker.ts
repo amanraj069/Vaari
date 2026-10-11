@@ -6,7 +6,8 @@
  *     up on phone-index and farmer-accounts. Unknown (no booking, no account): one fixed reply with
  *     the registration link, no data, no model. A registered farmer with no field yet can book one;
  *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language (the script the
- *     farmer just wrote or tapped in, remembered on their farmer records; else the remembered one), then
+ *     farmer just wrote in, Latin letters being English, or tapped in; remembered on their farmer
+ *     records; else the remembered one, else English), then
  *       a button or list reply -> the tools directly (no model),
  *       text -> the agent when AGENT_ENABLED, with the last few exchanges with this phone (its reply
  *               checked against this turn's tool results, else the template reply; a reply with no
@@ -37,7 +38,7 @@ import { logger } from "../logger";
 import type { FarmerAccountRecord, FarmerRecord } from "../store/types";
 import type { AgentRunner, Exchange } from "./agent";
 import { checkReply } from "./output-check";
-import { chooseLocale, scriptLocale, toDevanagari } from "./language";
+import { scriptLocale, storedLanguage, toDevanagari } from "./language";
 import { MENU_ACTIONS, promiseWords, words, type MenuAction } from "./messages";
 import { parseWebhook, type InboundMessage } from "./payload";
 import { fromWhatsAppNumber, maskPhone } from "./phone";
@@ -160,12 +161,19 @@ export function createWorker(deps: WorkerDeps) {
   }
 
   /**
-   * A farmer who writes (or taps) in Gurmukhi or Devanagari is answered in that language from now on,
-   * and sent their notices in it, on every farmer record of this phone. Latin script changes nothing:
-   * it may be English or Hindi typed in Latin letters.
+   * A farmer who writes (or taps) in Gurmukhi, Devanagari or Latin letters is answered in Punjabi,
+   * Hindi or English from now on, and sent their notices in it, on every farmer record of this phone.
+   * A message with no letters ("4", an emoji) changes nothing. A registered farmer whose own farmer
+   * record is missing gets one, so the choice is kept.
    */
-  async function rememberLanguage(records: FarmerRecord[], written: Locale) {
-    for (const record of records) if (record.language !== written) await store.putFarmer({ ...record, language: written });
+  async function rememberLanguage(records: FarmerRecord[], account: FarmerAccountRecord | null, written: Locale): Promise<FarmerRecord[]> {
+    const own: FarmerRecord[] = account && !records.some((record) => record.id === account.farmerId) ? [{ id: account.farmerId, name: account.name, phone: account.phone, language: written, facilitatorId: null }] : [];
+    const remembered = [...records, ...own].map((record) => ({ ...record, language: written, languageChosen: true }));
+    for (const [index, record] of remembered.entries()) {
+      const before = index < records.length ? records[index]! : null;
+      if (!before || before.language !== written || !before.languageChosen) await store.putFarmer(record);
+    }
+    return remembered;
   }
 
   /** The menu: everything for a farmer with fields; only "Book a field" for one without. */
@@ -511,10 +519,10 @@ export function createWorker(deps: WorkerDeps) {
       return "unknown number (no field, no account): sent the registration link";
     }
     if (!limiter.allow(phone, at.getTime())) return `dropped: over ${config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR} messages this hour`;
-    const records = await farmerRecords(probe, account);
-    const written = scriptLocale(message.text);
-    if (written) await rememberLanguage(records, written);
-    const session = new FarmerSession(deps, principal, chooseLocale(records[0]?.language ?? account?.language ?? null, message.text), now);
+    const written = scriptLocale(message.text, message.kind === "text");
+    const found = await farmerRecords(probe, account);
+    const records = written ? await rememberLanguage(found, account, written) : found;
+    const session = new FarmerSession(deps, principal, written ?? storedLanguage(records, account) ?? "en", now);
 
     const turn: Turn = { farmerWords: message.text, sent: [] };
     const outcome = await currentTurn.run(turn, () => answer(message, session, account));

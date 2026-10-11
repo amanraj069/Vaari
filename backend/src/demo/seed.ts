@@ -170,8 +170,17 @@ export async function seedDemo(store: VaariStore, config: Config, todayIso: stri
       name: farmerName,
       phone: isJaswinder ? DEMO_FARMER_PHONE : helperBooked ? DEMO_HELPER_FARMER_PHONES[helperIndex]! : "",
       language: "pa",
+      // Jaswinder, the demo farmer persona, speaks Punjabi; the other simulated farmers never chose.
+      languageChosen: isJaswinder,
       facilitatorId: helperBooked ? DEMO_USERS.facilitator : null,
     });
+    // Every visitor's "Try as farmer" shares the demo phone. Its account is written here, replacing
+    // any other, so the phone is always registered under the seeded name: no visitor is asked for a
+    // name (after cancelling its field, or mid-reset) and so none can rename the persona for everyone.
+    // English for the helper's phones, as when they had no account (demo phones are never messaged).
+    if (field.farmerPhone) {
+      await store.putFarmerAccount({ phone: field.farmerPhone, farmerId, name: farmerName, language: "en", consentAt: now, consentBy: DEMO_USERS.facilitator, createdAt: now });
+    }
   }
 
   const users: UserRecord[] = [
