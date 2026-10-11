@@ -1,6 +1,7 @@
 import "server-only";
 import { isIP } from "node:net";
 import { cookies, headers } from "next/headers";
+import type { Locale } from "@/shared";
 import { COOKIE, serverConfig } from "./server-config";
 
 export async function setSession(accessToken: string, expiresInSeconds: number, role: string, refreshToken?: string) {
@@ -18,6 +19,11 @@ export async function setSession(accessToken: string, expiresInSeconds: number, 
 export async function setFarmerSession(sessionToken: string, expiresInSeconds: number) {
   const jar = await cookies();
   jar.set(COOKIE.farmerSession, sessionToken, { httpOnly: true, secure: serverConfig.secureCookies, sameSite: "lax", path: "/", maxAge: expiresInSeconds });
+}
+
+/** The site's language (next-intl reads it on every request; src/i18n/request.ts), for a year. */
+export async function setLocaleCookie(locale: Locale) {
+  (await cookies()).set(COOKIE.locale, locale, { path: "/", maxAge: 365 * 24 * 3600, sameSite: "lax" });
 }
 
 /** "pending" means signed in but not onboarded: middleware keeps the user on /welcome. */

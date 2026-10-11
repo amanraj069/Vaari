@@ -170,10 +170,11 @@ export type UserRecord = {
 };
 
 /**
- * A one-time farmer login link (typ "farmer-login"): stored by its jti so it can be used once.
- * The phone is kept only to check the exchange; the record expires with the link.
+ * A one-time farmer login link, stored under `jti`: the SHA-256 of the link's token (never the token
+ * itself), so it can be used once. The phone is whose session it opens; `locale`, the language the
+ * link was sent in (the web opens in it). The record expires with the link.
  */
-export type LoginTokenRecord = { jti: string; phone: string; expiresAt: string; usedAt: string | null };
+export type LoginTokenRecord = { jti: string; phone: string; expiresAt: string; usedAt: string | null; locale?: Locale };
 
 /**
  * A change a farmer asked for on WhatsApp ("I cannot wait longer"), waiting for their Confirm tap.

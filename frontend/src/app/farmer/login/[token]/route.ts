@@ -1,15 +1,17 @@
 /**
  * GET /farmer/login/<token>: the link a farmer taps on WhatsApp (and the demo farmer follows).
  * Exchanges the one-time login token for a 7-day phone session cookie, then opens the farmer's
- * dashboard. A used, expired or broken link opens the farmer sign-in with a plain word on why.
+ * dashboard in the language the link was sent in (the WhatsApp chat's language). A used, expired or
+ * broken link opens the farmer sign-in with a plain word on why.
  * The token goes to the API in a POST body, never in a URL the API would log.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { serverConfig } from "@/lib/server-config";
-import { apiFetch, setFarmerSession } from "@/lib/session";
+import { apiFetch, setFarmerSession, setLocaleCookie } from "@/lib/session";
+import { localeSchema } from "@/shared";
 
-const sessionSchema = z.object({ sessionToken: z.string().min(1), expiresIn: z.number().int().positive() });
+const sessionSchema = z.object({ sessionToken: z.string().min(1), expiresIn: z.number().int().positive(), locale: localeSchema.optional() });
 
 type Context = { params: Promise<{ token: string }> };
 
@@ -30,5 +32,6 @@ export async function GET(_request: Request, context: Context) {
   const session = sessionSchema.safeParse(await response.json().catch(() => null));
   if (!session.success) return redirectTo("/farmer/signin?link=unavailable");
   await setFarmerSession(session.data.sessionToken, session.data.expiresIn);
+  if (session.data.locale) await setLocaleCookie(session.data.locale);
   return redirectTo("/dashboard");
 }

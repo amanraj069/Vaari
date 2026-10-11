@@ -4,25 +4,30 @@
  * a 7-day session scoped to that phone, or they sign in on the web with a one-time code
  * (auth/farmer-otp.ts), which ends in the same session.
  *
- *   login token   typ "farmer-login", phone, jti, 15 minutes, usable once (the jti is stored and
- *                 marked used in a conditional write, so a replayed or forwarded link fails)
- *   session token typ "farmer-session", phone, 7 days; it can only read fields with that phone
- *                 (Cedar FarmerPhone principal), never act on them
+ *   login link    /farmer/login/<16 random characters> (96 bits), 15 minutes, usable once. Only a
+ *                 SHA-256 of it is stored, with the phone and the language the link was sent in;
+ *                 using it is a conditional write, so a replayed or forwarded link fails. Short on
+ *                 purpose: it is read on a phone in WhatsApp, and a signed token (all the facts in
+ *                 the link itself) made it over 300 characters when the store holds them anyway.
+ *   session token typ "farmer-session", phone, 7 days, signed with SLOT_TOKEN_SECRET and its own
+ *                 audience (so no other token works as one); it can only read fields with that
+ *                 phone (Cedar FarmerPhone principal), never act on them
  *
- * Both are signed with SLOT_TOKEN_SECRET and carry their own audience, so no token works as
- * another kind. When the bot sends a login link it must turn link previews off (preview_url:
- * false): a preview fetch would use up the link before the farmer taps it.
+ * When the bot sends a login link it must turn link previews off (preview_url: false): a preview
+ * fetch would use up the link before the farmer taps it.
  */
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
-import { toE164 } from "../shared";
+import { toE164, type Locale } from "../shared";
 import type { Config } from "../config";
 import type { VaariStore } from "../store/types";
 import { AuthError } from "./tokens";
 
 const ISSUER = "vaari";
-const LOGIN_AUDIENCE = "vaari-farmer-login";
 const SESSION_AUDIENCE = "vaari-farmer-session";
+/** 12 random bytes: 16 URL-safe characters. */
+const LOGIN_TOKEN_BYTES = 12;
+const LOGIN_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16}$/;
 export const FARMER_LOGIN_SECONDS = 15 * 60;
 export const FARMER_SESSION_SECONDS = 7 * 24 * 60 * 60;
 
@@ -31,48 +36,41 @@ export type FarmerPhonePrincipal = { kind: "farmerPhone"; phone: string };
 
 const secretOf = (config: Config) => new TextEncoder().encode(config.SLOT_TOKEN_SECRET);
 
+/** The stored key of a login link: its SHA-256, so the table cannot be read back into working links. */
+const loginKey = (token: string) => createHash("sha256").update(token).digest("base64url");
+
 /**
- * The internal function that mints a farmer's login link. The WhatsApp worker will call it when a
- * farmer writes "my fields"; the demo farmer's "Try as farmer" calls it too. Not an HTTP route.
+ * The internal function that mints a farmer's login link. The WhatsApp worker calls it when a farmer
+ * asks for their fields page or books on the web; the demo farmer's "Try as farmer" calls it too.
+ * Not an HTTP route. `locale`: the language the link was sent in, so the web opens in it.
  */
 export async function mintFarmerLoginLink(
-  config: Config,
   store: VaariStore,
   phone: string,
-  now: Date = new Date(),
+  options: { locale?: Locale; now?: Date } = {},
 ): Promise<{ token: string; path: string; expiresAt: string }> {
   if (toE164(phone) !== phone) throw new Error("mintFarmerLoginLink needs a phone number in E.164");
-  const jti = randomUUID();
-  const expiresAtSeconds = Math.floor(now.getTime() / 1000) + FARMER_LOGIN_SECONDS;
-  const expiresAt = new Date(expiresAtSeconds * 1000).toISOString();
-  await store.putLoginToken({ jti, phone, expiresAt, usedAt: null });
-  const token = await new SignJWT({ typ: "farmer-login", phone })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(ISSUER)
-    .setAudience(LOGIN_AUDIENCE)
-    .setJti(jti)
-    .setIssuedAt(Math.floor(now.getTime() / 1000))
-    .setExpirationTime(expiresAtSeconds)
-    .sign(secretOf(config));
+  const token = randomBytes(LOGIN_TOKEN_BYTES).toString("base64url");
+  const expiresAt = new Date((options.now ?? new Date()).getTime() + FARMER_LOGIN_SECONDS * 1000).toISOString();
+  await store.putLoginToken({ jti: loginKey(token), phone, expiresAt, usedAt: null, ...(options.locale ? { locale: options.locale } : {}) });
   return { token, path: `/farmer/login/${token}`, expiresAt };
 }
 
-/** Uses a login link once and returns a session for its phone. Any failure is a plain AuthError (401). */
-export async function exchangeFarmerLogin(config: Config, store: VaariStore, token: string): Promise<{ sessionToken: string; expiresIn: number }> {
-  let phone: string;
-  let jti: string;
-  try {
-    const { payload } = await jwtVerify(token, secretOf(config), { issuer: ISSUER, audience: LOGIN_AUDIENCE, algorithms: ["HS256"] });
-    if (payload.typ !== "farmer-login" || typeof payload.phone !== "string" || typeof payload.jti !== "string") throw new Error("not a login token");
-    phone = payload.phone;
-    jti = payload.jti;
-  } catch {
-    throw new AuthError("invalid farmer login link");
-  }
-  const used = await store.useLoginToken(jti, new Date().toISOString());
+/**
+ * Uses a login link once and returns a session for its phone, with the language the link was sent
+ * in (if any). Any failure is a plain AuthError (401).
+ */
+export async function exchangeFarmerLogin(
+  config: Config,
+  store: VaariStore,
+  token: string,
+  now: Date = new Date(),
+): Promise<{ sessionToken: string; expiresIn: number; locale?: Locale }> {
+  if (!LOGIN_TOKEN_PATTERN.test(token)) throw new AuthError("invalid farmer login link");
+  const used = await store.useLoginToken(loginKey(token), now.toISOString());
   if (!used) throw new AuthError("farmer login link already used or unknown");
-  if (used.phone !== phone) throw new AuthError("farmer login link does not match its record");
-  return mintFarmerSession(config, phone);
+  if (used.expiresAt <= now.toISOString()) throw new AuthError("farmer login link expired");
+  return { ...(await mintFarmerSession(config, used.phone)), ...(used.locale ? { locale: used.locale } : {}) };
 }
 
 /** A 7-day phone session, after a login link or a one-time code (auth/farmer-otp.ts) proved the phone. */

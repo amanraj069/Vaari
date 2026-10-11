@@ -190,7 +190,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     asyncHandler(async (request, response) => {
       const { role: persona } = z.object({ role: demoPersonaSchema }).parse(request.body);
       if (persona === "farmer") {
-        const link = await mintFarmerLoginLink(config, dependencies.store, DEMO_FARMER_PHONE);
+        const link = await mintFarmerLoginLink(dependencies.store, DEMO_FARMER_PHONE);
         response.json({ persona, loginPath: link.path });
         return;
       }
@@ -296,7 +296,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     "/farmer/login",
     farmerLoginLimiter,
     asyncHandler<Request>(async (request, response) => {
-      const { token } = z.object({ token: z.string().min(1).max(2048) }).parse(request.body);
+      const { token } = z.object({ token: z.string().min(1).max(64) }).parse(request.body);
       response.json(await exchangeFarmerLogin(config, dependencies.store, token));
     }),
   );

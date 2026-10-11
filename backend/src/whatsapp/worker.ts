@@ -186,7 +186,7 @@ export function createWorker(deps: WorkerDeps) {
     // A new booking starts from nothing, whatever was said towards an earlier one.
     bookings.delete(phone);
     if (config.AGENT_ENABLED && deps.runner) return sender.text(phone, said.bookAsk);
-    const link = await mintFarmerLoginLink(config, store, phone);
+    const link = await mintFarmerLoginLink(store, phone, { locale: session.locale });
     // Link previews off: a preview fetch would use up the one-time link.
     return sender.text(phone, said.bookOnWeb(`${config.WEB_BASE_URL.replace(/\/$/, "")}${link.path}`), { previewUrl: false });
   }
@@ -261,7 +261,7 @@ export function createWorker(deps: WorkerDeps) {
           { id: `cancel:${action.draftId}`, title: said.cancel },
         ]);
       } else {
-        const link = await mintFarmerLoginLink(config, store, phone);
+        const link = await mintFarmerLoginLink(store, phone, { locale: session.locale });
         // Link previews off: a preview fetch would use up the one-time link.
         await sender.text(phone, said.pageLink(`${config.WEB_BASE_URL.replace(/\/$/, "")}${link.path}`), { previewUrl: false });
       }

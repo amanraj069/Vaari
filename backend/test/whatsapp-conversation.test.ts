@@ -5,6 +5,7 @@
  * a one-time link, never another phone's, and none after a quiet spell. The model is a stand-in
  * (no Bedrock call).
  */
+import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFarmerAccount } from "../src/auth/farmer-otp";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
@@ -109,6 +110,14 @@ describe("the reply language", () => {
     runner.script = async () => "";
     await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮੇਰੀ ਮਸ਼ੀਨ ਕਦੋਂ ਆਵੇਗੀ?" }));
     expect((await store.getFarmer(field!.farmerId))?.language).toBe("pa");
+  });
+
+  it("the fields page link is short, and opens the site in the chat's language", async () => {
+    await runtime.deliver(messageBody({ from: JASWINDER, listRow: "menu:page", title: hi.menuPage }));
+    const body = JSON.stringify(lastTo(DEMO_FARMER_PHONE));
+    const token = /\/farmer\/login\/([A-Za-z0-9_-]+)/.exec(body)?.[1];
+    expect(token).toMatch(/^[A-Za-z0-9_-]{16}$/);
+    expect((await request(runtime.app).post("/farmer/login").send({ token }).expect(200)).body.locale).toBe("hi");
   });
 });
 
