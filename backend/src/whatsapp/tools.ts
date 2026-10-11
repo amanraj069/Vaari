@@ -265,26 +265,30 @@ export class FarmerSession {
         }),
         async ({ village: named, acres, lastDayYouCanWait, moreDaysYouCanWait, harvestReady }) => {
           const planner = this.deps.planner;
+          // A problem goes back with what was understood, so the model's question about the one
+          // missing or wrong detail can repeat the rest ("your 4 acres: which village?") and still
+          // pass the number check.
+          const askAgain = (problem: { error: string; suggestions?: string[] }) => ({ ...problem, understood: { village: named ?? null, acres } });
           const found = await this.findVillage(named);
-          if ("error" in found) return found;
+          if ("error" in found) return askAgain(found);
           const today = planner.today();
           const readyIso = harvestReady ? this.seasonDate(harvestReady.day, harvestReady.month) : planner.dayToIso(today);
-          if (!readyIso) return { error: "that harvest day does not exist; ask the farmer again" };
+          if (!readyIso) return askAgain({ error: "that harvest day does not exist; ask the farmer again" });
           const readyDay = planner.isoToDay(readyIso);
           // A named date wins over a count of days; a count runs from the harvest, or from today once harvested.
           let lastDay: number;
           if (lastDayYouCanWait) {
             const lastIso = this.seasonDate(lastDayYouCanWait.day, lastDayYouCanWait.month);
-            if (!lastIso) return { error: "that last day does not exist; ask the farmer again" };
+            if (!lastIso) return askAgain({ error: "that last day does not exist; ask the farmer again" });
             lastDay = planner.isoToDay(lastIso);
           } else if (moreDaysYouCanWait) {
             lastDay = Math.max(readyDay, today) + moreDaysYouCanWait;
           } else {
-            return { error: "ask the farmer the last day they can wait for the machine" };
+            return askAgain({ error: "ask the farmer the last day they can wait for the machine" });
           }
           const waitingLimitDays = lastDay - readyDay;
-          if (lastDay <= today || waitingLimitDays < 1) return { error: "the last day they can wait must be after today and after the harvest; ask the farmer again" };
-          if (waitingLimitDays > 15) return { error: "Vaari plans waits of at most 15 days after the harvest; ask the farmer again" };
+          if (lastDay <= today || waitingLimitDays < 1) return askAgain({ error: "the last day they can wait must be after today and after the harvest; ask the farmer again" });
+          if (waitingLimitDays > 15) return askAgain({ error: "Vaari plans waits of at most 15 days after the harvest; ask the farmer again" });
           const input = { villageId: found.village.id, acres, readyDate: readyIso, waitingLimitDays };
           const checked = await checkFarmerBooking(this.deps, this.principal, input, this.locale);
           if (!checked.ok) {
@@ -295,7 +299,7 @@ export class FarmerSession {
               TOO_MANY_FIELDS: "this farmer already has the most open fields Vaari allows",
               READY_DATE_OUT_OF_RANGE: "the harvest day must be within a week back and a month ahead",
             };
-            return { error: problems[checked.error] };
+            return askAgain({ error: problems[checked.error] });
           }
           const now = this.now();
           const draftId = randomBytes(12).toString("base64url");

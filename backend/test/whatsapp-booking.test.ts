@@ -177,7 +177,7 @@ describe("book_field: code decides the village, the year and the days", () => {
 
   it("a phone with no account and no booking cannot book", async () => {
     const { output, pending } = await book("+447700900995", { village: "Balian", acres: 2, moreDaysYouCanWait: 3 });
-    expect(output).toEqual({ error: "this number is not registered" });
+    expect(output).toEqual({ error: "this number is not registered", understood: { village: "Balian", acres: 2 } });
     expect(pending).toEqual([]);
   });
 });
