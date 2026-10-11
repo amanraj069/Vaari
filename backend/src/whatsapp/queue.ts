@@ -50,8 +50,13 @@ export class SqsQueue implements WebhookQueue {
     await this.client.send(new SendMessageCommand({ QueueUrl: this.queueUrl, MessageBody: body }));
   }
 
-  /** The worker loop: long-poll, handle, delete. Stops when `signal` aborts. */
-  async consume(consumer: QueueConsumer, signal: AbortSignal) {
+  /**
+   * The worker loop: long-poll, handle, delete. Stops when `signal` aborts. `alive` is called after
+   * every receive that SQS answered (with or without messages) and after every message handled, so a
+   * health check can tell a working loop from one stuck on "sqs receive failed" (AccessDenied, a
+   * wrong queue URL), which otherwise retries forever while the process looks fine.
+   */
+  async consume(consumer: QueueConsumer, signal: AbortSignal, alive: () => void = () => {}) {
     while (!signal.aborted) {
       const received = await this.client
         .send(new ReceiveMessageCommand({ QueueUrl: this.queueUrl, MaxNumberOfMessages: 10, WaitTimeSeconds: 20, VisibilityTimeout: 120, MessageSystemAttributeNames: ["ApproximateReceiveCount"] }), { abortSignal: signal })
@@ -59,6 +64,7 @@ export class SqsQueue implements WebhookQueue {
           if (!signal.aborted) logger.error({ err: error }, "sqs receive failed");
           return null;
         });
+      if (received) alive();
       const messages = received?.Messages ?? [];
       if (messages.length > 0) logger.info({ count: messages.length }, "sqs: received webhook bodies");
       for (const message of messages) {
@@ -68,6 +74,8 @@ export class SqsQueue implements WebhookQueue {
           // Left on the queue: retried after the visibility timeout (a DLQ catches poison messages).
           logger.error({ sqsMessageId: message.MessageId, receiveCount: message.Attributes?.ApproximateReceiveCount, err: error }, "whatsapp worker failed; message left for retry");
           continue;
+        } finally {
+          alive();
         }
         await this.client
           .send(new DeleteMessageCommand({ QueueUrl: this.queueUrl, ReceiptHandle: message.ReceiptHandle }))

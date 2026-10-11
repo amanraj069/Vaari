@@ -5,7 +5,7 @@
 #   deploy/deploy.sh current    the release running now again (after editing backend/.env)
 # Why it exists: every check that used to be a debugging session runs here first, against the new
 # image and the real .env, before the running containers are touched. If the new containers are
-# not healthy, the previous release (or, on the first run, the old systemd service) comes back.
+# not healthy, the previous release (or, on the first run, the old systemd services) comes back.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,7 +20,10 @@ env_value() {
     sed -E "s/^[[:space:]]*(export[[:space:]]+)?$1=//; s/^['\"]//; s/['\"]$//"
 }
 
-LEGACY_SERVICE=vaari-backend
+# The systemd services the containers replaced: the API (`node dist/server.js`) and, on hosts that
+# had one, the WhatsApp worker (`node dist/worker.js`). A leftover worker service would read the same
+# SQS queue as the worker container, answering some farmers with old code.
+LEGACY_SERVICES="vaari-backend vaari-worker"
 RELEASE_FILE=deploy/.deployed-release
 TAG="${1:-}"
 [ -f .env ] || fail "backend/.env is missing. Copy backend/.env.example to backend/.env and fill it in."
@@ -44,6 +47,11 @@ if [ -z "${COMPOSE_PROFILES:-}" ] && [ -z "$(env_value COMPOSE_PROFILES)" ] &&
   export COMPOSE_PROFILES=worker
   echo "WHATSAPP_QUEUE=sqs: starting the worker too"
 fi
+# The services that must be healthy before the release counts as deployed.
+services="engine api"
+case ",${COMPOSE_PROFILES:-$(env_value COMPOSE_PROFILES)}," in
+  *,worker,*) services="engine api worker" ;;
+esac
 
 log "Checking backend/.env"
 compose_problem="$(docker compose config --quiet 2>&1)" || fail "docker compose cannot read the setup: ${compose_problem}"
@@ -87,15 +95,32 @@ if [ "$(env_value REPO)" = "dynamo" ] && [ -z "$(env_value DYNAMODB_ENDPOINT)" ]
     fail "the containers cannot use DynamoDB. 'Could not load credentials' means the instance metadata hop limit is 1 (set it to 2, see backend/deploy/README.md); 'ResourceNotFoundException' means the tables for TABLE_PREFIX do not exist in AWS_REGION; 'AccessDenied' means the instance role lacks DynamoDB rights. Nothing was changed."
 fi
 
-# First container deploy: the old `node dist/server.js` service holds the port. Stop it only now,
-# after every check passed, so the API is down for seconds; it comes back if the containers fail.
-legacy_stopped=false
-if command -v systemctl >/dev/null && systemctl is-active --quiet "$LEGACY_SERVICE" 2>/dev/null; then
-  log "Stopping the old ${LEGACY_SERVICE} systemd service (replaced by the containers)"
-  sudo -n systemctl disable --now "$LEGACY_SERVICE" ||
-    fail "could not stop ${LEGACY_SERVICE} (no passwordless sudo). Run once: sudo systemctl disable --now ${LEGACY_SERVICE}"
-  legacy_stopped=true
+# The old systemd services (running, or enabled to start at boot) are stopped only now, after every
+# check passed, so the API is down for seconds; they come back if the containers fail.
+legacy_stopped=""
+if command -v systemctl >/dev/null; then
+  for legacy in $LEGACY_SERVICES; do
+    if systemctl is-active --quiet "$legacy" 2>/dev/null || systemctl is-enabled --quiet "$legacy" 2>/dev/null; then
+      log "Stopping the old ${legacy} systemd service (replaced by the containers)"
+      sudo -n systemctl disable --now "$legacy" ||
+        fail "could not stop ${legacy} (no passwordless sudo). Run once: sudo systemctl disable --now ${legacy}"
+      legacy_stopped="${legacy_stopped} ${legacy}"
+    fi
+  done
 fi
+
+# A worker container from a release that ran one, now unwanted (WHATSAPP_QUEUE is no longer sqs):
+# `up` leaves services outside the active profiles alone, and that worker would crash-loop or keep
+# reading the queue. Removed before the new release starts.
+case " $services " in
+  *" worker "*) ;;
+  *)
+    if [ -n "$(docker compose --profile worker ps -aq worker 2>/dev/null)" ]; then
+      log "Removing the worker container (not needed with this .env)"
+      docker compose --profile worker rm --stop --force worker >/dev/null || true
+    fi
+    ;;
+esac
 
 log "Starting the containers"
 docker compose up -d --remove-orphans || true
@@ -104,7 +129,7 @@ wait_healthy() {
   local deadline=$((SECONDS + 180)) service container status
   while [ "$SECONDS" -lt "$deadline" ]; do
     local all_healthy=true
-    for service in engine api; do
+    for service in $services; do
       container="$(docker compose ps -q "$service")"
       status="$( [ -n "$container" ] && docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" || echo missing)"
       case "$status" in
@@ -126,7 +151,7 @@ wait_healthy() {
 api_port="$(env_value PORT)"
 if wait_healthy && curl -fsS --max-time 5 "http://127.0.0.1:${api_port:-4000}/healthz" >/dev/null; then
   if [ -n "$TAG" ]; then echo "$IMAGE_REGISTRY $TAG" >"$RELEASE_FILE"; fi
-  log "Deployed ${TAG:-a local build}: api and engine are healthy on port ${api_port:-4000}"
+  log "Deployed ${TAG:-a local build}: ${services// /, } healthy; the API answers on port ${api_port:-4000}"
   docker compose ps
   # Keep the running release and the one before it (for rollback); remove older backend images.
   docker images --format '{{.Repository}}:{{.Tag}}' | while read -r image; do
@@ -144,11 +169,12 @@ if wait_healthy && curl -fsS --max-time 5 "http://127.0.0.1:${api_port:-4000}/he
 fi
 
 log "The new containers are not healthy. Last log lines:"
-docker compose logs --no-color --tail 60 engine api || true
-if $legacy_stopped; then
-  log "Bringing the old ${LEGACY_SERVICE} service back"
+# shellcheck disable=SC2086 # $services is a list of service names
+docker compose logs --no-color --tail 60 $services || true
+if [ -n "$legacy_stopped" ]; then
+  log "Bringing the old systemd services back:${legacy_stopped}"
   docker compose down || true
-  sudo -n systemctl enable --now "$LEGACY_SERVICE" || true
+  for legacy in $legacy_stopped; do sudo -n systemctl enable --now "$legacy" || true; done
 elif [ -n "$TAG" ] && [ -n "$previous_tag" ] && [ "$previous_tag" != "$TAG" ]; then
   log "Rolling back to ${previous_tag}"
   IMAGE_REGISTRY="$previous_registry" IMAGE_TAG="$previous_tag" docker compose up -d --remove-orphans || true

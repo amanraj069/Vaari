@@ -5,10 +5,13 @@
  *   - the sender's number (Meta signed the payload) is the identity: normalised to E.164 and looked
  *     up on phone-index and farmer-accounts. Unknown (no booking, no account): one fixed reply with
  *     the registration link, no data, no model. A registered farmer with no field yet can book one;
- *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language, then
+ *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language (the script the
+ *     farmer just wrote or tapped in, remembered on their farmer records; else the remembered one), then
  *       a button or list reply -> the tools directly (no model),
- *       text -> the agent when AGENT_ENABLED (its reply checked against this turn's tool results,
- *               else the template reply), otherwise the menu,
+ *       text -> the agent when AGENT_ENABLED, with the last few exchanges with this phone (its reply
+ *               checked against this turn's tool results, else the template reply; a reply with no
+ *               tool call is sent only if it holds no number or date: a question back, or "I can
+ *               only help with ..."), otherwise the menu,
  *       a voice note -> with VOICE_ENABLED and the agent: Transcribe's words (and language) go
  *               through the same agent turn as text, the farmer first reads what was heard, and
  *               Polly reads back what that turn sent as a voice note after the text; otherwise
@@ -29,7 +32,8 @@ import { bookFieldForPhone } from "../domain/farmer-booking";
 import { ConflictError } from "../domain/planner";
 import { formatDate } from "../explain/templates";
 import { logger } from "../logger";
-import type { AgentRunner } from "./agent";
+import type { FarmerAccountRecord, FarmerRecord } from "../store/types";
+import type { AgentRunner, Exchange } from "./agent";
 import { checkReply } from "./output-check";
 import { chooseLocale, scriptLocale } from "./language";
 import { MENU_ACTIONS, promiseWords, words, type MenuAction } from "./messages";
@@ -42,6 +46,13 @@ import { toDevanagari, type Heard, type SpeechService } from "./voice";
 const DEDUPE_DAYS = 3;
 /** Polly takes up to 3,000 billed characters; a spoken reply is cut well before that. */
 const SPOKEN_CHARACTERS = 1_500;
+/** How much of a conversation the model sees: enough for "which village?" -> "Balian". */
+const HISTORY_EXCHANGES = 3;
+const HISTORY_MINUTES = 15;
+const HISTORY_CHARACTERS = 600;
+
+/** One inbound message being handled: the farmer's words (typed, tapped or heard) and every body sent back. */
+type Turn = { farmerWords: string | null; sent: string[] };
 
 /** At most `limit` messages per phone per rolling hour (one worker process; SQS runs one worker). */
 export class PhoneRateLimiter {
@@ -59,21 +70,52 @@ export class PhoneRateLimiter {
   }
 }
 
+/**
+ * The last few exchanges with each phone, so the model reads "Balian, 4 acres" as the answer to the
+ * question Vaari just asked. Kept in this process only (SQS runs one worker), forgotten
+ * HISTORY_MINUTES after a conversation's last message, never logged and never written to the store:
+ * a restart forgets, and the farmer says it again.
+ */
+export class RecentExchanges {
+  private readonly byPhone = new Map<string, { exchanges: Exchange[]; lastAt: number }>();
+  constructor(private readonly keep: number, private readonly minutes: number) {}
+
+  recent(phone: string, now: number): Exchange[] {
+    const conversation = this.byPhone.get(phone);
+    return conversation && now - conversation.lastAt < this.minutes * 60_000 ? conversation.exchanges : [];
+  }
+
+  add(phone: string, exchange: Exchange, now: number) {
+    const exchanges = [...this.recent(phone, now), exchange].slice(-this.keep);
+    // Drop every conversation that has gone quiet, so the map only ever holds recent phones.
+    for (const [otherPhone, conversation] of this.byPhone) if (now - conversation.lastAt >= this.minutes * 60_000) this.byPhone.delete(otherPhone);
+    this.byPhone.set(phone, { exchanges, lastAt: now });
+  }
+}
+
+/**
+ * Words kept for the model's history. One-time login links are replaced: a link must never reach
+ * the model (it is a live credential), and the model never needs one.
+ */
+const forHistory = (text: string) => text.replace(/https?:\/\/\S+/g, "[link]").slice(0, HISTORY_CHARACTERS);
+
 export type WorkerDeps = FarmerToolDeps & { sender: WhatsAppSender; runner: AgentRunner | null; speech?: SpeechService | null; now?: () => Date };
 
 export function createWorker(deps: WorkerDeps) {
   const now = deps.now ?? (() => new Date());
   const limiter = new PhoneRateLimiter(deps.config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR);
+  const exchanges = new RecentExchanges(HISTORY_EXCHANGES, HISTORY_MINUTES);
   const { store, config } = deps;
   const speech = deps.speech ?? null;
 
-  // During a voice turn, every body sent (text, buttons, list) is also collected here, so the voice
-  // reply says exactly what the farmer can read, and every send path stays as it is.
-  const spokenTurn = new AsyncLocalStorage<string[]>();
+  // While a message is handled, every body sent (text, buttons, list) is also collected on its turn,
+  // so the exchange can be remembered and a voice reply says exactly what the farmer can read;
+  // every send path stays as it is.
+  const currentTurn = new AsyncLocalStorage<Turn>();
   const sender: WhatsAppSender = {
-    text: (to, body, options) => (spokenTurn.getStore()?.push(body), deps.sender.text(to, body, options)),
-    buttons: (to, body, buttons) => (spokenTurn.getStore()?.push(body), deps.sender.buttons(to, body, buttons)),
-    list: (to, body, buttonLabel, rows) => (spokenTurn.getStore()?.push(body), deps.sender.list(to, body, buttonLabel, rows)),
+    text: (to, body, options) => (currentTurn.getStore()?.sent.push(body), deps.sender.text(to, body, options)),
+    buttons: (to, body, buttons) => (currentTurn.getStore()?.sent.push(body), deps.sender.buttons(to, body, buttons)),
+    list: (to, body, buttonLabel, rows) => (currentTurn.getStore()?.sent.push(body), deps.sender.list(to, body, buttonLabel, rows)),
     template: (...args) => deps.sender.template(...args),
     authCode: (...args) => deps.sender.authCode(...args),
     voice: (...args) => deps.sender.voice(...args),
@@ -81,9 +123,21 @@ export function createWorker(deps: WorkerDeps) {
     downloadMedia: (...args) => deps.sender.downloadMedia(...args),
   };
 
-  async function storedLanguage(session: FarmerSession, accountLanguage: Locale | null): Promise<Locale | null> {
-    const newest = (await session.fields())[0];
-    return (newest ? ((await store.getFarmer(newest.field.farmerId))?.language ?? null) : null) ?? accountLanguage;
+  /** The farmer records behind this phone, the newest booking's first, then the account's own. */
+  async function farmerRecords(session: FarmerSession, account: FarmerAccountRecord | null): Promise<FarmerRecord[]> {
+    const farmerIds = new Set((await session.fields()).map((entry) => entry.field.farmerId));
+    if (account) farmerIds.add(account.farmerId);
+    const records = await Promise.all([...farmerIds].map((farmerId) => store.getFarmer(farmerId)));
+    return records.filter((record): record is FarmerRecord => record !== null);
+  }
+
+  /**
+   * A farmer who writes (or taps) in Gurmukhi or Devanagari is answered in that language from now on,
+   * and sent their notices in it, on every farmer record of this phone. Latin script changes nothing:
+   * it may be English or Hindi typed in Latin letters.
+   */
+  async function rememberLanguage(records: FarmerRecord[], written: Locale) {
+    for (const record of records) if (record.language !== written) await store.putFarmer({ ...record, language: written });
   }
 
   /** The menu: everything for a farmer with fields; only "Book a field" for one without. */
@@ -269,7 +323,7 @@ export function createWorker(deps: WorkerDeps) {
     let reply: string | null = null;
     let failed = false;
     try {
-      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools() });
+      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools(), history: exchanges.recent(phone, now().getTime()) });
     } catch (error) {
       failed = true;
       // Bedrock's error names the problem (AccessDeniedException, ThrottlingException, a timeout);
@@ -277,8 +331,11 @@ export function createWorker(deps: WorkerDeps) {
       logger.warn({ phone: maskPhone(phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp agent failed; template reply");
     }
     if (session.calls.length === 0) {
-      // No tool, no facts: either the model failed, or the question was not about their dates (a
-      // farmer with no field yet is shown how to book one).
+      // No tool, no facts. With no tool result the check allows no number or date at all, so a reply
+      // that passes is a question back ("which village, how many acres?") or "I can only help with
+      // ...": sent as it is. Otherwise the model failed or made something up: the menu (a farmer
+      // with no field yet is shown how to book one).
+      if (reply && checkReply(reply, []).ok) return sender.text(phone, reply);
       return sendMenu(session, failed ? said.agentUnavailable : (noFieldsLead ?? said.offTopic));
     }
     // A drafted change or booking is announced only by our own Confirm message: the model's words
@@ -337,9 +394,12 @@ export function createWorker(deps: WorkerDeps) {
     }
     const heardText = heard.text;
     await sender.text(phone, said.heard(heardText));
-    const spoken: string[] = [];
-    await spokenTurn.run(spoken, () => agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null));
-    const voiced = await speakReply(session, spoken);
+    // The answer starts after "I heard": only the answer is spoken, and remembered with the heard words.
+    const turn = currentTurn.getStore()!;
+    turn.farmerWords = heardText;
+    turn.sent.length = 0;
+    await agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null);
+    const voiced = await speakReply(session, turn.sent);
     return `answered voice note (${heard.locale}) with the agent${voiced ? " and a voice reply" : ", text only"}`;
   }
 
@@ -363,7 +423,21 @@ export function createWorker(deps: WorkerDeps) {
       return "unknown number (no field, no account): sent the registration link";
     }
     if (!limiter.allow(phone, at.getTime())) return `dropped: over ${config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR} messages this hour`;
-    const session = new FarmerSession(deps, principal, chooseLocale(await storedLanguage(probe, account?.language ?? null), message.text), now);
+    const records = await farmerRecords(probe, account);
+    const written = scriptLocale(message.text);
+    if (written) await rememberLanguage(records, written);
+    const session = new FarmerSession(deps, principal, chooseLocale(records[0]?.language ?? account?.language ?? null, message.text), now);
+
+    const turn: Turn = { farmerWords: message.text, sent: [] };
+    const outcome = await currentTurn.run(turn, () => answer(message, session, account));
+    if (turn.farmerWords && turn.sent.length > 0) {
+      exchanges.add(phone, { farmer: forHistory(turn.farmerWords), vaari: forHistory(turn.sent.join("\n\n")) }, at.getTime());
+    }
+    return outcome;
+  }
+
+  /** A known phone's message, by kind; returns what was done. */
+  async function answer(message: InboundMessage, session: FarmerSession, account: FarmerAccountRecord | null): Promise<string> {
     const noFieldsLead = account ? words(session.locale).noBookingsYet(account.name) : null;
     if (message.kind === "reply" && message.replyId) {
       await handleReply(session, message.replyId);
@@ -379,7 +453,7 @@ export function createWorker(deps: WorkerDeps) {
     }
     if (message.kind === "audio") {
       if (config.VOICE_ENABLED && speech && config.AGENT_ENABLED && deps.runner && message.mediaId) {
-        return voiceTurn(message, principal, session.locale, account?.name ?? null);
+        return voiceTurn(message, session.principal, session.locale, account?.name ?? null);
       }
       await sendMenu(session, words(session.locale).voiceNotSupported);
       return "voice note: sent 'please type' and the menu";

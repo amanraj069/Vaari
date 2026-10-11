@@ -59,6 +59,7 @@ export type InboundMessage = {
   /** Sender as Meta wrote it (`from`, else the contact's `wa_id`); null if absent. */
   sender: string | null;
   kind: "text" | "reply" | "audio" | "other";
+  /** What the farmer typed, or the title of the button or list row they tapped (in the language we sent it in). */
   text: string | null;
   /** A button or list reply's id (our own ids, set when we sent the buttons). */
   replyId: string | null;
@@ -84,7 +85,7 @@ export function parseWebhook(body: string): { messages: InboundMessage[]; status
           id: message.id,
           sender: message.from ?? contactWaId,
           kind: reply ? "reply" : message.type === "text" ? "text" : message.type === "audio" ? "audio" : "other",
-          text: message.text?.body ?? null,
+          text: message.text?.body ?? reply?.title ?? null,
           replyId: reply?.id ?? null,
           mediaId: message.audio?.id ?? null,
         });
