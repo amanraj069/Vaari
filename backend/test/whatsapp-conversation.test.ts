@@ -1,11 +1,11 @@
 /**
  * A conversation on WhatsApp, not one message at a time: the model's question back reaches the
  * farmer (only when it holds no number or date), and the reply language follows the script the
- * farmer writes or taps in. The model is a stand-in (no Bedrock call).
+ * farmer writes or taps in, and is remembered. The model is a stand-in (no Bedrock call).
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFarmerAccount } from "../src/auth/farmer-otp";
-import { DEMO_FARMER_PHONE } from "../src/demo/seed";
+import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
 import type { AgentRunner } from "../src/whatsapp/agent";
 import { words } from "../src/whatsapp/messages";
 import { parseWebhook } from "../src/whatsapp/payload";
@@ -33,6 +33,10 @@ let runtime: Awaited<ReturnType<typeof whatsappRuntime>>;
 const runner = new RecordingRunner();
 const lastTo = (phone: string): SentMessage | undefined => runtime.sender.sent.filter((message) => message.to === phone).at(-1);
 const from = (phone: string) => phone.replace(/^\+/, "");
+const accountFarmer = async (phone: string) => {
+  const { store } = runtime.runtime.dependencies;
+  return store.getFarmer((await store.getFarmerAccount(phone))!.farmerId);
+};
 
 beforeAll(async () => {
   runtime = await whatsappRuntime({ config: { AGENT_ENABLED: true }, runner });
@@ -61,6 +65,23 @@ describe("the reply language", () => {
   it("tapping the Hindi 'खेत बुक करें' row is answered in Hindi, though the farmer registered in English", async () => {
     await runtime.deliver(messageBody({ from: from(HARPREET), listRow: "menu:book", title: hi.menuBook }));
     expect(lastTo(HARPREET)).toMatchObject({ type: "text", body: hi.bookAsk });
+  });
+
+  it("is remembered: the farmer record (which notices use) now says Hindi, and Latin letters keep it", async () => {
+    expect((await accountFarmer(HARPREET))?.language).toBe("hi");
+    runner.script = async () => "";
+    await runtime.deliver(messageBody({ from: from(HARPREET), text: "Balian 4 acre" }));
+    expect(runner.inputs.at(-1)?.locale).toBe("hi");
+    expect((await accountFarmer(HARPREET))?.language).toBe("hi");
+  });
+
+  it("writing in Gurmukhi switches every farmer record of the phone to Punjabi", async () => {
+    const { store } = runtime.runtime.dependencies;
+    const field = await store.getField(DEMO_CHC_ID, "f-jaswinder");
+    expect((await store.getFarmer(field!.farmerId))?.language).toBe("hi"); // from the Hindi above
+    runner.script = async () => "";
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮੇਰੀ ਮਸ਼ੀਨ ਕਦੋਂ ਆਵੇਗੀ?" }));
+    expect((await store.getFarmer(field!.farmerId))?.language).toBe("pa");
   });
 });
 
