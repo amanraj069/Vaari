@@ -15,7 +15,8 @@ x-logging: &logging
   options:
     awslogs-region: ap-south-1
     awslogs-group: /vaari/backend
-    awslogs-stream-prefix: vaari
+    awslogs-create-group: "true"
+    tag: "{{.Name}}"
 
 x-backend: &backend
   image: ${IMAGE_REGISTRY:-vaari}/vaari-api:${IMAGE_TAG:-local}
