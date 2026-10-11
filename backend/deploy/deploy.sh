@@ -44,6 +44,11 @@ if [ -z "${COMPOSE_PROFILES:-}" ] && [ -z "$(env_value COMPOSE_PROFILES)" ] &&
   export COMPOSE_PROFILES=worker
   echo "WHATSAPP_QUEUE=sqs: starting the worker too"
 fi
+# The services that must be healthy before the release counts as deployed.
+services="engine api"
+case ",${COMPOSE_PROFILES:-$(env_value COMPOSE_PROFILES)}," in
+  *,worker,*) services="engine api worker" ;;
+esac
 
 log "Checking backend/.env"
 compose_problem="$(docker compose config --quiet 2>&1)" || fail "docker compose cannot read the setup: ${compose_problem}"
@@ -97,6 +102,19 @@ if command -v systemctl >/dev/null && systemctl is-active --quiet "$LEGACY_SERVI
   legacy_stopped=true
 fi
 
+# A worker container from a release that ran one, now unwanted (WHATSAPP_QUEUE is no longer sqs):
+# `up` leaves services outside the active profiles alone, and that worker would crash-loop or keep
+# reading the queue. Removed before the new release starts.
+case " $services " in
+  *" worker "*) ;;
+  *)
+    if [ -n "$(docker compose --profile worker ps -aq worker 2>/dev/null)" ]; then
+      log "Removing the worker container (not needed with this .env)"
+      docker compose --profile worker rm --stop --force worker >/dev/null || true
+    fi
+    ;;
+esac
+
 log "Starting the containers"
 docker compose up -d --remove-orphans || true
 
@@ -104,7 +122,7 @@ wait_healthy() {
   local deadline=$((SECONDS + 180)) service container status
   while [ "$SECONDS" -lt "$deadline" ]; do
     local all_healthy=true
-    for service in engine api; do
+    for service in $services; do
       container="$(docker compose ps -q "$service")"
       status="$( [ -n "$container" ] && docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" || echo missing)"
       case "$status" in
@@ -126,7 +144,7 @@ wait_healthy() {
 api_port="$(env_value PORT)"
 if wait_healthy && curl -fsS --max-time 5 "http://127.0.0.1:${api_port:-4000}/healthz" >/dev/null; then
   if [ -n "$TAG" ]; then echo "$IMAGE_REGISTRY $TAG" >"$RELEASE_FILE"; fi
-  log "Deployed ${TAG:-a local build}: api and engine are healthy on port ${api_port:-4000}"
+  log "Deployed ${TAG:-a local build}: ${services// /, } healthy; the API answers on port ${api_port:-4000}"
   docker compose ps
   # Keep the running release and the one before it (for rollback); remove older backend images.
   docker images --format '{{.Repository}}:{{.Tag}}' | while read -r image; do
@@ -144,7 +162,8 @@ if wait_healthy && curl -fsS --max-time 5 "http://127.0.0.1:${api_port:-4000}/he
 fi
 
 log "The new containers are not healthy. Last log lines:"
-docker compose logs --no-color --tail 60 engine api || true
+# shellcheck disable=SC2086 # $services is a list of service names
+docker compose logs --no-color --tail 60 $services || true
 if $legacy_stopped; then
   log "Bringing the old ${LEGACY_SERVICE} service back"
   docker compose down || true
