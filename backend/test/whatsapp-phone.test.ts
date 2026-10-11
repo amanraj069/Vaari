@@ -1,6 +1,6 @@
 /** Phone numbers as Meta sends them, masking for logs, the reply language, and payload parsing. */
 import { describe, expect, it } from "vitest";
-import { scriptLocale, storedLanguage } from "../src/whatsapp/language";
+import { phoneLanguage, scriptLocale, storedLanguage } from "../src/whatsapp/language";
 import { parseWebhook } from "../src/whatsapp/payload";
 import { fromWhatsAppNumber, maskPhone, toWhatsAppNumber } from "../src/whatsapp/phone";
 import { PhoneRateLimiter } from "../src/whatsapp/worker";
@@ -35,6 +35,16 @@ describe("the reply language", () => {
     expect(storedLanguage([record("own", "pa")], account)).toBe("hi"); // registered in Hindi; the record's default ignored
     expect(storedLanguage([record("own", "en", true)], account)).toBe("en"); // then wrote in English
     expect(storedLanguage([], account)).toBe("hi");
+  });
+
+  it("phoneLanguage: returns null (English fallback) when there is no account or farmerId, without querying with empty id", async () => {
+    const store = {
+      getFarmerAccount: async () => null,
+      getFarmer: async () => {
+        throw new Error("getFarmer should not be called without an ID");
+      },
+    };
+    expect(await phoneLanguage(store, "+919876543210")).toBeNull();
   });
 
   it("is the script the farmer just wrote in: Gurmukhi, Devanagari or Latin letters", () => {
