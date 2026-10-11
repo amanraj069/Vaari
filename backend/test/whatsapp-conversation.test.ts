@@ -5,6 +5,7 @@
  * a one-time link, never another phone's, and none after a quiet spell. The model is a stand-in
  * (no Bedrock call).
  */
+import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFarmerAccount } from "../src/auth/farmer-otp";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
@@ -66,6 +67,28 @@ describe("a question back reaches the farmer", () => {
   });
 });
 
+describe("a turn always says something useful", () => {
+  it("a question back that says 'thanks' (शुक्रिया, which holds the short word for Friday) is still sent", async () => {
+    const question = "शुक्रिया! आपका खेत किस गाँव में है?";
+    runner.script = async () => question;
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "मेरा खेत बुक करो" }));
+    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "text", body: question });
+  });
+
+  it("a farmer with no field who asks for their date is told so, never left with no reply", async () => {
+    runner.script = async (tool) => (await tool("list_my_fields").run({}), "");
+    const before = runtime.sender.sent.length;
+    await runtime.deliver(messageBody({ from: from(HARPREET), text: "मेरी मशीन कब आएगी?" }));
+    expect(runtime.sender.sent.slice(before).filter((message) => message.to === HARPREET)).toEqual([expect.objectContaining({ type: "text", body: hi.noFields })]);
+  });
+
+  it("a field that is not in the farmer's list gets 'could not find that field', not a sentence about changes", async () => {
+    runner.script = async (tool) => (await tool("get_slot").run({ fieldRef: 9 }), "");
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "मेरे नौवें खेत की तारीख़?" }));
+    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "text", body: hi.fieldNotFound });
+  });
+});
+
 describe("the reply language", () => {
   it("tapping the Hindi 'खेत बुक करें' row is answered in Hindi, though the farmer registered in English", async () => {
     await runtime.deliver(messageBody({ from: from(HARPREET), listRow: "menu:book", title: hi.menuBook }));
@@ -87,6 +110,14 @@ describe("the reply language", () => {
     runner.script = async () => "";
     await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮੇਰੀ ਮਸ਼ੀਨ ਕਦੋਂ ਆਵੇਗੀ?" }));
     expect((await store.getFarmer(field!.farmerId))?.language).toBe("pa");
+  });
+
+  it("the fields page link is short, and opens the site in the chat's language", async () => {
+    await runtime.deliver(messageBody({ from: JASWINDER, listRow: "menu:page", title: hi.menuPage }));
+    const body = JSON.stringify(lastTo(DEMO_FARMER_PHONE));
+    const token = /\/farmer\/login\/([A-Za-z0-9_-]+)/.exec(body)?.[1];
+    expect(token).toMatch(/^[A-Za-z0-9_-]{16}$/);
+    expect((await request(runtime.app).post("/farmer/login").send({ token }).expect(200)).body.locale).toBe("hi");
   });
 });
 

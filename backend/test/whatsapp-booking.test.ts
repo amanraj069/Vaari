@@ -14,7 +14,7 @@ import { operatorPlanSchema } from "../src/shared";
 import type { AgentRunner } from "../src/whatsapp/agent";
 import { words } from "../src/whatsapp/messages";
 import type { SentMessage } from "../src/whatsapp/sender";
-import { FarmerSession } from "../src/whatsapp/tools";
+import { FarmerSession, MAX_WAIT_DAYS } from "../src/whatsapp/tools";
 import { ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers";
 
 const GURPREET = "+447700900996"; // registered on the web, no field yet
@@ -177,7 +177,100 @@ describe("book_field: code decides the village, the year and the days", () => {
 
   it("a phone with no account and no booking cannot book", async () => {
     const { output, pending } = await book("+447700900995", { village: "Balian", acres: 2, moreDaysYouCanWait: 3 });
-    expect(output).toEqual({ error: "this number is not registered", understood: { village: "Balian", acres: 2 } });
+    expect(output).toEqual({ problem: "notAllowed", error: "this number is not registered", understood: { village: "Balian", acres: 2 } });
     expect(pending).toEqual([]);
+  });
+
+  it("an empty village or zero acres from the model means 'not said', not a failed booking", async () => {
+    expect((await book(DEMO_FARMER_PHONE, { village: "", acres: 0 })).output).toMatchObject({ problem: "missingDetails", missing: ["village", "acres", "lastDay"] });
+    expect((await book(DEMO_FARMER_PHONE, { village: "", acres: 3 })).output).toMatchObject({ problem: "missingDetails", missing: ["lastDay"] });
+  });
+
+  it.each([
+    ["बालियां", "Balian"],
+    ["ਬਾਲੀਆਂ", "Balian"],
+    ["ढंडीवाल", "Dhandiwal"],
+    ["भैणी महाराज", "Bhaini Mahraj"],
+    ["कट्टू", "Kattu"],
+  ])("finds a village said or written in Hindi or Punjabi: %s -> %s", async (named, village) => {
+    expect((await book(DEMO_FARMER_PHONE, { village: named, acres: 2, moreDaysYouCanWait: 3 })).output).toMatchObject({ needsConfirmation: true, village });
+  });
+});
+
+describe("a booking a piece at a time: code asks for exactly what is still missing", () => {
+  const KULDEEP = "+447700900993"; // registered on the web in English, no field yet
+  const hi = words("hi");
+
+  beforeAll(async () => {
+    await createFarmerAccount(runtime.runtime.dependencies.store, KULDEEP, "Kuldeep Singh", "en");
+  });
+
+  /** One message from Kuldeep, with the model doing `script`; returns what Vaari sent back. */
+  const say = async (text: string, script: ConstructorParameters<typeof ScriptedRunner>[0]) => {
+    runner.current = new ScriptedRunner(script);
+    const before = runtime.sender.sent.length;
+    await runtime.deliver(messageBody({ from: from(KULDEEP), text }));
+    return sentTo(KULDEEP, before);
+  };
+
+  it("'मुझे खेत बुक करना है', no details yet: the booking prompt from code, in Hindi, not the model's question", async () => {
+    // The model's own question carries example numbers, which the number check would refuse.
+    const sent = await say("मुझे खेत बुक करना है", async (tool) => (await tool("book_field").run({}), "जैसे: 4 एकड़, 3 नवंबर तक। अपना गाँव बताइए।"));
+    expect(sent).toEqual([expect.objectContaining({ type: "text", body: hi.bookAsk })]);
+  });
+
+  it("then 'बालियां में 4 एकड़': the village (in Devanagari) and the acres are kept; only the last day is asked for", async () => {
+    const sent = await say("बालियां में 4 एकड़", async (tool) => (await tool("book_field").run({ village: "बालियां", acres: 4 }), ""));
+    expect(sent).toEqual([expect.objectContaining({ type: "text", body: hi.bookNeeds(hi.bookDetail.lastDay) })]);
+  });
+
+  it("then '3 नवंबर तक': everything is there, so Confirm shows all of it; nothing is booked yet", async () => {
+    const { store, planner } = runtime.runtime.dependencies;
+    const sent = await say("3 नवंबर तक", async (tool) => (await tool("book_field").run({ lastDayYouCanWait: { day: 3, month: 11 } }), ""));
+    expect(sent.map((message) => message.type)).toEqual(["buttons"]);
+    const today = planner.dayToIso(planner.today());
+    expect(sent[0]).toMatchObject({
+      body: hi.bookConfirmBody({ village: "Balian", centre: "Balian Cooperative Society", acres: 4, readyDate: formatDate(today, "hi"), lastDay: formatDate("2026-11-03", "hi") }),
+    });
+    expect(await store.listFieldsByPhone(KULDEEP)).toEqual([]);
+  });
+
+  it("after a draft the next booking starts from nothing", async () => {
+    const sent = await say("2 एकड़ और", async (tool) => (await tool("book_field").run({ acres: 2 }), ""));
+    expect(sent).toEqual([expect.objectContaining({ body: hi.bookNeeds(`${hi.bookDetail.village}, ${hi.bookDetail.lastDay}`) })]);
+  });
+
+  it("a village no centre serves is named in the reply and forgotten; the acres are kept", async () => {
+    expect(await say("Atlantis", async (tool) => (await tool("book_field").run({ village: "Atlantis" }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookUnknownVillage("Atlantis") }),
+    ]);
+    expect(await say("3 नवंबर तक", async (tool) => (await tool("book_field").run({ lastDayYouCanWait: { day: 3, month: 11 } }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookNeeds(hi.bookDetail.village) }),
+    ]);
+  });
+
+  it("a last day that does not work: the rule, and only the day is asked for again", async () => {
+    expect(await say("Balian, 30 नवंबर तक", async (tool) => (await tool("book_field").run({ village: "Balian", lastDayYouCanWait: { day: 30, month: 11 } }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookBadDay(MAX_WAIT_DAYS) }),
+    ]);
+    expect(await say("2 एकड़", async (tool) => (await tool("book_field").run({ acres: 2 }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookNeeds(hi.bookDetail.lastDay) }),
+    ]);
+  });
+
+  it("tapping 'Book a field' starts again from nothing", async () => {
+    runner.current = new ScriptedRunner(async () => "");
+    await runtime.deliver(messageBody({ from: from(KULDEEP), listRow: "menu:book", title: hi.menuBook }));
+    expect(sentTo(KULDEEP).at(-1)).toMatchObject({ type: "text", body: hi.bookAsk });
+    expect(await say("3 नवंबर तक", async (tool) => (await tool("book_field").run({ lastDayYouCanWait: { day: 3, month: 11 } }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookNeeds(`${hi.bookDetail.village}, ${hi.bookDetail.acres}`) }),
+    ]);
+  });
+
+  it("what was said is forgotten after 15 quiet minutes", async () => {
+    runtime.clock.now = new Date(runtime.clock.now.getTime() + 16 * 60_000);
+    expect(await say("Balian", async (tool) => (await tool("book_field").run({ village: "Balian" }), ""))).toEqual([
+      expect.objectContaining({ body: hi.bookNeeds(`${hi.bookDetail.acres}, ${hi.bookDetail.lastDay}`) }),
+    ]);
   });
 });

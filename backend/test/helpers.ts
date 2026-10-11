@@ -16,8 +16,8 @@ export function bookingInput(villageId: string, overrides: Record<string, unknow
 
 /** A farmer's phone session, made the way the web makes one: mint a login link, exchange it once. */
 export async function farmerSession(app: ReturnType<typeof createApp>, runtime: Awaited<ReturnType<typeof buildRuntime>>, phone: string): Promise<string> {
-  const { config, store } = runtime.dependencies;
-  const link = await mintFarmerLoginLink(config, store, phone);
+  const { store } = runtime.dependencies;
+  const link = await mintFarmerLoginLink(store, phone);
   const exchanged = await request(app).post("/farmer/login").send({ token: link.token }).expect(200);
   return exchanged.body.sessionToken as string;
 }

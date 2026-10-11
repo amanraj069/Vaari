@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { DEMO_FARMER_PHONE } from "../src/demo/seed";
 import type { AgentRunner } from "../src/whatsapp/agent";
 import { words } from "../src/whatsapp/messages";
-import { toDevanagari } from "../src/whatsapp/voice";
+import { toDevanagari } from "../src/whatsapp/language";
 import { FakeSpeech, ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers";
 
 const JASWINDER = "447700900017";
@@ -114,6 +114,19 @@ describe("a voice note goes through the agent and comes back as text and a voice
     const { sent, spoken } = await sendNote();
     expect(JSON.stringify(sent)).toMatch(/https?:\/\//);
     expect(spoken.map((item) => item.text).join(" ")).not.toMatch(/https?:|\/farmer\/login/);
+  });
+});
+
+describe("booking by voice", () => {
+  it("'मुझे खेत बुक करना है' said, no details: Vaari asks for them with its own words, read and heard, in Hindi", async () => {
+    speech.heard = { text: "मुझे खेत बुक करना है ।", locale: "hi" };
+    // The model asks with an example of its own; the number check would refuse it, and code answers instead.
+    runner.current = new ScriptedRunner(async (tool) => (await tool("book_field").run({}), "जैसे: 4 एकड़, 3 नवंबर तक।"));
+    const { sent, spoken } = await sendNote();
+    expect(sent.map((message) => message.type)).toEqual(["text", "text", "voice"]);
+    expect(sent[0]).toMatchObject({ body: words("hi").heard("मुझे खेत बुक करना है ।") });
+    expect(sent[1]).toMatchObject({ body: words("hi").bookAsk });
+    expect(spoken.map((item) => item.text)).toEqual([words("hi").bookAsk]);
   });
 });
 

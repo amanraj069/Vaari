@@ -2,8 +2,9 @@
  * Code decides, the model only explains. Before a model reply is sent, every number in it and every
  * month or weekday name must come from THIS turn's tool results: numbers that appear in a result
  * (digits in Latin, Gurmukhi or Devanagari script), and the day, month, year, month names and weekday
- * names of every ISO date in a result, in English, Punjabi and Hindi. Anything else (a date or number
- * the model made up or changed) fails the check, and the farmer gets the template reply instead.
+ * names of every ISO date in a result, in English, Punjabi and Hindi, matched as whole words. Anything
+ * else (a date or number the model made up or changed) fails the check, and the farmer gets the
+ * template reply instead.
  */
 import type { ToolCall } from "./tools";
 
@@ -52,9 +53,13 @@ export function checkReply(reply: string, calls: ToolCall[]): CheckResult {
   const unsupported: string[] = [];
   let text = latinDigits(reply);
   for (const name of ALL_NAMES) {
-    // Latin names are matched as capitalised words ("May", not the verb "may"); Indic names as text.
+    // Whole words only. Latin names as capitalised words ("May", not the verb "may"); Gurmukhi and
+    // Devanagari names with no letter or vowel sign on either side, so the short weekday शुक्र
+    // (Friday) is found alone or in शुक्र को, but not inside शुक्रिया ("thanks"). \b cannot do this:
+    // it treats vowel signs as word edges.
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const latin = /^[A-Za-z.]+$/.test(name);
-    const pattern = latin ? new RegExp(`\\b${name.replace(".", "\\.")}\\b`, "g") : new RegExp(name, "g");
+    const pattern = latin ? new RegExp(`\\b${escaped}\\b`, "g") : new RegExp(`(?<![\\p{L}\\p{M}])${escaped}(?![\\p{L}\\p{M}])`, "gu");
     if (pattern.test(text)) {
       if (!allowedNames.has(name.toLowerCase())) unsupported.push(name);
       text = text.replace(pattern, " ");

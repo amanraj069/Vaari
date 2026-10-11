@@ -4,7 +4,7 @@ import { isSameOrigin } from "@/lib/same-origin";
 import { cookies } from "next/headers";
 import { meSchema, onboardingInputSchema } from "@/shared";
 import { COOKIE, ROLE_HOME } from "@/lib/server-config";
-import { apiFetch, setRoleCookie } from "@/lib/session";
+import { apiFetch, setLocaleCookie, setRoleCookie } from "@/lib/session";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
@@ -18,6 +18,6 @@ export async function POST(request: Request) {
   if (!me.role) return NextResponse.json({ error: "FAILED" }, { status: 500 });
   await setRoleCookie(me.role);
   (await cookies()).delete(COOKIE.displayName);
-  (await cookies()).set(COOKIE.locale, input.data.language, { path: "/", maxAge: 365 * 24 * 3600, sameSite: "lax" });
+  await setLocaleCookie(input.data.language);
   return NextResponse.json({ home: ROLE_HOME[me.role] ?? "/" });
 }

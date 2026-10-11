@@ -3,6 +3,7 @@
  * becomes a 7-day phone session that reads every field booked with that phone, across CHCs, and
  * nothing else. The demo farmer ("Try as farmer") signs in with the same kind of link.
  */
+import { createHash } from "node:crypto";
 import request from "supertest";
 import { SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -26,40 +27,56 @@ beforeAll(async () => {
 });
 
 describe("farmer login link", () => {
+  it("is short (16 characters), and the store keeps only its hash", async () => {
+    const { store } = runtime.dependencies;
+    const link = await mintFarmerLoginLink(store, DEMO_FARMER_PHONE);
+    expect(link.token).toMatch(/^[A-Za-z0-9_-]{16}$/);
+    expect(link.path).toBe(`/farmer/login/${link.token}`);
+    // The token itself is no key in the store: only its SHA-256 is.
+    expect(await store.useLoginToken(link.token, new Date().toISOString())).toBeNull();
+    expect(await store.useLoginToken(createHash("sha256").update(link.token).digest("base64url"), new Date().toISOString())).toMatchObject({ phone: DEMO_FARMER_PHONE });
+  });
+
   it("is exchanged once for a session scoped to its phone; a second use is refused", async () => {
     const { config, store } = runtime.dependencies;
-    const link = await mintFarmerLoginLink(config, store, DEMO_FARMER_PHONE);
-    expect(link.path).toBe(`/farmer/login/${link.token}`);
+    const link = await mintFarmerLoginLink(store, DEMO_FARMER_PHONE);
     const first = await request(app).post("/farmer/login").send({ token: link.token }).expect(200);
     expect(first.body.expiresIn).toBe(7 * 24 * 60 * 60);
+    expect(first.body.locale).toBeUndefined();
     expect(await verifyFarmerSession(config, first.body.sessionToken)).toEqual({ kind: "farmerPhone", phone: DEMO_FARMER_PHONE });
     expect((await request(app).post("/farmer/login").send({ token: link.token }).expect(401)).body.error).toBe("UNAUTHENTICATED");
+  });
+
+  it("carries the language it was sent in, so the web opens in it", async () => {
+    const { store } = runtime.dependencies;
+    const link = await mintFarmerLoginLink(store, DEMO_FARMER_PHONE, { locale: "hi" });
+    expect((await request(app).post("/farmer/login").send({ token: link.token }).expect(200)).body.locale).toBe("hi");
   });
 
   it("expires after 15 minutes", async () => {
     const { config, store } = runtime.dependencies;
     const minted = new Date(Date.now() - (FARMER_LOGIN_SECONDS + 5) * 1000);
-    const stale = await mintFarmerLoginLink(config, store, DEMO_FARMER_PHONE, minted);
+    const stale = await mintFarmerLoginLink(store, DEMO_FARMER_PHONE, { now: minted });
     await expect(exchangeFarmerLogin(config, store, stale.token)).rejects.toBeInstanceOf(AuthError);
     await request(app).post("/farmer/login").send({ token: stale.token }).expect(401);
   });
 
-  it("refuses a tampered link, a forged one, and any other kind of token", async () => {
+  it("refuses a tampered link, an old signed one, and any other kind of token", async () => {
     const { config, store } = runtime.dependencies;
-    const link = await mintFarmerLoginLink(config, store, DEMO_FARMER_PHONE);
+    const link = await mintFarmerLoginLink(store, DEMO_FARMER_PHONE);
     await request(app).post("/farmer/login").send({ token: `${link.token.slice(0, -4)}AAAA` }).expect(401);
-    // Correctly signed, but its jti was never stored (not minted by us): refused.
-    const forged = await new SignJWT({ typ: "farmer-login", phone: DEMO_FARMER_PHONE })
+    // The old link format (a signed token), even correctly signed: refused.
+    const signed = await new SignJWT({ typ: "farmer-login", phone: DEMO_FARMER_PHONE })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuer("vaari")
       .setAudience("vaari-farmer-login")
       .setJti("never-minted")
       .setExpirationTime("10m")
       .sign(new TextEncoder().encode(config.SLOT_TOKEN_SECRET));
-    await request(app).post("/farmer/login").send({ token: forged }).expect(401);
+    await request(app).post("/farmer/login").send({ token: signed }).expect(400);
     // A slot link or a session is not a login link, and a login link is not a session.
     const slotLink = (await request(app).get("/fields/f-jaswinder/slot-link").set(bearer(tokens.operator!)).expect(200)).body.token;
-    await request(app).post("/farmer/login").send({ token: slotLink }).expect(401);
+    await request(app).post("/farmer/login").send({ token: slotLink }).expect(400);
     await request(app).get("/farmer/home").set(bearer(slotLink)).expect(401);
     await request(app).get("/farmer/home").set(bearer(link.token)).expect(401);
     await request(app).get("/farmer/home").expect(401);
@@ -68,8 +85,8 @@ describe("farmer login link", () => {
   });
 
   it("is minted only for a phone number in E.164", async () => {
-    const { config, store } = runtime.dependencies;
-    await expect(mintFarmerLoginLink(config, store, "98765 43210")).rejects.toThrow("E.164");
+    const { store } = runtime.dependencies;
+    await expect(mintFarmerLoginLink(store, "98765 43210")).rejects.toThrow("E.164");
   });
 });
 
