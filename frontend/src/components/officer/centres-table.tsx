@@ -25,7 +25,7 @@ function OnTrackMeter({ onTrack, open }: { onTrack: number; open: number }) {
     <div className="min-w-24">
       <p className="text-sm tabular">{t("onTrackOf", { onTrack, open })}</p>
       {/* The track is a lighter step of the fill's own colour, so state reads across the whole bar. */}
-      <div aria-hidden className={`mt-1.5 h-1.5 w-full rounded-full ${share < 1 ? "bg-ember-soft" : "bg-field-soft"}`}>
+      <div aria-hidden className={`mt-1.5 h-1.5 w-full rounded-full bg-line/80`}>
         <div className={`h-full rounded-full ${share < 1 ? "bg-ember" : "bg-field"}`} style={{ width: `${Math.round(share * 100)}%` }} />
       </div>
     </div>
@@ -91,7 +91,7 @@ export function CentresTable({ centres }: { centres: OfficerCentre[] }) {
         type="button"
         onClick={() => setShowAll((value) => !value)}
         aria-expanded={showAll}
-        className="min-h-11 w-full border-t border-line px-5 text-left text-sm font-medium text-wheat-deep hover:bg-ink/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
+        className="min-h-11 w-full border-t border-line px-5 text-left text-sm font-medium text-ink hover:bg-ink/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
       >
         {showAll ? t("centresFewer") : t("centresAll", { count: sorted.length, more })}
       </button>

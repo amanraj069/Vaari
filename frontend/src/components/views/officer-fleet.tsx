@@ -101,7 +101,6 @@ export function OfficerFleetView() {
   const sorted = [...centres].sort((left, right) => perMachine(right) - perMachine(left) || left.name.localeCompare(right.name));
   const scale = Math.max(BREAK_EVEN_ACRES * 1.5, ...centres.map(perMachine)) * 1.05;
   const list = showAll ? sorted : sorted.slice(0, SHOWN);
-  const districts = [...new Set(centres.map((centre) => centre.district ?? t("outsideDistricts")))].sort();
 
   return (
     <>
@@ -125,33 +124,6 @@ export function OfficerFleetView() {
               ]}
             />
           </div>
-
-          <section aria-labelledby="fleet-districts-title" className="mt-6">
-            <h2 id="fleet-districts-title" className="mb-3 text-base font-semibold">
-              {t("byDistrict")}
-            </h2>
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {districts.map((district) => {
-                const here = centres.filter((centre) => (centre.district ?? t("outsideDistricts")) === district);
-                const machines = sum((centre) => centre.fleet.own, here);
-                const load = machines > 0 ? sum((centre) => centre.fleet.acresBookedSeason, here) / machines : 0;
-                return (
-                  <li key={district} className="rounded-card border border-line bg-surface p-4 sm:p-5">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="font-semibold">{district}</h3>
-                      <span className="text-sm text-ink-muted">{t("centresCount", { count: here.length })}</span>
-                    </div>
-                    <p className="mt-2 text-[26px] font-semibold leading-none tabular">{machines}</p>
-                    <p className="mt-1 text-xs text-ink-muted">{t("districtMachines", { working: sum((centre) => centre.machinesWorking, here), workshop: sum((centre) => centre.fleet.inWorkshop, here) })}</p>
-                    <div className="mt-4">
-                      <p className="mb-1 text-xs text-ink-muted">{t("loadLabel")}</p>
-                      <LoadBar acres={load} scale={scale} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
 
           <section aria-labelledby="fleet-centres-title" className="mt-6">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
@@ -184,7 +156,6 @@ export function OfficerFleetView() {
                       <tr key={centre.id}>
                         <th scope="row" className="px-5 py-3 font-medium">
                           {centre.name}
-                          <span className="block text-xs font-normal text-ink-muted">{centre.district ?? t("outsideDistricts")}</span>
                         </th>
                         <td className="px-4 py-3">
                           <span className="tabular">{centre.fleet.own}</span>

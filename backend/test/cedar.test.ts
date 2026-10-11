@@ -7,11 +7,11 @@ import { authorize, type Action } from "../src/authz/cedar";
 import type { Principal } from "../src/auth/tokens";
 import type { FarmerPhonePrincipal } from "../src/auth/farmer-session";
 
-const operator: Principal = { userId: "u-op", name: "O", role: "operator", chcId: "chc-a", demo: true };
+const operator: Principal = { userId: "u-op", name: "O", role: "operator", chcId: "chc-a", district: null, demo: true };
 const foreignOperator: Principal = { ...operator, userId: "u-op-b", chcId: "chc-b" };
-const officer: Principal = { userId: "u-off", name: "D", role: "officer", chcId: null, demo: true };
-const facilitator: Principal = { userId: "u-fac", name: "G", role: "facilitator", chcId: "chc-a", demo: true };
-const pending: Principal = { userId: "u-new", name: "N", role: null, chcId: null, demo: false };
+const officer: Principal = { userId: "u-off", name: "D", role: "officer", chcId: null, district: "Sangrur", demo: true };
+const facilitator: Principal = { userId: "u-fac", name: "G", role: "facilitator", chcId: "chc-a", district: null, demo: true };
+const pending: Principal = { userId: "u-new", name: "N", role: null, chcId: null, district: null, demo: false };
 const farmerPhone: FarmerPhonePrincipal = { kind: "farmerPhone", phone: "+447700900017" };
 const otherPhone: FarmerPhonePrincipal = { kind: "farmerPhone", phone: "+447700900018" };
 
@@ -65,8 +65,25 @@ describe("Cedar policies", () => {
     expect(authorize(foreignOperator, "ReissueLink", field).allowed).toBe(false);
   });
 
+  it("an officer sees and lends between only the centres of their own district", () => {
+    const sangrurChc = { type: "Chc" as const, id: "chc-s", district: "Sangrur" };
+    const malerkotlaChc = { type: "Chc" as const, id: "chc-m", district: "Malerkotla" };
+    const outsideChc = { type: "Chc" as const, id: "chc-x", district: null };
+    for (const action of ["ViewAggregates", "ArrangeLoan"] as Action[]) {
+      expect(authorize(officer, action, sangrurChc).allowed).toBe(true);
+      expect(authorize(officer, action, malerkotlaChc).allowed).toBe(false);
+      expect(authorize(officer, action, outsideChc).allowed).toBe(false);
+      expect(authorize(officer, action, chcA).allowed).toBe(false); // a centre with no district given
+      // An officer not assigned a district sees no centre, not every centre.
+      expect(authorize({ ...officer, district: null }, action, outsideChc).allowed).toBe(false);
+      expect(authorize({ ...officer, district: "Malerkotla" }, action, sangrurChc).allowed).toBe(false);
+      // Another role's district never stands in for the officer role.
+      expect(authorize({ ...operator, district: "Sangrur" }, action, sangrurChc).allowed).toBe(false);
+    }
+  });
+
   it("officer sees aggregates but never farmer contact details or a field", () => {
-    expect(authorize(officer, "ViewAggregates", chcA).allowed).toBe(true);
+    expect(authorize(officer, "ViewAggregates", { ...chcA, district: "Sangrur" }).allowed).toBe(true);
     expect(authorize(officer, "ViewFarmerContact", field).allowed).toBe(false);
     expect(authorize(officer, "ViewField", field).allowed).toBe(false);
     expect(authorize(officer, "ReissueLink", field).allowed).toBe(false);

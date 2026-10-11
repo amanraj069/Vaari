@@ -31,7 +31,7 @@ export function WorkloadGrid({ days: allDays, selected, onSelect }: { days: Plan
   return (
     <div>
       <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[32rem] table-fixed border-separate border-spacing-[3px] text-xs">
+        <table className="w-full min-w-[40rem] table-fixed border-separate border-spacing-[3px] text-xs">
           <caption className="sr-only">{t("workloadCaption")}</caption>
           <thead>
             <tr>
@@ -45,7 +45,7 @@ export function WorkloadGrid({ days: allDays, selected, onSelect }: { days: Plan
                     onClick={() => onSelect(day.date)}
                     aria-pressed={day.date === selected}
                     aria-label={dates.full(day.date)}
-                    className={`flex min-h-11 w-full flex-col items-center justify-center rounded-chip py-1 transition-colors duration-200 ${day.date === selected ? "bg-wheat-soft text-ink ring-1 ring-inset ring-wheat-deep/40" : "text-ink-muted hover:bg-paper"}`}
+                    className={`flex min-h-11 w-full flex-col items-center justify-center rounded-chip py-1 transition-colors duration-200 ${day.date === selected ? "bg-wheat-solid text-on-solid shadow-[0_6px_14px_-8px_rgb(143_98_16/0.7)]" : "text-ink-muted hover:bg-sunken"}`}
                   >
                     <span>{dates.weekdayShort(day.date)}</span>
                     <span className="font-semibold tabular">{dates.dayOfMonth(day.date)}</span>
@@ -69,7 +69,7 @@ export function WorkloadGrid({ days: allDays, selected, onSelect }: { days: Plan
                     ? t("cellDown", { machine: machine.name, date: dates.short(day.date) })
                     : t("cellBusy", { machine: machine.name, date: dates.short(day.date), hours, of: Math.round(cell.capacityMinutes / 60), fields: cell.fields });
                   return (
-                    <td key={day.date} title={label} aria-label={label} className={`h-9 rounded-[6px] text-center tabular ${cell.down ? "hatched text-ink-muted" : band(cell.busyMinutes === 0 ? 0 : share)} ${day.date === selected ? "outline outline-1 outline-wheat-deep/50" : ""}`}>
+                    <td key={day.date} title={label} aria-label={label} className={`h-9 rounded-[6px] text-center tabular ${cell.down ? "hatched text-ink-muted" : band(cell.busyMinutes === 0 ? 0 : share)} ${day.date === selected ? "outline outline-1 outline-ink/40" : ""}`}>
                       {cell.down ? <Wrench aria-hidden className="mx-auto size-3.5" strokeWidth={1.75} /> : cell.busyMinutes === 0 ? "–" : hours}
                     </td>
                   );

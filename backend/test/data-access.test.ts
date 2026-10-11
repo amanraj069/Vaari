@@ -32,7 +32,7 @@ beforeAll(async () => {
       const user = await store.getUser(token);
       // Tokens starting "google-operator" stand for members of the Cognito "operator" group.
       const groupRole = token.startsWith("google-operator") ? ("operator" as const) : null;
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, demo: false };
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, district: user?.district ?? null, demo: false };
     },
   };
   googleApp = createApp({ ...runtime.dependencies, verifier: googleVerifier });
@@ -48,7 +48,7 @@ describe("facilitator bookings", () => {
     const ids = response.body.items.map((item: unknown) => queueItemSchema.parse(item).fieldId);
     expect(ids).toContain(mine.id);
     expect(ids).not.toContain(theirs.id);
-    // Seeded fields were booked by nobody, so they do not appear either.
+    // The demo farmer's seeded field was booked by nobody, so it does not appear either.
     expect(ids).not.toContain("f-jaswinder");
   });
 

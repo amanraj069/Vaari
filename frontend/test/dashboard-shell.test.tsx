@@ -4,7 +4,7 @@
  * vague "go to my page"), and a farmer's dashboard having no staff pages.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AccountMenu } from "@/components/account-menu";
@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 
 const staff = (role: "operator" | "facilitator" | "officer", name: string, chcName: string | null = "Balian Cooperative Society"): Viewer => ({
   kind: "staff",
-  me: { userId: `u-${role}`, name, role, chcId: chcName ? "chc-balian" : null, chcName, language: "en", demo: true, needsOnboarding: false },
+  me: { userId: `u-${role}`, name, role, chcId: chcName ? "chc-balian" : null, chcName, district: role === "officer" ? "Sangrur" : null, language: "en", demo: true, needsOnboarding: false },
 });
 const farmer: Viewer = { kind: "farmer", farmer: { name: "Jaswinder Singh", registered: true } };
 
@@ -57,10 +57,24 @@ describe("DashboardShell", () => {
     expect(screen.getByRole("heading", { name: "Page" })).toBeInTheDocument();
   });
 
+  it("moves the current-page marker on click, before the next page has loaded", () => {
+    pathname.current = "/dashboard/plan";
+    renderShell(staff("operator", "Harpal Singh"));
+    const sidebar = screen.getByRole("navigation", { name: "Main" });
+    const queue = within(sidebar).getByRole("link", { name: /^Queue/ });
+    // The address has not changed yet (navigation still loading), but the click already shows where you are going.
+    queue.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(queue);
+    expect(queue).toHaveAttribute("aria-current", "page");
+    expect(within(sidebar).getByRole("link", { name: "Plan" })).not.toHaveAttribute("aria-current");
+  });
+
   it("gives the officer a District page and a Centres page, and the farmer only their fields and booking", () => {
     pathname.current = "/dashboard";
     const officer = renderShell(staff("officer", "District officer (demo)", null));
     expect(within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link").map((link) => link.textContent)).toEqual(["District", "Centres", "Machines", "Proof", "Profile"]);
+    // An officer runs one district, and the sidebar names it.
+    expect(within(screen.getByRole("complementary", { name: "Dashboard" })).getByText("Sangrur district office")).toBeInTheDocument();
     officer.unmount();
     renderShell(farmer);
     const sidebar = screen.getByRole("navigation", { name: "Main" });
@@ -137,7 +151,7 @@ describe("AccountMenu", () => {
   });
 
   it("asks a new staff member to finish setting up instead of listing pages", async () => {
-    renderWithIntl(<AccountMenu viewer={{ kind: "staff", me: { userId: "u", name: "new@example.org", role: null, chcId: null, chcName: null, language: "en", demo: false, needsOnboarding: true } }} />);
+    renderWithIntl(<AccountMenu viewer={{ kind: "staff", me: { userId: "u", name: "new@example.org", role: null, chcId: null, chcName: null, district: null, language: "en", demo: false, needsOnboarding: true } }} />);
     await userEvent.click(screen.getByRole("button", { name: "Account" }));
     expect(itemsAfterName(screen.getByRole("menu"))).toEqual(["Finish setting up", "Switch to dark mode", "Sign out"]);
   });

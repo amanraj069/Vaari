@@ -88,7 +88,7 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
         aria-label={`${back ? t("showChart") : t("showData")}: ${title}`}
         className="group -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center rounded-full px-2 focus-visible:outline-offset-0"
       >
-        <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line-strong bg-paper px-3 text-[0.8125rem] font-medium text-ink-muted transition-colors group-hover:border-ink/40 group-hover:text-ink">
+        <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line-strong bg-raised px-3 text-[0.8125rem] font-medium text-ink-muted transition-colors group-hover:border-ink/40 group-hover:text-ink shadow-control">
           {back ? <LineChart aria-hidden className="size-3.5" strokeWidth={1.75} /> : <Table2 aria-hidden className="size-3.5" strokeWidth={1.75} />}
           {back ? t("showChart") : t("showData")}
         </span>

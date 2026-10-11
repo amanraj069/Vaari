@@ -88,7 +88,7 @@ export function ChangeBooking({
                   value={date}
                   min={earliest}
                   onChange={(event) => setDate(event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-base focus:border-ink/50 focus:outline-none"
+                  className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-raised px-3 text-base focus:border-ink/50 focus:outline-none shadow-control"
                 />
               </label>
               <Button disabled={state === "saving" || !date || date === readyDate} onClick={() => send("harvest")}>
@@ -109,7 +109,7 @@ export function ChangeBooking({
                   <Button variant="secondary" onClick={() => setConfirmCancel(false)}>
                     {t("keep")}
                   </Button>
-                  <Button disabled={state === "saving"} onClick={() => send("cancel")} className="border-ember-deep bg-ember-deep hover:bg-ember-deep/90">
+                  <Button variant="danger" disabled={state === "saving"} onClick={() => send("cancel")}>
                     {t("cancelConfirm")}
                   </Button>
                 </div>

@@ -83,7 +83,7 @@ export function MachineCentre({ chcName, operatorPhone }: { chcName: string; ope
       {operatorPhone ? (
         <a
           href={`tel:${operatorPhone.replace(/\s/g, "")}`}
-          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line-strong bg-paper px-4 text-ink hover:border-ink/50"
+          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line-strong bg-raised px-4 text-ink hover:border-ink/50 shadow-control"
         >
           <Phone aria-hidden className="size-5" strokeWidth={1.75} />
           {t("callOperator")}

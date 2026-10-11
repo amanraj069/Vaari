@@ -29,7 +29,7 @@ export const ROLE_STORAGE_KEY = "vaari:staff-role";
 const RESEND_SECONDS = 30;
 const EASE = [0.22, 1, 0.36, 1] as const;
 const INPUT =
-  "min-h-12 w-full rounded-control border border-line-strong bg-paper px-3 text-base outline-none transition-colors focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-ink/20 disabled:opacity-60 aria-[invalid=true]:border-ember-deep";
+  "min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-base outline-none transition-colors focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-ink/20 disabled:opacity-60 aria-[invalid=true]:border-ember-deep shadow-control";
 const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 const openPage = (path: string) => window.location.assign(path);
 
@@ -75,7 +75,7 @@ function PasswordInput({ id, value, onChange, autoComplete, describedBy, disable
   const checkCaps = (event: KeyboardEvent<HTMLInputElement>) => setCapsLock(event.getModifierState("CapsLock"));
   return (
     <>
-      <span className="flex min-h-12 overflow-hidden rounded-control border border-line-strong bg-paper focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/20">
+      <span className="flex min-h-12 overflow-hidden rounded-control border border-line-strong bg-raised focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/20 shadow-control">
         <input
           id={id}
           type={shown ? "text" : "password"}

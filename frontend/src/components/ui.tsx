@@ -1,20 +1,25 @@
 /**
- * Small primitives with the Vaari look: flat, bordered, 8px corners, large tap targets.
+ * Small primitives with the Vaari look: flat, bordered, large tap targets.
  * Risk and promise state always show an icon and a word, never colour alone.
  */
 import Link from "next/link";
 import { AlertTriangle, CalendarCheck2, CalendarRange, CheckCheck, CircleDashed, Clock3, CloudOff, FilePenLine, Hourglass, Inbox, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-type Variant = "primary" | "accent" | "secondary" | "quiet";
+type Variant = "primary" | "accent" | "secondary" | "quiet" | "danger" | "dangerQuiet";
+// btn-solid / btn-outline pick the hover lift and shadow in globals.css (the micro-interactions block).
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-ink text-paper hover:bg-ink/90 border border-ink",
-  accent: "bg-action text-on-action hover:bg-action/90 border border-action",
-  secondary: "bg-surface text-ink border border-line-strong hover:border-ink/50",
+  primary: "btn-solid bg-ink text-paper hover:bg-ink/90 border border-ink",
+  accent: "btn-solid bg-action text-on-action hover:bg-action/90 border border-action",
+  secondary: "btn-outline bg-raised text-ink shadow-control border border-line-strong hover:border-ink/50",
   quiet: "bg-transparent text-ink hover:bg-ink/5 border border-transparent",
+  // Destructive actions: the confirming dialog's button is red; on a card the action is quiet until
+  // hovered, so a grid of cards is not a grid of red words (ember is for burn risk).
+  danger: "btn-solid bg-ember-solid text-on-solid hover:bg-ember-solid/90 border border-ember-solid",
+  dangerQuiet: "bg-transparent text-ink-muted hover:text-ember-deep hover:bg-ember-soft/60 border border-transparent",
 };
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-control px-5 min-h-11 font-medium transition-[color,background-color,border-color,scale] duration-150 enabled:active:scale-[0.98] [&:not(button)]:active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed";
+  "btn inline-flex items-center justify-center gap-2 rounded-control px-5 min-h-11 font-medium disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function Button({ variant = "primary", className = "", ...props }: ComponentProps<"button"> & { variant?: Variant }) {
   return <button className={`${BASE} ${VARIANT[variant]} ${className}`} {...props} />;
@@ -30,27 +35,30 @@ export function Card({ className = "", children }: { className?: string; childre
 
 export type PillKind = "firm" | "window" | "requested" | "safe" | "tight" | "at_risk" | "unplanned" | "approved" | "draft" | "done";
 
-const PILL: Record<PillKind, { className: string; Icon: typeof ShieldCheck }> = {
-  firm: { className: "bg-field-soft text-field border-field/30", Icon: CalendarCheck2 },
-  window: { className: "bg-sky-soft text-sky border-sky/30", Icon: CalendarRange },
+// Healthy and pending states are a neutral chip with a coloured icon; only risk gets a tinted chip,
+// so a screen of on-track fields stays calm and the one at risk stands out.
+const NEUTRAL_CHIP = "bg-surface text-ink border-line-strong/80";
+const PILL: Record<PillKind, { className: string; iconClassName: string; Icon: typeof ShieldCheck }> = {
+  firm: { className: NEUTRAL_CHIP, iconClassName: "text-field", Icon: CalendarCheck2 },
+  window: { className: NEUTRAL_CHIP, iconClassName: "text-sky", Icon: CalendarRange },
   // Waiting for the operator's next plan: not a risk, so not ember.
-  requested: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: Hourglass },
-  safe: { className: "bg-field-soft text-field border-field/30", Icon: ShieldCheck },
-  tight: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: Clock3 },
-  at_risk: { className: "bg-ember-soft text-ember-deep border-ember/40", Icon: AlertTriangle },
-  unplanned: { className: "bg-ember-soft text-ember-deep border-ember/40", Icon: CircleDashed },
-  approved: { className: "bg-field-soft text-field border-field/30", Icon: ShieldCheck },
-  draft: { className: "bg-wheat-soft text-wheat-deep border-wheat-deep/30", Icon: FilePenLine },
-  done: { className: "bg-field-soft text-field border-field/30", Icon: CheckCheck },
+  requested: { className: NEUTRAL_CHIP, iconClassName: "text-wheat-deep", Icon: Hourglass },
+  safe: { className: NEUTRAL_CHIP, iconClassName: "text-field", Icon: ShieldCheck },
+  tight: { className: NEUTRAL_CHIP, iconClassName: "text-wheat-deep", Icon: Clock3 },
+  at_risk: { className: "bg-ember-soft text-ember-deep border-ember/35", iconClassName: "", Icon: AlertTriangle },
+  unplanned: { className: "bg-ember-soft text-ember-deep border-ember/35", iconClassName: "", Icon: CircleDashed },
+  approved: { className: NEUTRAL_CHIP, iconClassName: "text-field", Icon: ShieldCheck },
+  draft: { className: NEUTRAL_CHIP, iconClassName: "text-wheat-deep", Icon: FilePenLine },
+  done: { className: NEUTRAL_CHIP, iconClassName: "text-field", Icon: CheckCheck },
 };
 
 export function Pill({ kind, children, size = "sm" }: { kind: PillKind; children: ReactNode; size?: "sm" | "lg" }) {
-  const { className, Icon } = PILL[kind];
+  const { className, iconClassName, Icon } = PILL[kind];
   // lg (a token's status) steps down one size on phones, where it shares a row with the token number.
   const sizing = size === "lg" ? "text-sm px-2.5 py-1 gap-1.5 sm:text-base sm:px-3 sm:py-1.5 sm:gap-2" : "text-xs px-2 py-0.5 gap-1";
   return (
-    <span className={`inline-flex items-center rounded-full border font-medium whitespace-nowrap ${sizing} ${className}`}>
-      <Icon aria-hidden className={size === "lg" ? "size-4" : "size-3.5"} strokeWidth={1.75} />
+    <span className={`badge-pop inline-flex items-center rounded-full border font-medium whitespace-nowrap ${sizing} ${className}`}>
+      <Icon aria-hidden className={`${size === "lg" ? "size-4" : "size-3.5"} ${iconClassName}`} strokeWidth={2} />
       {children}
     </span>
   );
@@ -73,7 +81,7 @@ export function StateMessage({ title, body, action, tone = "neutral", icon }: { 
   const Icon = icon ?? (tone === "error" ? CloudOff : Inbox);
   return (
     <div className={`rounded-card border px-6 py-8 text-center ${tone === "error" ? "border-ember/30 bg-ember-soft/30" : "border-line bg-surface"}`}>
-      <span aria-hidden className={`mx-auto mb-4 grid size-14 place-items-center rounded-full ${tone === "error" ? "bg-ember-soft text-ember-deep" : "bg-wheat-soft text-wheat-deep"}`}>
+      <span aria-hidden className={`mx-auto mb-4 grid size-14 place-items-center rounded-full ${tone === "error" ? "bg-ember-soft text-ember-deep" : "bg-paper text-ink-muted ring-1 ring-inset ring-line"}`}>
         <Icon className="size-6" strokeWidth={1.5} />
       </span>
       <p className="font-display text-xl">{title}</p>

@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
 import { bookingSchema, operatorPlanSchema } from "../src/shared";
 import { verifySlotToken } from "../src/auth/slot-token";
+import { promiseWords } from "../src/whatsapp/messages";
 import { createNotifier } from "../src/whatsapp/notices";
 import { RecordingSender } from "../src/whatsapp/sender";
 import { bookingInput } from "./helpers";
@@ -46,7 +47,8 @@ beforeAll(async () => {
   await runtime.runtime.dependencies.whatsapp.notifier.idle();
 });
 
-const templatesTo = (phone: string) => runtime.sender.sent.filter((message) => message.type === "template" && message.to === phone);
+// The bookings above sent their own "request is in" notices (whatsapp-booking-notice.test.ts); these are the approval's.
+const templatesTo = (phone: string) => runtime.sender.sent.filter((message) => message.type === "template" && message.to === phone && message.parameters[0] !== promiseWords(null, "pa"));
 
 describe("outbound notices", () => {
   it("go to every consented number, and never to one without consent", () => {
@@ -125,6 +127,7 @@ describe("outbound notices", () => {
     const silent = createNotifier({ ...deps, config: { ...deps.config, WHATSAPP_ENABLED: false }, sender: off });
     const changes = { promised: [{ fieldId: fieldIds[CONSENTED]!, promise: { kind: "firm" as const, day: 31 } }], firmed: [], moved: [], broken: [], rePromised: [], unplaced: [] };
     silent.planPublished(DEMO_CHC_ID, changes);
+    silent.fieldBooked((await deps.store.getField(DEMO_CHC_ID, fieldIds[CONSENTED]!))!);
     await silent.idle();
     expect(off.sent).toHaveLength(0);
 

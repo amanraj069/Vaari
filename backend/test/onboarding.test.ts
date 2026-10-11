@@ -22,7 +22,7 @@ beforeAll(async () => {
       const user = await store.getUser(token);
       // Tokens starting "google-operator" stand for members of the Cognito "operator" group.
       const groupRole = token.startsWith("google-operator") ? ("operator" as const) : null;
-      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, demo: false };
+      return { userId: token, name: user?.name ?? "Google user", role: user?.role ?? groupRole, chcId: user?.chcId ?? null, district: user?.district ?? null, demo: false };
     },
   };
   app = createApp({ ...dependencies, store, verifier: stubVerifier });

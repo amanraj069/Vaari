@@ -49,9 +49,9 @@ import { DEMO_CHC_ID, DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
 import { approveForSimulatedOperator } from "./demo/district";
 import { ConflictError, NotFoundError } from "./domain/planner";
 import { bookFieldForPhone } from "./domain/farmer-booking";
-import type { FieldRecord } from "./store/types";
+import type { ChcRecord, FieldRecord } from "./store/types";
 import { buildBoard, buildBookedFields, buildMachinesView, buildFarmerPhoneHome, buildOfficerOverview, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
-import { loadDistrictOutlines } from "./data/boundaries";
+import { districtAt, loadDistrictOutlines } from "./data/boundaries";
 import { loadOutlookContext } from "./data/outlook-context";
 import { explainField as explainFieldFor } from "./domain/why";
 import { clientRateLimit } from "./http/client-ip";
@@ -224,6 +224,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       role: principal.role,
       chcId: principal.chcId,
       chcName: chc?.name ?? null,
+      district: principal.role === "officer" ? principal.district : null,
       language: user?.language ?? "en",
       demo: principal.demo,
       needsOnboarding: needsOnboarding(principal),
@@ -423,6 +424,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       }
       const { field } = booked;
       const token = await mintSlotToken(config, field);
+      // The farmer hears on WhatsApp that the request is in, with this slot link (in the background).
+      dependencies.whatsapp.notifier.fieldBooked(field);
       response.status(201).json({
         field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
         slot: { token, path: `/slot/${token}` },
@@ -498,6 +501,8 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         input,
       );
       const token = await mintSlotToken(config, field);
+      // The farmer hears on WhatsApp that the request is in, with this slot link (in the background).
+      dependencies.whatsapp.notifier.fieldBooked(field);
       response.status(201).json({
         field: await buildOneFarmerField(dependencies.planner, dependencies.store, field, localeOf(request)),
         slot: { token, path: `/slot/${token}` },
@@ -650,19 +655,23 @@ export function buildRoutes(dependencies: AppDependencies): Router {
 
   // --- Officer ------------------------------------------------------------------------------
 
-  // The district at a glance: counts per centre, per village and per day ahead. Cedar is asked for
-  // every centre (ViewAggregates); a centre the officer may not see is left out, never half shown.
+  // An officer works in one district: a centre is in the district whose real outline holds its base.
+  const chcInDistrict = (chc: ChcRecord) => ({ type: "Chc" as const, id: chc.id, district: districtAt(chc.base.lon, chc.base.lat, loadDistrictOutlines(config.DATA_DIR)) });
+
+  // The officer's district at a glance: counts per centre, per village and per day ahead. Cedar is
+  // asked for every centre (ViewAggregates: only the officer's own district); a centre the officer
+  // may not see is left out, never half shown, and so is every other district's outline.
   router.get(
     "/officer/overview",
     authenticate,
     asyncHandler(async (request, response) => {
       const { principal } = request;
       if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
-      const chcs = (await dependencies.store.listChcs()).filter((chc) => authorize(principal, "ViewAggregates", { type: "Chc", id: chc.id }).allowed);
+      const chcs = (await dependencies.store.listChcs()).filter((chc) => authorize(principal, "ViewAggregates", chcInDistrict(chc)).allowed);
       response.json(
         await buildOfficerOverview(dependencies.planner, dependencies.store, chcs, {
           optimumLastDate: config.OPTIMUM_LAST_DATE,
-          districts: loadDistrictOutlines(config.DATA_DIR),
+          districts: loadDistrictOutlines(config.DATA_DIR).filter((outline) => outline.name === principal.district),
           outlook: loadOutlookContext(config.DATA_DIR, config.SEASON_START_DATE),
         }),
       );
@@ -679,9 +688,11 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const { principal } = request;
       if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
       const input = arrangeLoanInputSchema.parse(request.body);
+      // Both centres must be in the officer's district, so a loan never crosses a district line.
       for (const chcId of [input.fromChcId, input.toChcId]) {
-        requireCedar(principal, "ArrangeLoan", { type: "Chc", id: chcId });
-        if (!(await dependencies.store.getChc(chcId))) throw new NotFoundError("centre not found");
+        const chc = await dependencies.store.getChc(chcId);
+        if (!chc) throw new NotFoundError("centre not found");
+        requireCedar(principal, "ArrangeLoan", chcInDistrict(chc));
       }
       const loan = await dependencies.planner.arrangeLoan(input.fromChcId, input.toChcId, principal.userId, input.days);
       for (const plan of [loan.lenderPlan, loan.borrowerPlan]) await approveForSimulatedOperator(dependencies.planner, plan);
@@ -696,10 +707,17 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       const { principal } = request;
       if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
       const loanId = String(request.params.loanId);
-      const fromChcId = loanId.split("~")[0] ?? "";
-      requireCedar(principal, "ArrangeLoan", { type: "Chc", id: fromChcId });
+      // Both centres are checked before anything changes: the lender from the loan id, the
+      // borrower from the lent machine's loan.
+      const [lenderId, machineId] = loanId.split("~");
+      const lender = lenderId ? await dependencies.store.getChc(lenderId) : null;
+      if (!lender) throw new NotFoundError("loan not found");
+      requireCedar(principal, "ArrangeLoan", chcInDistrict(lender));
+      const lent = (await dependencies.store.listMachines(lender.id)).find((machine) => machine.id === machineId);
+      const borrower = lent?.loan?.direction === "out" ? await dependencies.store.getChc(lent.loan.otherChcId) : null;
+      if (!borrower) throw new NotFoundError("loan not found");
+      requireCedar(principal, "ArrangeLoan", chcInDistrict(borrower));
       const ended = await dependencies.planner.endLoan(loanId);
-      requireCedar(principal, "ArrangeLoan", { type: "Chc", id: ended.toChcId });
       for (const plan of [ended.lenderPlan, ended.borrowerPlan]) await approveForSimulatedOperator(dependencies.planner, plan);
       response.json({ ended: loanId });
     }),

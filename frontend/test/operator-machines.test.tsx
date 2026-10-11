@@ -53,6 +53,10 @@ describe("operator machines", () => {
     expect(within(cards[3]!).getByText("Borrowed from Rattoke CHC")).toBeInTheDocument();
     expect(within(cards[3]!).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Check and approve" })).toHaveAttribute("href", "/dashboard/plan");
+    // The footnote sits at the bottom of a page that fills the dashboard's main area.
+    const footnote = screen.getByText(/Adding or removing a machine makes a new plan for you to check/);
+    expect(footnote).toHaveClass("mt-auto");
+    expect(footnote.parentElement).toHaveAttribute("data-fill-page");
   });
 
   it("adds a machine by name and kind, and removes one only after asking", async () => {
@@ -65,8 +69,15 @@ describe("operator machines", () => {
     fireEvent.click(within(add).getByRole("button", { name: "Add machine" }));
     await waitFor(() => expect(calls.find((call) => call.method === "POST")).toMatchObject({ body: JSON.stringify({ name: "Rented Happy Seeder", kind: "happy_seeder" }) }));
 
-    fireEvent.click(within(screen.getAllByRole("listitem")[0]!).getByRole("button", { name: "Remove" }));
+    // Remove on a card is quiet until hovered (a grid of red words would read as burn risk); it turns
+    // red on hover, and the confirm button is red.
+    const removeButton = within(screen.getAllByRole("listitem")[0]!).getByRole("button", { name: "Remove" });
+    expect(removeButton.className).toContain("text-ink-muted");
+    expect(removeButton.className).toContain("hover:text-ember-deep");
+    fireEvent.click(removeButton);
     const confirm = await screen.findByRole("dialog", { name: "Remove Super Seeder 1?" });
+    expect(within(confirm).getByRole("button", { name: "Remove machine" }).className).toContain("bg-ember-solid");
+    expect(within(confirm).getByRole("button", { name: "Remove machine" }).className).not.toContain("bg-ink");
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
     fireEvent.click(within(confirm).getByRole("button", { name: "Remove machine" }));
     await waitFor(() => expect(calls.find((call) => call.method === "DELETE")?.url).toContain("operator/machines/m1"));

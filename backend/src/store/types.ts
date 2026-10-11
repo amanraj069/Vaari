@@ -185,6 +185,9 @@ export type UserRecord = {
   role: Role;
   chcId: string | null;
   language: Locale;
+  // An officer's district (a name in data/boundaries.json): they see and lend between only the
+  // centres whose base lies inside it. Absent for other roles, and for an officer not assigned yet.
+  district?: string;
 };
 
 /**
@@ -240,7 +243,7 @@ export type OtpChallengeRecord = {
   attempts: number;
 };
 
-export type NoticeKind = "new_date" | "firm_date" | "date_changed";
+export type NoticeKind = "booked" | "new_date" | "firm_date" | "date_changed";
 export type DeliveryStatus = "accepted" | "sent" | "delivered" | "read" | "failed";
 
 /** One outbound WhatsApp notice and its latest delivery status. Only the phone's last 4 digits are kept. */

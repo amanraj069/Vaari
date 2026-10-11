@@ -1,12 +1,13 @@
 /**
- * The operator's day card: today's fields are ticked as sown by default and an untick sends "not
- * sown"; tomorrow cannot start while a plan waits for approval; starting asks first, because the
- * day moves for every centre.
+ * The operator's day: today's fields are ticked as sown by default and an untick sends "not sown";
+ * the card is gone once the day is recorded or nothing was planned; the header's "Start tomorrow"
+ * is hidden until today is recorded, disabled with its reason while a plan waits for approval, and
+ * asks first, because the day moves for every centre.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DayClose } from "@/components/operator/day-close";
+import { DayClose, StartDay } from "@/components/operator/day-close";
 import type { DayView } from "@/shared";
 import { renderWithIntl } from "./render";
 
@@ -34,7 +35,13 @@ function serve() {
     }),
   );
 }
-const render = (day: DayView) => renderWithIntl(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><DayClose day={day} /></QueryClientProvider>);
+const render = (day: DayView) =>
+  renderWithIntl(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
+      <DayClose day={day} />
+      <StartDay day={day} />
+    </QueryClientProvider>,
+  );
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -53,11 +60,28 @@ describe("the operator's day", () => {
     expect(screen.queryByRole("button", { name: /^Start / })).not.toBeInTheDocument();
   });
 
+  it("shows no card once today is recorded or when nothing was planned", () => {
+    serve();
+    const recorded = render({ ...TODAY, closed: true, blockedBy: null });
+    expect(screen.queryByRole("heading", { name: /^Today,/ })).not.toBeInTheDocument();
+    recorded.unmount();
+    render({ ...TODAY, stops: [], closed: false, blockedBy: null });
+    expect(screen.queryByRole("heading", { name: /^Today,/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start Monday, 2 November" })).toBeEnabled();
+  });
+
+  it("hides the start button from an operator who cannot move the season", () => {
+    serve();
+    render({ ...TODAY, closed: true, blockedBy: null, canStart: false });
+    expect(screen.queryByRole("button", { name: /^Start / })).not.toBeInTheDocument();
+  });
+
   it("waits for tomorrow's plan to be approved, then asks before starting the next day", async () => {
     serve();
     const waiting = render({ ...TODAY, closed: true, blockedBy: "approve" });
-    expect(screen.getByRole("button", { name: "Start Monday, 2 November" })).toBeDisabled();
-    expect(screen.getByText(/Approve tomorrow's plan to start tomorrow\./)).toBeInTheDocument();
+    const blocked = screen.getByRole("button", { name: "Start Monday, 2 November" });
+    expect(blocked).toBeDisabled();
+    expect(blocked).toHaveAccessibleDescription("Approve tomorrow's plan to start tomorrow.");
     waiting.unmount();
     render({ ...TODAY, closed: true, blockedBy: null });
     fireEvent.click(screen.getByRole("button", { name: "Start Monday, 2 November" }));

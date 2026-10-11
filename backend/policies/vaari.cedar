@@ -1,6 +1,7 @@
 // Vaari permissions. Deny by default: anything not permitted here is refused with 403.
-// Principals: User (signed in: attrs role, userId, chcId) and FarmerPhone (a farmer's phone
-// session; attr phone). Resources: Field (attrs chcId, farmerPhone, bookedBy), Chc (attr chcId).
+// Principals: User (signed in: attrs role, userId, chcId, district) and FarmerPhone (a farmer's
+// phone session; attr phone). Resources: Field (attrs chcId, farmerPhone, bookedBy), Chc (attrs
+// chcId, district).
 // A FarmerPhone principal reads the fields booked with its phone and books new ones for itself.
 
 // A farmer's phone sees and asks about the fields booked with that phone, nothing else. On WhatsApp
@@ -41,16 +42,18 @@ when { principal.role == "operator" && resource.chcId == principal.chcId };
 permit (principal is User, action in [Action::"ViewField", Action::"AskWhy", Action::"ViewFarmerContact", Action::"ReissueLink", Action::"ChangeBooking"], resource is Field)
 when { principal.role == "operator" && resource.chcId == principal.chcId };
 
-// An officer sees aggregates for every CHC, never an individual farmer's contact details.
+// An officer sees aggregates for the CHCs in their own district, never another district's, and
+// never an individual farmer's contact details. An officer with no district sees no centre.
 @id("officer-aggregates")
 permit (principal is User, action == Action::"ViewAggregates", resource is Chc)
-when { principal.role == "officer" };
+when { principal.role == "officer" && principal.district != "" && resource.district == principal.district };
 
-// An officer allocates machines between centres: a loan from one centre to another (both are
-// checked). They never add or remove a centre's own machines; the centre's operator does that.
+// An officer allocates machines between centres of their own district: a loan from one centre to
+// another (both are checked, so a loan never crosses a district line). They never add or remove a
+// centre's own machines; the centre's operator does that.
 @id("officer-arrange-loans")
 permit (principal is User, action == Action::"ArrangeLoan", resource is Chc)
-when { principal.role == "officer" };
+when { principal.role == "officer" && principal.district != "" && resource.district == principal.district };
 
 @id("officer-no-contact")
 forbid (principal is User, action == Action::"ViewFarmerContact", resource)

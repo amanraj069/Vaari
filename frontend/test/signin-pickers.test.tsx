@@ -1,7 +1,6 @@
-/** /signin's pieces: farmers on WhatsApp, the staff role pick with Log in / Register and Google, demo accounts that take over the panel, the role pages' chips. */
+/** /signin's pieces: farmers on WhatsApp, the staff role pick with Log in / Register and Google, the demo accounts listed below them, the role pages' chips. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignInChooser } from "@/components/signin-chooser";
 import { renderWithIntl } from "./render";
@@ -44,14 +43,14 @@ describe("sign-in choices", () => {
     expect(screen.getByRole("link", { name: "Log in / Register" })).toHaveAttribute("href", "/signin/officer");
   });
 
-  it("'Try the demo accounts' swaps the section for the demo people, each tagged Demo, and goes back", async () => {
+  it("the demo people are listed on the page itself, below staff sign-in, each tagged Demo; no click needed", () => {
     renderChooser();
-    await userEvent.click(screen.getByRole("button", { name: /Try the demo accounts/ }));
-    expect(await screen.findByRole("heading", { name: "Demo accounts" })).toBeInTheDocument();
-    expect(screen.getAllByText("Demo")).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Use this account" })).toHaveLength(2);
-    await vi.waitFor(() => expect(screen.queryByRole("link", { name: "Log in / Register" })).not.toBeInTheDocument());
-    await userEvent.click(screen.getByRole("button", { name: "Back to sign in" }));
-    expect(await screen.findByRole("link", { name: "Log in / Register" })).toBeInTheDocument();
+    const demo = screen.getByRole("region", { name: "Demo accounts" });
+    expect(within(demo).getAllByText("Demo")).toHaveLength(2);
+    expect(within(demo).getAllByRole("button", { name: "Use this account" })).toHaveLength(2);
+    // Sign-in stays on screen alongside them, and comes first.
+    const login = screen.getByRole("link", { name: "Log in / Register" });
+    expect(login.compareDocumentPosition(demo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Try the demo accounts/ })).not.toBeInTheDocument();
   });
 });

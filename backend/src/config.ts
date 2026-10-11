@@ -111,6 +111,10 @@ const configSchema = z.object({
   // More demo farmer phones (E.164, comma-separated) that see their sign-in code on screen, besides
   // the seeded demo farmer's. Never a real person's number: anyone can sign in as these.
   DEMO_FARMER_PHONES: z.string().default(""),
+  // Phones (E.164, comma-separated) that always get WhatsApp notices, even when they count as demo
+  // farmer phones (DEMO_FARMER_PHONES=* makes every phone one): the team's own numbers on Meta's
+  // test-recipient list, so the booking and plan messages can be seen on a real phone.
+  WHATSAPP_ALLOWED_TEST_NUMBERS: z.string().default(""),
 });
 
 export type Config = Omit<z.infer<typeof configSchema>, "FARMER_OTP_DELIVERY"> & { FARMER_OTP_DELIVERY: "off" | "whatsapp" };

@@ -1,15 +1,18 @@
 /**
  * The operator's plan pieces: what approving changes (broken promises in ember, never hidden),
  * lanes that flag fields past the farmer's last waiting day with an icon and words (not colour
- * alone), and the move dialog that refuses workshop and rain days with the reason.
+ * alone), the move dialog that refuses workshop and rain days with the reason, and a picked day
+ * that answers the click at once while its lanes load.
  */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MachineLane } from "@/components/machine-lane";
 import { MoveFieldDialog } from "@/components/move-field-dialog";
 import { PlanChangesList } from "@/components/plan-changes";
-import type { Lane, LaneStop, PlanChangesView } from "@/shared";
+import { OperatorPlanView } from "@/components/views/operator-plan";
+import type { Lane, LaneStop, OperatorPlan, PlanChangesView } from "@/shared";
 import { renderWithIntl } from "./render";
 
 const ref = (token: number, farmerName: string) => ({ fieldId: `f${token}`, token, farmerName, villageName: "Balian" });
@@ -97,5 +100,60 @@ describe("move dialog", () => {
     await userEvent.click(within(dialog).getByRole("radio", { name: /2 Nov/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Move and re-plan" }));
     expect(onMove).toHaveBeenCalledWith({ machineId: "m2", date: "2026-11-02" });
+  });
+});
+
+describe("picking a plan day", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const day = (date: string) => ({ date, rain: false, fields: 1, acres: 3, atRisk: 0, machines: [] });
+  const PLAN: OperatorPlan = {
+    chc: { id: "chc-balian", name: "Balian Cooperative Society" },
+    today: "2026-10-31",
+    plan: { version: 1, status: "approved", planDate: "2026-11-01", createdAt: "2026-10-31T10:00:00Z", approvedAt: "2026-10-31T10:05:00Z", approvedBy: "Harpal Singh", cause: "generate", causeMachineName: null },
+    changes: null,
+    pins: [],
+    days: ["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04"].map(day),
+    selectedDate: "2026-11-01",
+    lanes: [lane([stop()])],
+    newRequests: 0,
+    attention: [],
+    moveOptions: { machines: [], dates: [], rainDates: [] },
+    solver: null,
+  };
+
+  it("moves to the picked day at the click and says it is loading until the day's lanes arrive", async () => {
+    let releaseDay: (() => void) | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("date=2026-11-04")) {
+          // The picked day's answer waits until the test lets it through.
+          await new Promise<void>((resolve) => (releaseDay = resolve));
+          return new Response(JSON.stringify({ ...PLAN, selectedDate: "2026-11-04", lanes: [lane([stop({ token: 52, farmerName: "Gurpreet Singh" })])] }), { status: 200 });
+        }
+        return new Response(JSON.stringify(PLAN), { status: 200 });
+      }),
+    );
+    renderWithIntl(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <OperatorPlanView />
+      </QueryClientProvider>,
+    );
+    const wednesday = await screen.findByRole("button", { name: /Wednesday, 4 November/ });
+    expect(screen.getByRole("button", { name: /#041 Paramjit Kaur/ })).toBeInTheDocument();
+
+    await userEvent.click(wednesday);
+    // Before the answer: the highlight and the heading are already on Wednesday, the old day's lanes are gone.
+    expect(wednesday).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Sunday, 1 November/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Machines on Wednesday, 4 November")).toBeInTheDocument();
+    expect(screen.getByText("Loading Wednesday, 4 November…")).toHaveAttribute("role", "status");
+    expect(screen.queryByRole("button", { name: /#041 Paramjit Kaur/ })).not.toBeInTheDocument();
+
+    releaseDay!();
+    expect(await screen.findByRole("button", { name: /#052 Gurpreet Singh/ })).toBeInTheDocument();
+    expect(screen.queryByText("Loading Wednesday, 4 November…")).not.toBeInTheDocument();
   });
 });

@@ -13,7 +13,7 @@ export function WhatsAppSignInCard() {
   return (
     <Link
       href="/farmer/signin"
-      className="group flex min-h-12 items-center gap-3 rounded-card border border-line bg-surface p-4 transition-colors duration-150 hover:border-ink/50 sm:p-5"
+      className="card-lift group flex min-h-12 items-center gap-3 rounded-card border border-line bg-surface p-4 transition-colors duration-150 hover:border-ink/50 sm:p-5"
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-field-soft text-field sm:size-11">
         <WhatsAppGlyph className="size-[1.375rem] sm:size-6" />

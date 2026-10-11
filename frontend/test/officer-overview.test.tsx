@@ -38,7 +38,7 @@ const OVERVIEW: OfficerOverview = {
   totals: { ...counts, centres: 10, villages: 12 },
   centres: [
     { ...counts, district: "Sangrur", fleet: { own: 4, superSeeders: 3, happySeeders: 1, inWorkshop: 1, lentOut: 0, borrowedIn: 0, acresBookedSeason: 300 }, id: "chc-balian", name: "Balian Cooperative Society", villageCount: 12, lat: 30.3, lon: 75.9, planDate: "2026-11-01", draftWaiting: true, maxDelayVsQueueDays: 2, outlook: { lateAcres: 12.4, lateIfOneDownAcres: 40, lateIfOneMoreAcres: 0, capacityAcresPerDay: 19.9, waitingAcres: 20 } },
-    { ...counts, burnRisk: 0, district: "Malerkotla", fleet: { own: 4, superSeeders: 3, happySeeders: 1, inWorkshop: 1, lentOut: 0, borrowedIn: 0, acresBookedSeason: 600 }, id: "chc-sim-03", name: "Rajpura CHC", villageCount: 20, lat: 30.27, lon: 76.13, planDate: "2026-11-01", draftWaiting: false, maxDelayVsQueueDays: 0, outlook: { lateAcres: 0, lateIfOneDownAcres: 0, lateIfOneMoreAcres: 0, capacityAcresPerDay: 33.2, waitingAcres: 10 } },
+    { ...counts, burnRisk: 0, district: "Sangrur", fleet: { own: 4, superSeeders: 3, happySeeders: 1, inWorkshop: 1, lentOut: 0, borrowedIn: 0, acresBookedSeason: 600 }, id: "chc-sim-03", name: "Rajpura CHC", villageCount: 20, lat: 30.27, lon: 76.13, planDate: "2026-11-01", draftWaiting: false, maxDelayVsQueueDays: 0, outlook: { lateAcres: 0, lateIfOneDownAcres: 0, lateIfOneMoreAcres: 0, capacityAcresPerDay: 33.2, waitingAcres: 10 } },
     { ...counts, burnRisk: 0, district: "Sangrur", fleet: { own: 4, superSeeders: 3, happySeeders: 1, inWorkshop: 1, lentOut: 0, borrowedIn: 0, acresBookedSeason: 200 }, id: "chc-sim-11", name: "Dudian CHC", villageCount: 18, lat: 29.88, lon: 75.94, planDate: "2026-11-01", draftWaiting: false, maxDelayVsQueueDays: 0, outlook: { lateAcres: 0, lateIfOneDownAcres: 23, lateIfOneMoreAcres: 0, capacityAcresPerDay: 33.2, waitingAcres: 10 } },
     ...Array.from({ length: 7 }, (_, index) => ({ ...counts, burnRisk: 0, district: "Sangrur", fleet: { own: 4, superSeeders: 3, happySeeders: 1, inWorkshop: 1, lentOut: 0, borrowedIn: 0, acresBookedSeason: 100 }, id: `chc-sim-2${index}`, name: `Quiet ${index} CHC`, villageCount: 9, lat: 30, lon: 75.8, planDate: "2026-11-01", draftWaiting: false, maxDelayVsQueueDays: 0, outlook: { lateAcres: 0, lateIfOneDownAcres: 0, lateIfOneMoreAcres: 0, capacityAcresPerDay: 20, waitingAcres: 0 } })),
   ],
@@ -207,15 +207,15 @@ describe("officer centres page", () => {
 });
 
 describe("officer machines page", () => {
-  it("counts the district's machines, by district and by centre, most load per machine first", async () => {
+  it("counts the officer's district's machines by centre, most load per machine first", async () => {
     serve({ "officer/overview": { status: 200, body: OVERVIEW } });
     renderWith(<OfficerFleetView />);
     const numbers = await screen.findByLabelText("The district's machines");
     expect(within(numbers).getByText("Machines").parentElement).toHaveTextContent("40");
     expect(within(numbers).getByText("In the workshop").parentElement).toHaveTextContent("10");
-    const districts = screen.getByRole("region", { name: "By district" });
-    expect(within(districts).getByRole("heading", { name: "Malerkotla" })).toBeInTheDocument();
-    expect(within(districts).getByRole("heading", { name: "Sangrur" })).toBeInTheDocument();
+    // An officer runs one district, so the page never splits or names districts.
+    expect(screen.queryByRole("region", { name: "By district" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Malerkotla")).not.toBeInTheDocument();
     const rows = within(screen.getByRole("table", { name: "By centre, most load per machine first" })).getAllByRole("rowheader");
     // Rajpura: 600 acres over 4 machines = 150 a machine, the most.
     expect(rows[0]).toHaveTextContent("Rajpura CHC");
