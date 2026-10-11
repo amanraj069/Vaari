@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * BookedList: the fields this facilitator booked, newest status first. Each row shows the farmer,
- * the promise (only a promised date, never a planned one), status badges with icon + word, a
- * button to copy the farmer's slot link again, and one to give the farmer a new link (after a
- * confirmation: the old link stops working at once).
+ * BookedList: the fields this facilitator booked, newest status first. Each row shows the farmer on
+ * the left; on the right, the status badges at the top (the promise, only a promised date, never a
+ * planned one, with icon + word) and under them a button to copy the farmer's slot link again and
+ * one to give the farmer a new link (after a confirmation: the old link stops working at once).
  */
 import { Copy, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -17,12 +17,12 @@ import { Button, Pill, Skeleton, Spinner, StateMessage } from "./ui";
 
 export type BookedListState = { kind: "loading" } | { kind: "error"; onRetry: () => void } | { kind: "ready"; items: QueueItem[] };
 
-export function StatusBadges({ item }: { item: QueueItem }) {
+export function StatusBadges({ item, align = "start" }: { item: QueueItem; align?: "start" | "end" }) {
   const tf = useTranslations("farmer");
   const tr = useTranslations("risk");
   const dates = useDates();
   return (
-    <span className="flex flex-wrap items-center gap-1.5">
+    <span className={`flex flex-wrap items-center gap-1.5 ${align === "end" ? "justify-end" : ""}`}>
       {item.promise?.kind === "firm" ? (
         <Pill kind="firm">
           {tf("firm")} · <span className="tabular">{dates.short(item.promise.date)}</span>
@@ -94,7 +94,8 @@ export function BookedList({
       ) : (
         <ul className={bare ? "divide-y divide-line" : "mt-4 divide-y divide-line rounded-card border border-line bg-surface"}>
           {state.items.map((item) => (
-            <li key={item.fieldId} className={`flex items-center gap-3 py-3 ${bare ? "px-5" : "px-4"}`}>
+            // Who and where on the left; on the right, the status at the top and the actions under it.
+            <li key={item.fieldId} className={`flex items-start gap-3 py-3 ${bare ? "px-5" : "px-4"}`}>
               <div className="min-w-0 flex-1">
                 <p className="truncate">
                   <span className="font-medium tabular">#{String(item.token).padStart(3, "0")}</span> {item.farmerName}
@@ -102,32 +103,34 @@ export function BookedList({
                 <p className="truncate text-sm text-ink-muted">
                   {item.villageName} · {tc("acres", { acres: item.acres })}
                 </p>
-                <div className="mt-1.5">
-                  <StatusBadges item={item} />
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <StatusBadges item={item} align="end" />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onCopyLink(item)}
+                    aria-label={t("copyLinkFor", { name: item.farmerName })}
+                    className="grid size-11 shrink-0 place-items-center rounded-control border border-line-strong text-ink hover:border-ink/50"
+                  >
+                    <Copy aria-hidden className="size-5" strokeWidth={1.75} />
+                  </button>
+                  {onReissueLink ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReissueState("idle");
+                        setReissuing(item);
+                      }}
+                      aria-label={t("reissueFor", { name: item.farmerName })}
+                      className="grid size-11 shrink-0 place-items-center rounded-control border border-line-strong text-ink hover:border-ink/50"
+                    >
+                      <RefreshCw aria-hidden className="size-5" strokeWidth={1.75} />
+                    </button>
+                  ) : null}
+                  {onChanged ? <ChangeBooking compact base={`fields/${item.fieldId}`} readyDate={item.readyDate} today={today} label={item.farmerName} onDone={onChanged} /> : null}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => onCopyLink(item)}
-                aria-label={t("copyLinkFor", { name: item.farmerName })}
-                className="grid size-11 shrink-0 place-items-center rounded-control border border-line-strong text-ink hover:border-ink/50"
-              >
-                <Copy aria-hidden className="size-5" strokeWidth={1.75} />
-              </button>
-              {onReissueLink ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReissueState("idle");
-                    setReissuing(item);
-                  }}
-                  aria-label={t("reissueFor", { name: item.farmerName })}
-                  className="grid size-11 shrink-0 place-items-center rounded-control border border-line-strong text-ink hover:border-ink/50"
-                >
-                  <RefreshCw aria-hidden className="size-5" strokeWidth={1.75} />
-                </button>
-              ) : null}
-              {onChanged ? <ChangeBooking compact base={`fields/${item.fieldId}`} readyDate={item.readyDate} today={today} label={item.farmerName} onDone={onChanged} /> : null}
             </li>
           ))}
         </ul>

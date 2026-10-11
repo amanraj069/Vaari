@@ -48,7 +48,7 @@ beforeAll(async () => {
 });
 
 // The bookings above sent their own "request is in" notices (whatsapp-booking-notice.test.ts); these are the approval's.
-const templatesTo = (phone: string) => runtime.sender.sent.filter((message) => message.type === "template" && message.to === phone && message.parameters[0] !== promiseWords(null, "pa"));
+const templatesTo = (phone: string) => runtime.sender.sent.filter((message) => message.type === "template" && message.to === phone && message.parameters[0] !== promiseWords(null, "en"));
 
 describe("outbound notices", () => {
   it("go to every consented number, and never to one without consent", () => {
@@ -72,7 +72,7 @@ describe("outbound notices", () => {
 
   it("use the utility template for a first date, with the date and the slot page's own sentence in the farmer's language", () => {
     const [notice] = templatesTo(CONSENTED);
-    expect(notice).toMatchObject({ type: "template", name: "vaari_new_date", language: "pa" });
+    expect(notice).toMatchObject({ type: "template", name: "vaari_new_date", language: "en" });
     const parameters = notice?.type === "template" ? notice.parameters : [];
     expect(parameters).toHaveLength(2);
     expect(parameters.every((text) => text.length > 0)).toBe(true);

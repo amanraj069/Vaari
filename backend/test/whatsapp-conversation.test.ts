@@ -95,12 +95,16 @@ describe("the reply language", () => {
     expect(lastTo(HARPREET)).toMatchObject({ type: "text", body: hi.bookAsk });
   });
 
-  it("is remembered: the farmer record (which notices use) now says Hindi, and Latin letters keep it", async () => {
+  it("is remembered: the farmer record (which notices use) now says Hindi; no letters keep it, Latin letters switch to English", async () => {
     expect((await accountFarmer(HARPREET))?.language).toBe("hi");
     runner.script = async () => "";
-    await runtime.deliver(messageBody({ from: from(HARPREET), text: "Balian 4 acre" }));
+    await runtime.deliver(messageBody({ from: from(HARPREET), text: "4" }));
     expect(runner.inputs.at(-1)?.locale).toBe("hi");
     expect((await accountFarmer(HARPREET))?.language).toBe("hi");
+    // "Sat Shri Kal", typed in Latin letters: answered in English, and remembered.
+    await runtime.deliver(messageBody({ from: from(HARPREET), text: "Sat Shri Kal" }));
+    expect(runner.inputs.at(-1)?.locale).toBe("en");
+    expect(await accountFarmer(HARPREET)).toMatchObject({ language: "en", languageChosen: true });
   });
 
   it("writing in Gurmukhi switches every farmer record of the phone to Punjabi", async () => {

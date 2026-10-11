@@ -18,7 +18,7 @@ import { FarmerSession, type FarmerTool } from "../src/whatsapp/tools";
 import { ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers";
 
 const JASWINDER = "447700900017";
-const pa = words("pa");
+const en = words("en"); // Jaswinder writes in Latin letters below: answered in English
 type Runtime = Awaited<ReturnType<typeof whatsappRuntime>>;
 
 /** One runtime, the model swapped per test. */
@@ -91,8 +91,8 @@ describe("the output check", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]?.type === "text" && sent[0].body).not.toContain("30 November");
     const field = (await runtime.runtime.dependencies.store.getField(DEMO_CHC_ID, "f-jaswinder"))!;
-    const lastDay = formatDate(runtime.runtime.dependencies.planner.dayToIso(field.readyDay + field.waitingLimitDays), "pa");
-    expect(sent[0]?.type === "text" && sent[0].body).toContain(pa.lastDayYouCanWait(lastDay));
+    const lastDay = formatDate(runtime.runtime.dependencies.planner.dayToIso(field.readyDay + field.waitingLimitDays), "en");
+    expect(sent[0]?.type === "text" && sent[0].body).toContain(en.lastDayYouCanWait(lastDay));
   });
 
   it("checkReply: numbers, months and weekdays must all come from the tool results (any script)", () => {
@@ -142,7 +142,7 @@ describe("off-topic questions, model failures and changes", () => {
     runner.current = new ScriptedRunner(async () => "The price of wheat in Sangrur mandi is 2,425 rupees per quintal.");
     await runtime.deliver(messageBody({ from: JASWINDER, text: "what is the wheat price?" }));
     const sent = lastTo(DEMO_FARMER_PHONE);
-    expect(sent).toMatchObject({ type: "list", body: `${pa.offTopic}\n\n${pa.menuBody}` });
+    expect(sent).toMatchObject({ type: "list", body: `${en.offTopic}\n\n${en.menuBody}` });
     expect(JSON.stringify(sent)).not.toContain("2,425");
   });
 
@@ -159,7 +159,7 @@ describe("off-topic questions, model failures and changes", () => {
       throw new Error("AccessDeniedException");
     });
     await runtime.deliver(messageBody({ from: JASWINDER, text: "when?" }));
-    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "list", body: `${pa.agentUnavailable}\n\n${pa.menuBody}` });
+    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "list", body: `${en.agentUnavailable}\n\n${en.menuBody}` });
   });
 
   it("a change drafted by the model is announced only by our Confirm buttons, and nothing changes yet", async () => {

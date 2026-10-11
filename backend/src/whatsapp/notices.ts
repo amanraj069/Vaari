@@ -5,7 +5,8 @@
  * promise changed hears about it: a first date (new_date), a window that became a firm date (firm_date), a promise
  * that had to move or break, or a sooner date after "I cannot wait longer" (date_changed). Each is a
  * utility template (names from env) with two parameters: the date in words and the slot page's own
- * sentence (explain/slot-reasons.ts), in the farmer's language; and, with
+ * sentence (explain/slot-reasons.ts), in the farmer's language (a registered farmer's own, else
+ * English); and, with
  * WHATSAPP_TEMPLATE_SLOT_BUTTON, a "My slot" button that opens the field's signed slot link.
  *
  * Sent only to a field with a phone AND consent, never to a demo farmer's phone (demo/phones.ts)
@@ -18,6 +19,7 @@ import { isDemoFarmerPhone } from "../demo/phones";
 import { buildOneFarmerField } from "../domain/views";
 import { logger } from "../logger";
 import type { FieldRecord, NoticeKind, PlanChanges } from "../store/types";
+import { phoneLanguage } from "./language";
 import { promiseWords } from "./messages";
 import { fromWhatsAppNumber, maskPhone } from "./phone";
 import type { WhatsAppSender } from "./sender";
@@ -65,7 +67,8 @@ export function createNotifier(deps: NotifierDeps) {
       logger.warn({ kind }, "whatsapp notice skipped: no template name configured");
       return "no template";
     }
-    const language = (await store.getFarmer(field.farmerId))?.language ?? "pa";
+    // The language the farmer chose (registered in, or wrote to Vaari in); English if they never chose one.
+    const language = (await phoneLanguage(store, phone, field.farmerId)) ?? "en";
     const view = await buildOneFarmerField(planner, store, field, language);
     const sentAt = new Date().toISOString();
     const base = { phoneLast4: phone.slice(-4), kind, chcId, fieldId, sentAt, statusAt: sentAt };

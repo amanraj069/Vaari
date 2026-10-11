@@ -1,6 +1,6 @@
 /** Phone numbers as Meta sends them, masking for logs, the reply language, and payload parsing. */
 import { describe, expect, it } from "vitest";
-import { chooseLocale, scriptLocale } from "../src/whatsapp/language";
+import { scriptLocale, storedLanguage } from "../src/whatsapp/language";
 import { parseWebhook } from "../src/whatsapp/payload";
 import { fromWhatsAppNumber, maskPhone, toWhatsAppNumber } from "../src/whatsapp/phone";
 import { PhoneRateLimiter } from "../src/whatsapp/worker";
@@ -27,17 +27,29 @@ describe("the sender's number", () => {
 });
 
 describe("the reply language", () => {
-  it("is the script the farmer just wrote in, else the stored language, else English", () => {
+  it("stored: only a language the farmer chose counts (an old booking's Punjabi default does not)", () => {
+    const record = (id: string, language: "en" | "hi" | "pa", languageChosen?: boolean) => ({ id, name: "A", phone: "+919876543210", language, languageChosen, facilitatorId: null });
+    const account = { phone: "+919876543210", farmerId: "own", name: "A", language: "hi" as const, consentAt: "", consentBy: "farmer", createdAt: "" };
+    expect(storedLanguage([record("old", "pa")], null)).toBeNull();
+    expect(storedLanguage([record("old", "pa"), record("wrote", "hi", true)], null)).toBe("hi");
+    expect(storedLanguage([record("own", "pa")], account)).toBe("hi"); // registered in Hindi; the record's default ignored
+    expect(storedLanguage([record("own", "en", true)], account)).toBe("en"); // then wrote in English
+    expect(storedLanguage([], account)).toBe("hi");
+  });
+
+  it("is the script the farmer just wrote in: Gurmukhi, Devanagari or Latin letters", () => {
     expect(scriptLocale("ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
     expect(scriptLocale("मेरी तारीख़")).toBe("hi");
-    expect(scriptLocale("my date")).toBeNull();
-    expect(chooseLocale("hi", "ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
-    expect(chooseLocale("pa", "मेरी तारीख़")).toBe("hi");
-    expect(chooseLocale("pa", "my date")).toBe("pa");
-    expect(chooseLocale(null, "ਮੇਰੀ ਤਰੀਕ")).toBe("pa");
-    expect(chooseLocale(null, "मेरी तारीख़")).toBe("hi");
-    expect(chooseLocale(null, "my date")).toBe("en");
-    expect(chooseLocale(null, null)).toBe("en");
+    expect(scriptLocale("my date")).toBe("en");
+    expect(scriptLocale("Sat Shri Kal")).toBe("en");
+    expect(scriptLocale("Balian, 30 नवंबर तक")).toBe("hi");
+    // A tapped row's title: Latin letters (a village's name in a Punjabi list) do not count.
+    expect(scriptLocale("#035 Balian", false)).toBeNull();
+    expect(scriptLocale("खेत बुक करें", false)).toBe("hi");
+    // No letters at all: no language.
+    expect(scriptLocale("4")).toBeNull();
+    expect(scriptLocale("🙏")).toBeNull();
+    expect(scriptLocale(null)).toBeNull();
   });
 });
 

@@ -21,14 +21,19 @@ async function fillToCheck() {
   expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
   await user.type(screen.getByRole("textbox", { name: /Farmer's name/ }), "Paramjit Kaur");
   await next();
-  // The phone: a wrong number says so and blocks Next; a right one still needs the farmer's consent.
+  // The phone (+91 fixed): a short number blocks Next quietly, a wrong ten-digit one says so, and a
+  // right one still needs the farmer's consent. A pasted +91 is not typed twice.
   const phone = screen.getByRole("textbox", { name: /Paramjit Kaur's mobile number/ });
+  await user.type(phone, "12345");
+  expect(phone).toHaveAttribute("aria-invalid", "false");
+  expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
   await user.type(phone, "12345");
   expect(phone).toHaveAttribute("aria-invalid", "true");
   expect(screen.getByText(/Type a 10-digit mobile number/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
   await user.clear(phone);
-  await user.type(phone, "98765 43210");
+  await user.type(phone, "+91 98765 43210");
+  expect(phone).toHaveValue("9876543210");
   expect(phone).toHaveAttribute("aria-invalid", "false");
   expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
   await user.click(screen.getByRole("checkbox", { name: /Paramjit Kaur agrees to get messages/ }));
@@ -56,8 +61,8 @@ describe("BookForm", () => {
     const writeText = vi.spyOn(navigator.clipboard, "writeText");
     const summary = screen.getByRole("heading", { name: "Check before booking" }).parentElement!;
     expect(within(summary).getByText("Paramjit Kaur")).toBeInTheDocument();
-    // The facilitator sees the number they typed, as it will be stored.
-    expect(within(summary).getByText("+919876543210")).toBeInTheDocument();
+    // The facilitator sees the number with its +91, the way the farmer would say it.
+    expect(within(summary).getByText("+91 98765 43210")).toBeInTheDocument();
     expect(within(summary).getByText("Akoi")).toBeInTheDocument();
     expect(within(summary).getByText("3.5 acres")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Book and get the link" }));

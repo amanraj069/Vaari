@@ -55,6 +55,7 @@ import { districtAt, loadDistrictOutlines } from "./data/boundaries";
 import { loadOutlookContext } from "./data/outlook-context";
 import { explainField as explainFieldFor } from "./domain/why";
 import { clientRateLimit } from "./http/client-ip";
+import { phoneLanguage } from "./whatsapp/language";
 
 export class ForbiddenError extends Error {
   constructor(readonly errors: string[] = []) {
@@ -487,7 +488,9 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         return;
       }
       const farmerId = `farmer-${randomUUID().slice(0, 8)}`;
-      await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: input.farmerPhone, language: "pa", facilitatorId: principal.userId });
+      // The language the farmer chose, else English (never the helper's screen language).
+      const language = (await phoneLanguage(dependencies.store, input.farmerPhone)) ?? "en";
+      await dependencies.store.putFarmer({ id: farmerId, name: input.farmerName, phone: input.farmerPhone, language, facilitatorId: principal.userId });
       const field = await dependencies.planner.requestField(
         chcId,
         {

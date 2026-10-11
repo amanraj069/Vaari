@@ -32,8 +32,8 @@ export function mobileDigits(typed: string): string {
   return digits.slice(0, 10);
 }
 
-const isMobile = (digits: string) => /^[6-9]\d{9}$/.test(digits);
-const spaced = (digits: string) => `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+export const isMobile = (digits: string) => /^[6-9]\d{9}$/.test(digits);
+export const spacedMobile = (digits: string) => `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 
 /** The three steps share one grid cell (StackPanel); going back slides back, moving on slides forward. */
 function Panel({ step, current, children }: { step: Step; current: Step; children: ReactNode }) {
@@ -233,7 +233,7 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
         {/* "Change it" sits in the sentence, not on its own row, to keep this (the tallest) step short;
             its vertical padding keeps the tap target tall without moving the lines. */}
         <p className="mt-2 text-sm sm:text-base text-ink-muted">
-          {t("codeSentTo", { phone: spaced(shown.digits) })}{" "}
+          {t("codeSentTo", { phone: spacedMobile(shown.digits) })}{" "}
           <button type="button" onClick={backToPhone} className="inline py-2.5 font-medium text-wheat-deep underline decoration-wheat-deep/40 underline-offset-4 hover:decoration-wheat-deep">
             {t("changeNumber")}
           </button>

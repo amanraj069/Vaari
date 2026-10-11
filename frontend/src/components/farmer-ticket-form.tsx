@@ -7,7 +7,7 @@
  * the one that serves the village. The new field shows on /farmer at once; it gets a date when the
  * operator publishes the next plan.
  */
-import { ArrowLeft, ArrowRight, Check, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { Booking, FarmerVillageOption, FieldRequestInput } from "@/shared";
@@ -77,11 +77,12 @@ export function FarmerTicketForm({ villages, today, onSubmit }: Props) {
           {tc("acres", { acres: booked.field.acres })} · {booked.field.villageName}
         </p>
         <p className="mt-3">{tr("successNoDate")}</p>
-        <div className="mt-5 grid gap-2 sm:flex sm:flex-wrap">
+        <div className="mt-5 grid gap-2 sm:flex sm:items-center">
           <ButtonLink href="/dashboard" variant="accent" className="min-h-12">
             {tr("seeMyFields")}
           </ButtonLink>
-          <Button variant="quiet" className="min-h-12" onClick={reset}>
+          <Button variant="secondary" className="min-h-12 sm:ml-auto" onClick={reset}>
+            <Plus aria-hidden className="size-5" strokeWidth={1.75} />
             {t("another")}
           </Button>
         </div>

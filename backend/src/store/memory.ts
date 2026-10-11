@@ -240,6 +240,9 @@ export class MemoryStore implements VaariStore {
     this.farmerAccounts.set(record.phone, copy(record));
     return copy(record);
   }
+  async putFarmerAccount(record: FarmerAccountRecord) {
+    this.farmerAccounts.set(record.phone, copy(record));
+  }
   async putOtpChallenge(record: OtpChallengeRecord) {
     this.otpChallenges.set(record.phone, copy(record));
   }

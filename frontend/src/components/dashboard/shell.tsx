@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import { useDates } from "@/lib/dates";
 import { dashboardRole, viewerName, type Viewer } from "@/lib/viewer-kind";
 import { AccountMenu, useRoleLine } from "../account-menu";
+import { Avatar } from "../avatar";
 import { BrandMark } from "../brand-mark";
 import { LanguageMenu } from "../language-menu";
 import { ThemeToggle } from "../theme-toggle";
@@ -270,6 +271,21 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
               <SeasonClock />
               <LanguageMenu />
               <ThemeToggle />
+              {/* A farmer sees their own name at the top right, so a shared phone shows whose fields
+                  these are. Laptop: avatar and name (the sidebar's account row is far below); phone:
+                  the name beside the account avatar, truncated so the bar never overflows. */}
+              {viewer.kind === "farmer" ? (
+                <Link
+                  href="/dashboard/profile"
+                  title={workspaceName}
+                  className="flex min-h-11 min-w-0 items-center gap-2 rounded-full pl-1 pr-1 text-sm font-medium text-ink transition-colors duration-150 hover:bg-ink/[0.045] lg:pr-3"
+                >
+                  <span className="hidden lg:block">
+                    <Avatar name={viewerName(viewer)} size="sm" />
+                  </span>
+                  <span className="max-w-[6.5rem] truncate sm:max-w-[12rem]">{workspaceName}</span>
+                </Link>
+              ) : null}
               <div className="lg:hidden">
                 <AccountMenu viewer={viewer} />
               </div>

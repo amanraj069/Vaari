@@ -14,6 +14,7 @@ import { ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers
 
 const JASWINDER = "447700900017"; // DEMO_FARMER_PHONE as Meta sends it
 const pa = words("pa");
+const en = words("en");
 type Runtime = Awaited<ReturnType<typeof whatsappRuntime>>;
 
 const lastTo = (runtime: Runtime, phone: string): SentMessage | undefined => runtime.sender.sent.filter((message) => message.to === phone).at(-1);
@@ -51,9 +52,10 @@ describe("worker basics (model off)", () => {
     await runtime.runtime.dependencies.store.createFarmerAccount({
       phone: "+447700900997", farmerId: "farmer-web", name: "Gurpreet Singh", language: "pa", consentAt: "2026-10-31T10:00:00.000Z", consentBy: "farmer", createdAt: "2026-10-31T10:00:00.000Z",
     });
+    // Registered in Punjabi, but "hey" is written in Latin letters: answered in English from now on.
     await runtime.deliver(messageBody({ from: "447700900997", text: "hey" }));
     const menu = lastTo(runtime, "+447700900997");
-    expect(menu).toMatchObject({ type: "list", body: `${pa.noBookingsYet("Gurpreet Singh")}\n\n${pa.menuBody}` });
+    expect(menu).toMatchObject({ type: "list", body: `${en.noBookingsYet("Gurpreet Singh")}\n\n${en.menuBody}` });
     expect(menu?.type === "list" && menu.rows.map((row) => row.id)).toEqual(["menu:book"]);
     // Model off: "Book a field" sends the one-time link to the web form, preview off.
     await runtime.deliver(messageBody({ from: "447700900997", listRow: "menu:book" }));
@@ -62,7 +64,7 @@ describe("worker basics (model off)", () => {
     expect(link?.type === "text" && /\/farmer\/login\/[\w.-]+/.test(link.body)).toBe(true);
     // "My date" from an old menu, with no field: the menu again, never an empty list.
     await runtime.deliver(messageBody({ from: "447700900997", listRow: "menu:date" }));
-    expect(lastTo(runtime, "+447700900997")).toMatchObject({ type: "list", body: pa.menuBody });
+    expect(lastTo(runtime, "+447700900997")).toMatchObject({ type: "list", body: en.menuBody });
     expect(spy.calls).toBe(0);
   });
 
@@ -72,8 +74,11 @@ describe("worker basics (model off)", () => {
     expect(runtime.sender.sent.length).toBe(before);
   });
 
-  it("with the model off, text gets the menu, in the farmer's stored language", async () => {
+  it("with the model off, text gets the menu, in the language it is written in; no letters: the remembered one", async () => {
     await runtime.deliver(messageBody({ from: JASWINDER, text: "when is my machine coming?" }));
+    expect(lastTo(runtime, DEMO_FARMER_PHONE)).toMatchObject({ type: "list", body: en.menuBody, buttonLabel: en.menuButton });
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "ਮਸ਼ੀਨ ਕਦੋਂ ਆਵੇਗੀ?" }));
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "?" }));
     const menu = lastTo(runtime, DEMO_FARMER_PHONE);
     expect(menu).toMatchObject({ type: "list", body: pa.menuBody, buttonLabel: pa.menuButton });
     expect(menu?.type === "list" && menu.rows.map((row) => row.id)).toEqual(["menu:date", "menu:why", "menu:wait", "menu:book", "menu:page"]);
@@ -146,7 +151,8 @@ describe("a change needs a Confirm tap", () => {
     expect(list?.type === "list" && list.rows.map((row) => row.id.split(":").at(-1))).toEqual(["4", "3", "2", "1"]);
 
     await draft(3);
-    for (const typed of ["yes", "Yes, confirm", "ਹਾਂ", "confirm"]) await runtime.deliver(messageBody({ from: JASWINDER, text: typed }));
+    // Punjabi last: the replies below stay in Punjabi.
+    for (const typed of ["yes", "Yes, confirm", "confirm", "ਹਾਂ"]) await runtime.deliver(messageBody({ from: JASWINDER, text: typed }));
     const after = (await jaswinderField(runtime))!;
     expect(after.waitingLimitDays).toBe(5);
     expect(after.soonerRequestedAt).toBeNull();
@@ -183,13 +189,13 @@ describe("a change needs a Confirm tap", () => {
     await runtime.deliver(messageBody({ from: JASWINDER, button: cancelled.confirm }));
     expect((await jaswinderField(runtime))!.waitingLimitDays).toBe(3);
 
-    // Another farmer (a known number) taps Jaswinder's Confirm id: refused.
+    // Another farmer (a known number, who never chose a language: English) taps Jaswinder's Confirm id: refused.
     const { store } = runtime.runtime.dependencies;
     const other = (await store.getField(DEMO_CHC_ID, "f-sim-00"))!;
     await store.putField({ ...other, farmerPhone: "+447700900555", consentAt: new Date().toISOString(), consentBy: "demo-facilitator-gurpreet" });
     const stolen = await draft(2);
     await runtime.deliver(messageBody({ from: "447700900555", button: stolen.confirm }));
-    expect(lastTo(runtime, "+447700900555")).toMatchObject({ type: "text", body: pa.expired });
+    expect(lastTo(runtime, "+447700900555")).toMatchObject({ type: "text", body: en.expired });
     expect((await jaswinderField(runtime))!.waitingLimitDays).toBe(3);
   });
 });

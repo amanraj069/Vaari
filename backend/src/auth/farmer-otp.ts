@@ -137,7 +137,7 @@ export async function createFarmerAccount(store: VaariStore, phone: string, name
   // A conditional write: if another request made the account first, theirs is kept and returned.
   const account = await store.createFarmerAccount({ phone, farmerId, name, language, consentAt: at, consentBy: "farmer", createdAt: at });
   const created = account.farmerId === farmerId;
-  if (created) await store.putFarmer({ id: farmerId, name, phone, language, facilitatorId: null });
+  if (created) await store.putFarmer({ id: farmerId, name, phone, language, languageChosen: true, facilitatorId: null });
   return { account, created };
 }
 

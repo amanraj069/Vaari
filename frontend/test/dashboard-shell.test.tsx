@@ -83,6 +83,22 @@ describe("DashboardShell", () => {
   });
 });
 
+describe("top bar name", () => {
+  it("shows a farmer their own name at the top right, opening their profile; staff keep the plain bar", () => {
+    pathname.current = "/dashboard";
+    const farmerView = renderShell(farmer);
+    const header = screen.getByRole("banner");
+    expect(within(header).getByRole("link", { name: /Jaswinder Singh/ })).toHaveAttribute("href", "/dashboard/profile");
+    farmerView.unmount();
+    // A farmer who never gave a name still sees who this is, in words.
+    const unnamed = renderShell({ kind: "farmer", farmer: { name: null, registered: false } });
+    expect(within(screen.getByRole("banner")).getByRole("link", { name: "Farmer" })).toHaveAttribute("href", "/dashboard/profile");
+    unnamed.unmount();
+    renderShell(staff("operator", "Harpal Singh"));
+    expect(within(screen.getByRole("banner")).queryByText("Harpal Singh")).not.toBeInTheDocument();
+  });
+});
+
 describe("sidebar badges", () => {
   it("count the helper's bookings beside Bookings, in words for screen readers", async () => {
     pathname.current = "/dashboard";
