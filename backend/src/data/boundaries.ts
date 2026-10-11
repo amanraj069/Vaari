@@ -26,3 +26,21 @@ export function loadDistrictOutlines(dataDir: string): DistrictOutline[] {
   outlinesByDir.set(dataDir, outlines);
   return outlines;
 }
+
+/** The district whose outline holds a point (a centre's base), or null outside every outline. */
+export function districtAt(lon: number, lat: number, outlines: readonly DistrictOutline[]): string | null {
+  return outlines.find((outline) => insideRings(lon, lat, outline.rings))?.name ?? null;
+}
+
+/** Even-odd ray casting over every ring of an outline (the simulator's rule, sim/district.py). */
+function insideRings(lon: number, lat: number, rings: [number, number][][]): boolean {
+  let crossings = 0;
+  for (const ring of rings) {
+    for (let index = 0; index + 1 < ring.length; index += 1) {
+      const [lonA, latA] = ring[index]!;
+      const [lonB, latB] = ring[index + 1]!;
+      if (latA > lat !== latB > lat && lon < lonA + ((lat - latA) * (lonB - lonA)) / (latB - latA)) crossings += 1;
+    }
+  }
+  return crossings % 2 === 1;
+}

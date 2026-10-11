@@ -31,6 +31,7 @@ import {
   type SlotReasonCode,
   type SolveResponse,
 } from "../shared";
+import { districtAt } from "../data/boundaries";
 import { slotReasonText } from "../explain/slot-reasons";
 import { DEMO_CHC_ID } from "../demo/seed";
 import type { ChcRecord, FieldRecord, MachineRecord, PlanChanges, PlanRecord, PromiseRecord, VaariStore, VillageRecord } from "../store/types";
@@ -705,7 +706,7 @@ export async function buildOfficerOverview(
       ...counts,
       id: chc.id,
       name: chc.name,
-      district: context.districts.find((district) => insideRings(chc.base.lon, chc.base.lat, district.rings))?.name ?? null,
+      district: districtAt(chc.base.lon, chc.base.lat, context.districts),
       fleet,
       villageCount: chc.villageIds.length,
       lat: chc.base.lat,
@@ -769,19 +770,6 @@ export async function buildOfficerOverview(
     },
     districts: context.districts,
   };
-}
-
-/** Even-odd ray casting over every ring of an outline (the simulator's rule, sim/district.py). */
-function insideRings(lon: number, lat: number, rings: [number, number][][]): boolean {
-  let crossings = 0;
-  for (const ring of rings) {
-    for (let index = 0; index + 1 < ring.length; index += 1) {
-      const [lonA, latA] = ring[index]!;
-      const [lonB, latB] = ring[index + 1]!;
-      if (latA > lat !== latB > lat && lon < lonA + ((lat - latA) * (lonB - lonA)) / (latB - latA)) crossings += 1;
-    }
-  }
-  return crossings % 2 === 1;
 }
 
 function emptyCounts(): OfficerCounts {

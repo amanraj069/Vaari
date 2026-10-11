@@ -20,6 +20,8 @@ export type Principal = {
   // null: signed in with Google but not onboarded yet (no Cognito group and no stored profile).
   role: Role | null;
   chcId: string | null;
+  // An officer's district, from the stored user record (never from a token claim); null otherwise.
+  district: string | null;
   demo: boolean;
 };
 
@@ -64,7 +66,7 @@ export function createTokenVerifier(config: Config, store: VaariStore): TokenVer
       // Role and CHC come from the stored user record, never from client-supplied claims.
       const user = payload.sub ? await store.getUser(payload.sub) : null;
       if (!user) throw new AuthError("unknown user");
-      return { userId: user.userId, name: user.name, role: knownRole(user.role), chcId: user.chcId, demo: true };
+      return { userId: user.userId, name: user.name, role: knownRole(user.role), chcId: user.chcId, district: user.district ?? null, demo: true };
     } catch (error) {
       throw new AuthError(error instanceof Error ? error.message : "invalid token");
     }
@@ -86,6 +88,7 @@ export function createTokenVerifier(config: Config, store: VaariStore): TokenVer
       name: user?.name ?? payload.username?.toString() ?? "",
       role: groupRole ?? knownRole(user?.role),
       chcId: user?.chcId ?? null,
+      district: user?.district ?? null,
       demo: false,
     };
   }

@@ -33,7 +33,9 @@ export type Action =
 
 export type Resource =
   | { type: "Field"; id: string; chcId: string; farmerPhone: string | null; bookedBy: string | null }
-  | { type: "Chc"; id: string };
+  // district: the district the centre's base lies in (data/boundaries.ts districtAt); only the
+  // officer's policies read it, so operator checks may leave it out.
+  | { type: "Chc"; id: string; district?: string | null };
 
 /** The Cedar view of a stored field. */
 export const fieldResource = (field: { id: string; chcId: string; farmerPhone: string | null; bookedBy: string | null }): Resource => ({
@@ -63,14 +65,14 @@ export function authorize(principal: Principal | FarmerPhonePrincipal, action: A
   const resourceAttributes: Record<string, string> =
     resource.type === "Field"
       ? { chcId: resource.chcId, farmerPhone: resource.farmerPhone ?? "", bookedBy: resource.bookedBy ?? "" }
-      : { chcId: resource.id };
+      : { chcId: resource.id, district: resource.district ?? "" };
   // A phone session's entity id is a fixed word, so the number never appears in a Cedar diagnostic.
   const principalEntity: { uid: { type: string; id: string }; attrs: Record<string, string>; parents: [] } =
     "kind" in principal
       ? { uid: { type: "FarmerPhone", id: "session" }, attrs: { phone: principal.phone }, parents: [] }
       : {
           uid: { type: "User", id: principal.userId },
-          attrs: { role: principal.role ?? "", userId: principal.userId, chcId: principal.chcId ?? "" },
+          attrs: { role: principal.role ?? "", userId: principal.userId, chcId: principal.chcId ?? "", district: principal.district ?? "" },
           parents: [],
         };
   const answer = cedar.isAuthorized({

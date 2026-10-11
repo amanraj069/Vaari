@@ -23,9 +23,16 @@ export const DEMO_USERS = {
   operator: "demo-operator-harpal",
   officer: "demo-officer-sangrur",
 } as const;
+// The demo officer runs Sangrur district, where the demo centre (Balian) lies: they see and lend
+// between Sangrur's centres only, never Malerkotla's (a name in data/boundaries.json).
+export const DEMO_OFFICER_DISTRICT = "Sangrur";
 // SIMULATED phone for the demo farmer: Ofcom reserves +44 7700 900000-900999 for fiction, so it can
 // never be a real person's number. It is never shown on any page and never messaged.
 export const DEMO_FARMER_PHONE = "+447700900017";
+// SIMULATED: six farmers Gurpreet Kaur (the demo helper) booked for, with their consent, so her
+// page shows real bookings. Same reserved fiction range; demo phones, so never messaged.
+const HELPER_BOOKING_ORDERS = [2, 6, 10, 14, 21, 27];
+export const DEMO_HELPER_FARMER_PHONES = HELPER_BOOKING_ORDERS.map((order, index) => `+44770090060${index + 1}`);
 const JASWINDER_FARMER_ID = "farmer-jaswinder";
 export const DEMO_OPERATOR_NAME = "Harpal Singh";
 const CLUSTER_RADIUS_KM = 6;
@@ -128,6 +135,8 @@ export async function seedDemo(store: VaariStore, config: Config, todayIso: stri
   const jaswinderOrder = 17;
   for (let order = 0; order < FIELD_COUNT; order += 1) {
     const isJaswinder = order === jaswinderOrder;
+    const helperIndex = HELPER_BOOKING_ORDERS.indexOf(order);
+    const helperBooked = helperIndex >= 0;
     const farmerId = isJaswinder ? JASWINDER_FARMER_ID : `farmer-sim-${order}`;
     const farmerName = isJaswinder ? "Jaswinder Singh" : `${pick(FIRST_NAMES)} ${random() < 0.2 ? "Kaur" : "Singh"}`;
     const villageId = isJaswinder ? baseVillage.id : pick(clusterVillages).id;
@@ -146,22 +155,29 @@ export async function seedDemo(store: VaariStore, config: Config, todayIso: stri
       state: "waiting",
       plannedDay: null,
       plannedMachineId: null,
-      // Seeded farmers were booked by nobody. Only the demo farmer has a phone (and simulated consent).
-      bookedBy: null,
-      farmerPhone: isJaswinder ? DEMO_FARMER_PHONE : null,
-      consentAt: isJaswinder ? now : null,
-      consentBy: isJaswinder ? DEMO_USERS.facilitator : null,
+      // Most seeded farmers were booked by nobody. The demo farmer has a phone (and simulated
+      // consent); six were booked by the demo helper, with their phones and consent.
+      bookedBy: helperBooked ? DEMO_USERS.facilitator : null,
+      farmerPhone: isJaswinder ? DEMO_FARMER_PHONE : helperBooked ? DEMO_HELPER_FARMER_PHONES[helperIndex]! : null,
+      consentAt: isJaswinder || helperBooked ? now : null,
+      consentBy: isJaswinder || helperBooked ? DEMO_USERS.facilitator : null,
       linkVersion: 1,
       soonerRequestedAt: null,
     };
     await store.putField(field);
-    await store.putFarmer({ id: farmerId, name: farmerName, phone: isJaswinder ? DEMO_FARMER_PHONE : "", language: "pa", facilitatorId: null });
+    await store.putFarmer({
+      id: farmerId,
+      name: farmerName,
+      phone: isJaswinder ? DEMO_FARMER_PHONE : helperBooked ? DEMO_HELPER_FARMER_PHONES[helperIndex]! : "",
+      language: "pa",
+      facilitatorId: helperBooked ? DEMO_USERS.facilitator : null,
+    });
   }
 
   const users: UserRecord[] = [
     { userId: DEMO_USERS.facilitator, name: "Gurpreet Kaur", role: "facilitator", chcId: DEMO_CHC_ID, language: "en" },
     { userId: DEMO_USERS.operator, name: DEMO_OPERATOR_NAME, role: "operator", chcId: DEMO_CHC_ID, language: "en" },
-    { userId: DEMO_USERS.officer, name: "District officer (demo)", role: "officer", chcId: null, language: "en" },
+    { userId: DEMO_USERS.officer, name: "District officer (demo)", role: "officer", chcId: null, language: "en", district: DEMO_OFFICER_DISTRICT },
   ];
   for (const user of users) await store.putUser(user);
 }

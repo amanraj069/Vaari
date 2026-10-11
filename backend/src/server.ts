@@ -8,7 +8,7 @@ import { loadConfig } from "./config";
 import { createTokenVerifier } from "./auth/tokens";
 import { createEngineClient } from "./engine/client";
 import { approveForSimulatedOperator, bookDistrictDay, districtCentreIds, lastDistrictChcId, seedDistrict } from "./demo/district";
-import { DEMO_CHC_ID, DEMO_OPERATOR_NAME, seedDemo } from "./demo/seed";
+import { DEMO_CHC_ID, DEMO_OFFICER_DISTRICT, DEMO_OPERATOR_NAME, DEMO_USERS, seedDemo } from "./demo/seed";
 import { Planner } from "./domain/planner";
 import { createStore } from "./store";
 import { logProcessFailures } from "./logger";
@@ -87,6 +87,10 @@ export async function buildRuntime(options: { freshDemo?: boolean; district?: bo
   await planner.refreshClock();
   // With DynamoDB the season survives restarts: seed only when the demo CHC does not exist yet.
   if (options.freshDemo || !(await store.getChc(DEMO_CHC_ID))) await dependencies.resetDemo();
+  // A season seeded before officers had a district keeps its demo officer: give it its district,
+  // or Cedar (deny by default) would show that officer no centre at all.
+  const demoOfficer = await store.getUser(DEMO_USERS.officer);
+  if (demoOfficer && demoOfficer.district !== DEMO_OFFICER_DISTRICT) await store.putUser({ ...demoOfficer, district: DEMO_OFFICER_DISTRICT });
   // The other 24 simulated centres, for the officer's district. Tests skip them unless they ask
   // (each centre's first plan is a solve), so every other test file starts as fast as before.
   if ((options.district ?? config.NODE_ENV !== "test") && !(await store.latestApprovedPlan(lastDistrictChcId(config)))) {

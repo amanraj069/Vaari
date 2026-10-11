@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config";
 import { dateToDay } from "../src/shared";
-import { DEMO_CHC_ID, loadHarvestCurves, seedDemo } from "../src/demo/seed";
+import { isDemoFarmerPhone } from "../src/demo/phones";
+import { DEMO_CHC_ID, DEMO_USERS, loadHarvestCurves, seedDemo } from "../src/demo/seed";
 import { MemoryStore } from "../src/store/memory";
 
 describe("demo seed", () => {
@@ -40,6 +41,18 @@ describe("demo seed", () => {
       // Timestamps are when the seed ran; everything else is identical.
       (await first.listFields(DEMO_CHC_ID)).map((field) => ({ ...field, createdAt: expect.any(String), consentAt: field.consentAt === null ? null : expect.any(String) })),
     );
+  });
+
+  it("gives the demo helper six bookings, each with the farmer's phone and consent, all demo phones (never messaged)", async () => {
+    const store = new MemoryStore();
+    await seedDemo(store, config, config.DATE_TODAY);
+    const helpers = (await store.listFields(DEMO_CHC_ID)).filter((field) => field.bookedBy === DEMO_USERS.facilitator);
+    expect(helpers).toHaveLength(6);
+    for (const field of helpers) {
+      expect(field.farmerPhone).toMatch(/^\+447700900\d{3}$/);
+      expect(field.consentBy).toBe(DEMO_USERS.facilitator);
+      expect(isDemoFarmerPhone(config, field.farmerPhone!)).toBe(true);
+    }
   });
 
   it("never overwrites a real user's profile", async () => {
