@@ -82,7 +82,7 @@ export function TopBar({ overlay = false }: { overlay?: boolean }) {
         ) : me ? (
           <AccountMenu viewer={me} />
         ) : !onSignInPage ? (
-          <Link href="/signin" className="ml-1 inline-flex h-11 items-center whitespace-nowrap rounded-full border border-line-strong bg-surface px-3.5 text-[13px] font-medium hover:border-ink/50 min-[380px]:px-4 min-[380px]:text-sm sm:ml-0 sm:px-5">
+          <Link href="/signin" className="ml-1 inline-flex h-11 items-center whitespace-nowrap rounded-full border border-line-strong bg-raised px-3.5 text-[13px] font-medium hover:border-ink/50 min-[380px]:px-4 min-[380px]:text-sm sm:ml-0 sm:px-5 shadow-control">
             {t("signIn")}
           </Link>
         ) : null}

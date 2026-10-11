@@ -14,7 +14,7 @@ export function AttentionList({ items }: { items: AttentionItem[] }) {
   const dates = useDates();
   if (items.length === 0) return null;
   return (
-    <section aria-labelledby="attention-title" className="mt-5 rounded-card border border-wheat-deep/30 bg-wheat-soft/60 p-5">
+    <section aria-labelledby="attention-title" className="mt-5 rounded-card border border-wheat/45 bg-surface p-5">
       <h2 id="attention-title" className="flex items-center gap-2 font-medium">
         <Hourglass aria-hidden className="size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
         {t("attentionTitle", { count: items.length })}

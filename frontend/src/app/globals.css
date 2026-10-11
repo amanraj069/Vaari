@@ -5,21 +5,38 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Vaari design tokens. Quiet, warm, flat: paper not white, borders not
- * shadows, 8px corners. Ember means burn risk and nothing else. Wheat is a fill, never body text
- * (too little contrast on paper); text that needs the accent uses wheat-deep.
- * Contrast on paper: ink 16:1, ink-muted 5.4:1, field 5.6:1, ember-deep 5.7:1, wheat-deep 5.6:1.
+ * Vaari design tokens. Quiet, warm, flat: paper not white, borders not shadows.
+ * Contrast on paper: ink 16:1, ink-muted 5.8:1, field 5.6:1, ember-deep 5.8:1, wheat-deep 5.6:1.
+ *
+ * Who gets which colour (one job per colour, so colour carries meaning):
+ *  - Structure is neutral: paper is the page, surface the cards, line the hairlines, ink-muted the
+ *    secondary text. Neutrals lean warm-grey, not beige.
+ *  - Ink is action and selection: the main button, the picked day, the current page's text.
+ *  - Wheat is the brand and "waiting for you" (a draft to approve, a new request): the current
+ *    page's marker, the pending badge, the token. Never a page-wide fill.
+ *  - Field green is "kept / on track", ember is burn risk and nothing else (destructive buttons are
+ *    neutral until hovered), sky is a date window and focus.
+ *  - Soft tints (-soft) are reserved for risk: on-track and pending states are a neutral chip with a
+ *    coloured icon, so a screen of healthy fields stays calm and the one at risk stands out.
+ * Wheat is never body text (too little contrast on paper); text in the accent uses wheat-deep.
  */
 @theme {
   --color-paper: #f5f0e4;
-  --color-surface: #fffdf8;
-  --color-line: #e3d9c3;
-  --color-line-strong: #cbbd9f;
+  --color-surface: #fbf8f1;
+  /* Layers inside a card: a sunken well (a group of tiles, a timeline track, a panel's header) and
+     raised tiles inside it, so a small section never sits on exactly its parent's colour. */
+  --color-sunken: #f1ece0;
+  /* The dashboard's canvas: a step deeper than paper, so white-ish cards stand clearly off it. */
+  --color-canvas: #ebe4d4;
+  --shadow-card: 0 1px 2px rgb(27 26 23 / 0.05), 0 6px 16px -8px rgb(27 26 23 / 0.12);
+  --color-raised: #ffffff;
+  --color-line: #e4ded1;
+  --color-line-strong: #cdc6b6;
   --color-ink: #1b1a17;
-  --color-ink-muted: #6e6050;
+  --color-ink-muted: #625c52;
   --color-wheat: #d9a22b;
-  --color-wheat-soft: #f3e2b8;
-  --color-wheat-deep: #805810; /* 4.9:1 on wheat-soft pills, 5.6:1 on paper (was #8a5f12: 4.39 on wheat-soft) */
+  --color-wheat-soft: #f4e8c9;
+  --color-wheat-deep: #805810; /* 5.2:1 on wheat-soft, 5.6:1 on paper */
   /* Text on a wheat fill stays dark in both themes (wheat is light in both). */
   --color-on-wheat: #1b1a17;
   /* The main action (Approve, Book, Plan): a deeper amber that carries white text. White on it is
@@ -27,12 +44,18 @@
   --color-action: #8a5d0e;
   --color-on-action: #ffffff;
   --color-field: #2f6b3f;
-  --color-field-soft: #dcebdc;
-  --color-ember: #dc2626;
-  --color-ember-deep: #b91c1c;
-  --color-ember-soft: #fee2e2;
+  --color-field-soft: #e2eee2;
+  --color-ember: #c8452b;
+  --color-ember-deep: #a8361f;
+  --color-ember-soft: #f8e3dc;
   --color-sky: #346685; /* 5.0:1 on sky-soft "Window" pills (was #3c6e8f: 4.41) */
   --color-sky-soft: #dde8ef;
+  /* Small solid marks (badges, icon tiles, the danger button) carry white: deeper steps of wheat,
+     field and ember that hold white text in both themes (5.4, 6.4 and 6.5 to 1). */
+  --color-wheat-solid: #8f6210;
+  --color-field-solid: #2f6b3f;
+  --color-ember-solid: #a8361f;
+  --color-on-solid: #ffffff;
 
   /* Machine lanes: five muted hues, distinguishable without relying on colour alone (lanes are named). */
   --color-lane-1: #6b8f71;
@@ -48,7 +71,7 @@
   /* How a farmer's season ended on the replay maps: sown by the optimum, sown after it, burned (also a cross). Validated, all pairs. */
   --color-season-ontime: #2e7d4f;
   --color-season-late: #c48a12;
-  --color-season-burned: #dc2626;
+  --color-season-burned: #c8452b;
   /* The officer's outlook chart: acres booked to become ready (solid) and expected but not booked
      yet (the same hue lighter, always striped). Validated as a pair, light and dark (dataviz validator). */
   --color-outlook-booked: #9a6a10;
@@ -59,6 +82,8 @@
   --font-sans: var(--font-inter), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
 
   /* Radius scale: outer cards and panels, interactive controls, small pieces inside cards. */
+  /* Every control (outlined button, input, select, chip) is a raised tile: white, with this hairline shadow. */
+  --shadow-control: 0 1px 2px rgb(27 26 23 / 0.07);
   --radius-card: 16px;
   --radius-control: 12px;
   --radius-chip: 8px;
@@ -78,10 +103,13 @@ html.dark {
   color-scheme: dark;
   --color-paper: #16140f;
   --color-surface: #1f1c16;
-  --color-line: #332e25;
-  --color-line-strong: #4b4336;
+  --color-sunken: #191712;
+  --color-canvas: #100e0a;
+  --color-raised: #2a2620;
+  --color-line: #322e28;
+  --color-line-strong: #4a443b;
   --color-ink: #f1ebdf;
-  --color-ink-muted: #ab9f8c;
+  --color-ink-muted: #a59e92;
   --color-wheat: #e2ae45;
   --color-wheat-soft: #3a2e14;
   --color-wheat-deep: #ecc068;
@@ -89,9 +117,9 @@ html.dark {
   --color-action: #9a6a10;
   --color-field: #72b886;
   --color-field-soft: #1d2d21;
-  --color-ember: #ef4444;
-  --color-ember-deep: #fa5252;
-  --color-ember-soft: #3d171b;
+  --color-ember: #e5694c;
+  --color-ember-deep: #f2896f;
+  --color-ember-soft: #3b1f18;
   --color-sky: #82b3d4;
   --color-sky-soft: #1a2a35;
   --color-lane-1: #86ad8c;
@@ -120,10 +148,30 @@ html.dark {
   --font-display: var(--font-geist), var(--font-gurmukhi), var(--font-devanagari), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
   font-family: var(--font-sans);
+  /* The dashboard is a working tool: its main button is ink (paper text, 15:1), so amber is left to
+     mean "waiting for you". Public and farmer-facing pages outside it keep the amber action. */
+  --color-action: var(--color-ink);
+  --color-on-action: var(--color-paper);
 }
 html:lang(hi) .dashboard-ui {
   --font-sans: var(--font-geist), var(--font-devanagari), var(--font-gurmukhi), system-ui, sans-serif;
   --font-display: var(--font-geist), var(--font-devanagari), var(--font-gurmukhi), system-ui, sans-serif;
+}
+/* Every card on the dashboard (a rounded-card on the surface colour) lifts off the canvas with a soft
+   two-step shadow, so a section's edge is never only a hairline. */
+.dashboard-ui :where(.rounded-card.bg-surface, .rounded-card:has(> .bg-surface)) {
+  box-shadow: var(--shadow-card);
+}
+html.dark .dashboard-ui :where(.rounded-card.bg-surface, .rounded-card:has(> .bg-surface)) {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px -10px rgb(0 0 0 / 0.6);
+}
+/* The same lift for a card on a public page (the sign-in choices), where cards sit on paper and a
+   hairline alone barely separates them. */
+.card-lift {
+  box-shadow: var(--shadow-card);
+}
+html.dark .card-lift {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px -10px rgb(0 0 0 / 0.6);
 }
 .dashboard-ui :where(.font-display, h1, h2, h3) {
   font-weight: 600;
@@ -194,6 +242,82 @@ html:lang(hi) {
     mask: radial-gradient(circle 10px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
       radial-gradient(circle 10px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
   }
+}
+
+/*
+ * Micro-interactions, platform-wide. Short and springy, never decorative loops: a solid button lifts
+ * a pixel and casts a soft shadow on hover and sinks on press; an arrow or chevron inside any button
+ * or link slides forward on hover; badges and icon tiles pop in once; inputs glow on focus; dialogs
+ * rise in over a fading backdrop. All of it is switched off by the reduced-motion rule at the end.
+ */
+.btn {
+  transition:
+    color 0.2s var(--ease-calm),
+    background-color 0.2s var(--ease-calm),
+    border-color 0.2s var(--ease-calm),
+    box-shadow 0.25s var(--ease-calm),
+    translate 0.25s var(--ease-calm),
+    scale 0.12s var(--ease-calm);
+}
+.btn-solid:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) {
+  translate: 0 -1px;
+  box-shadow: 0 8px 20px -12px color-mix(in srgb, var(--color-ink) 70%, transparent);
+}
+.btn-outline:hover:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: 0 4px 14px -10px color-mix(in srgb, var(--color-ink) 50%, transparent);
+}
+.btn:active:not(:disabled, [aria-disabled="true"]) {
+  translate: 0 0;
+  scale: 0.97;
+  box-shadow: none;
+}
+:is(a, button) :is(.lucide-arrow-right, .lucide-chevron-right, .lucide-arrow-up-right) {
+  transition: translate 0.25s var(--ease-calm);
+}
+:is(a, button):hover :is(.lucide-arrow-right, .lucide-chevron-right) {
+  translate: 3px 0;
+}
+:is(a, button):hover .lucide-arrow-up-right {
+  translate: 2px -2px;
+}
+@keyframes badge-pop {
+  0% { opacity: 0; scale: 0.6; }
+  60% { opacity: 1; scale: 1.08; }
+  100% { scale: 1; }
+}
+.badge-pop {
+  animation: badge-pop 0.42s var(--ease-calm) both;
+}
+@keyframes icon-tile-in {
+  from { opacity: 0; scale: 0.8; rotate: -8deg; }
+  to { opacity: 1; scale: 1; rotate: 0deg; }
+}
+.icon-tile {
+  animation: icon-tile-in 0.5s var(--ease-out) 0.1s both;
+}
+@layer base {
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
+    transition:
+      border-color 0.2s var(--ease-calm),
+      box-shadow 0.2s var(--ease-calm);
+  }
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea):focus {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ink) 7%, transparent);
+  }
+}
+@keyframes dialog-rise {
+  from { opacity: 0; translate: 0 12px; scale: 0.98; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+dialog[open] {
+  animation: dialog-rise 0.32s var(--ease-out) both;
+}
+dialog[open]::backdrop {
+  animation: backdrop-in 0.25s ease-out both;
 }
 
 /* Slider track and thumb (native range input). The filled part shows the chosen value. */

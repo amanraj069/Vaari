@@ -88,7 +88,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
         <p className="mt-2 text-ink-muted">{t("successBody")}</p>
         <label className="mt-4 block">
           <span className="sr-only">{t("copy")}</span>
-          <input readOnly value={link} onFocus={(event) => event.currentTarget.select()} className="min-h-12 w-full rounded-control border border-line-strong bg-surface px-3 text-sm" />
+          <input readOnly value={link} onFocus={(event) => event.currentTarget.select()} className="min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm shadow-control" />
         </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
@@ -135,7 +135,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
               onChange={(event) => setFarmerName(event.target.value)}
               maxLength={80}
               autoComplete="off"
-              className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-paper px-3"
+              className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 shadow-control"
             />
             <span className="mt-2 block text-base text-ink-muted">{t("farmerHelp")}</span>
           </label>,
@@ -151,7 +151,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
                 autoComplete="off"
                 aria-invalid={phoneInvalid}
                 aria-describedby="book-phone-help"
-                className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-paper px-3 tabular"
+                className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 tabular shadow-control"
               />
               <span id="book-phone-help" className={`mt-2 block text-base ${phoneInvalid ? "text-ember-deep" : "text-ink-muted"}`}>
                 {phoneInvalid ? t("phoneInvalid") : t("phoneHelp")}

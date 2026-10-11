@@ -219,7 +219,7 @@ function CentreDetail({
       </div>
       <p className="mt-2 text-sm">{outlookLine}</p>
       {action ? (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control border border-wheat-deep/30 bg-wheat-soft/50 px-3 py-2">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control border border-wheat/45 bg-surface px-3 py-2">
           <p className="min-w-0 flex-1 basis-48 text-sm font-medium">{action}</p>
           {/* The suggestion is one tap from done, here as in the list. */}
           {borrows || lends[0] ? (
@@ -230,7 +230,7 @@ function CentreDetail({
         </div>
       ) : null}
       {loansHere.map((loan) => (
-        <div key={loan.id} className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control border border-sky/30 bg-sky-soft/50 px-3 py-2">
+        <div key={loan.id} className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control border border-sky/40 bg-surface px-3 py-2">
           <p className="min-w-0 flex-1 basis-48 text-sm font-medium">
             {loan.fromChcId === centre.id
               ? t("detailLoanOut", { machine: loan.machineName, to: name(loan.toChcId), range: dates.range(loan.startDate, loan.endDate) })
@@ -381,7 +381,7 @@ export function DistrictPanel({
         }
       />
       {/* The district's state in three lines, under the decision (the full numbers are on /dashboard/centres). */}
-      <section aria-labelledby="officer-today-title" className="mt-5 border-t border-line pt-4 xl:mt-auto">
+      <section aria-labelledby="officer-today-title" className="mt-5 border-t border-line pt-4">
         <h2 id="officer-today-title" className="px-2 text-sm font-semibold">
           {t("todayTitle")}
         </h2>
@@ -400,7 +400,7 @@ export function DistrictPanel({
       </section>
       <Link
         href="/dashboard/centres"
-        className="mt-4 inline-flex min-h-11 items-center gap-2 border-t border-line px-2 pt-3 text-sm font-medium text-wheat-deep underline decoration-wheat-deep/40 underline-offset-4 hover:decoration-wheat-deep"
+        className="mt-4 inline-flex min-h-11 items-center gap-2 border-t border-line px-2 pt-3 text-sm font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-wheat-deep"
       >
         {t("seeAllCentres", { count: overview.centres.length })}
         <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />

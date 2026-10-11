@@ -14,7 +14,7 @@ import { ChevronsLeft, ChevronsRight, FlaskConical, LandPlot, Sprout, Tractor, U
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { z } from "zod";
 import { operatorBoardSchema, publicSummarySchema, queueItemSchema } from "@/shared";
 import type { DashboardRole } from "@/lib/dashboard-routes";
@@ -33,13 +33,19 @@ const bookedFieldsSchema = z.object({ today: z.string(), items: z.array(queueIte
 const WORKSPACE_ICON = { operator: Tractor, facilitator: Users, officer: LandPlot, farmer: Sprout } as const;
 
 type Badge = { text: string; label: string; tone: "risk" | "warn" | "neutral" };
+// Solid with white type, like a notification count: red only for burn risk, wheat for "waiting for you".
 const BADGE_TONE: Record<Badge["tone"], string> = {
-  risk: "bg-ember-soft text-ember-deep",
-  warn: "bg-wheat-soft text-wheat-deep",
+  risk: "bg-ember-solid text-on-solid",
+  warn: "bg-wheat-solid text-on-solid",
   neutral: "bg-paper text-ink-muted ring-1 ring-inset ring-line",
 };
 
-function SidebarLink({ item, active, collapsed, badge }: { item: NavItem; active: boolean; collapsed: boolean; badge?: Badge | null }) {
+/** A plain click (no modifier keys, so not "open in a new tab") moves the current-page marker at once. */
+function plainClick(event: MouseEvent<HTMLAnchorElement>): boolean {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+
+function SidebarLink({ item, active, collapsed, badge, onNavigate }: { item: NavItem; active: boolean; collapsed: boolean; badge?: Badge | null; onNavigate: (section: NavItem["section"]) => void }) {
   const t = useTranslations("dashboard");
   const Icon = item.icon;
   const label = t(item.labelKey);
@@ -47,21 +53,27 @@ function SidebarLink({ item, active, collapsed, badge }: { item: NavItem; active
     <li>
       <Link
         href={item.href}
+        onClick={(event) => plainClick(event) && onNavigate(item.section)}
         aria-current={active ? "page" : undefined}
         title={collapsed ? label : undefined}
         className={`group relative flex min-h-11 items-center gap-3 rounded-control px-3 text-[14px] transition-colors duration-200 ${collapsed ? "justify-center" : ""} ${
-          active ? "font-medium text-ink" : "text-ink-muted hover:bg-paper/70 hover:text-ink"
+          active ? "font-medium text-ink" : "text-ink-muted hover:bg-ink/[0.035] hover:text-ink"
         }`}
       >
-        {/* The current page's highlight glides to the new item instead of jumping. */}
-        {active ? <motion.span layoutId="sidebar-current" transition={SLIDE} aria-hidden className="absolute inset-0 rounded-control bg-paper ring-1 ring-inset ring-line" /> : null}
-        <Icon aria-hidden className={`relative size-[19px] shrink-0 transition-colors duration-200 ${active ? "text-wheat-deep" : "text-ink-muted group-hover:text-ink"}`} strokeWidth={2.1} />
+        {/* The current page: a neutral highlight with the brand's wheat mark at its left edge; it glides
+            to the new item instead of jumping. */}
+        {active ? (
+          <motion.span layoutId="sidebar-current" transition={SLIDE} aria-hidden className="absolute inset-0 rounded-control bg-ink/[0.055]">
+            <span className="absolute inset-y-2.5 left-0 w-[3px] rounded-r-full bg-wheat" />
+          </motion.span>
+        ) : null}
+        <Icon aria-hidden className={`relative size-[19px] shrink-0 transition-[color,scale] duration-200 group-hover:scale-110 group-active:scale-95 ${active ? "text-ink" : "text-ink-muted group-hover:text-ink"}`} strokeWidth={2.1} />
         {collapsed ? <span className="sr-only">{label}</span> : <span className="relative min-w-0 flex-1 truncate">{label}</span>}
         {badge ? (
           collapsed ? (
-            <span aria-hidden className={`absolute right-2 top-2 size-2 rounded-full ${badge.tone === "risk" ? "bg-ember" : badge.tone === "warn" ? "bg-wheat" : "bg-line-strong"}`} />
+            <span aria-hidden className={`badge-pop absolute right-2 top-2 size-2 rounded-full ${badge.tone === "risk" ? "bg-ember-solid" : badge.tone === "warn" ? "bg-wheat-solid" : "bg-line-strong"}`} />
           ) : (
-            <span aria-hidden className={`relative ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none tabular ${BADGE_TONE[badge.tone]}`}>{badge.text}</span>
+            <span aria-hidden className={`badge-pop relative ml-auto rounded-full px-2 py-[3px] text-[11px] font-semibold leading-none tabular ${BADGE_TONE[badge.tone]}`}>{badge.text}</span>
           )
         ) : null}
         {badge ? <span className="sr-only">, {badge.label}</span> : null}
@@ -114,7 +126,11 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
   const pathname = usePathname();
   const role = dashboardRole(viewer);
   const items = role ? navItems(role) : [];
-  const current = activeSection(pathname);
+  // The marker follows the click, not the finished navigation: the page loads behind it. The pending
+  // choice is dropped as soon as the address changes (or if the navigation never happens).
+  const [pendingSection, setPendingSection] = useState<NavItem["section"] | null>(null);
+  useEffect(() => setPendingSection(null), [pathname]);
+  const current = pendingSection ?? activeSection(pathname);
   const currentItem = items.find((item) => item.section === current) ?? null;
   const roleLine = useRoleLine(viewer);
   const badges = useNavBadges(role);
@@ -145,7 +161,9 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
   const tabs = items.filter((item) => item.section !== "profile");
   const WorkspaceIcon = role ? WORKSPACE_ICON[role] : Tractor;
   const workspaceName =
-    viewer.kind === "farmer" ? (viewerName(viewer) ?? t("farmerNoName")) : viewer.me.chcName ?? (viewer.me.role === "officer" ? t("officerWorkspace") : t("title"));
+    viewer.kind === "farmer"
+      ? (viewerName(viewer) ?? t("farmerNoName"))
+      : viewer.me.chcName ?? (viewer.me.role === "officer" ? (viewer.me.district ? t("officerWorkspaceIn", { district: viewer.me.district }) : t("officerWorkspace")) : t("title"));
 
   return (
     <div className="dashboard-ui flex min-h-dvh">
@@ -193,7 +211,7 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
               </button>
             </div>
             <div className="mt-3 flex items-center gap-3 px-3 pb-5">
-              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-control bg-wheat-soft text-wheat-deep">
+              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-control bg-ink text-paper">
                 <WorkspaceIcon className="size-5" strokeWidth={2} />
               </span>
               <div className="min-w-0">
@@ -210,7 +228,7 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
         <nav aria-label={tn("mainNav")} className={`flex-1 overflow-y-auto pb-4 ${collapsed ? "px-2" : "px-4 pt-3"}`}>
           <ul className="space-y-1">
             {main.map((item) => (
-              <SidebarLink key={item.section} item={item} active={current === item.section} collapsed={collapsed} badge={badges[item.section]} />
+              <SidebarLink key={item.section} item={item} active={current === item.section} collapsed={collapsed} badge={badges[item.section]} onNavigate={setPendingSection} />
             ))}
           </ul>
           {more.length > 0 ? (
@@ -218,20 +236,21 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
               <div className={`my-3 border-t border-line ${collapsed ? "mx-2" : "mx-3"}`} />
               <ul className="space-y-1">
                 {more.map((item) => (
-                  <SidebarLink key={item.section} item={item} active={current === item.section} collapsed={collapsed} badge={badges[item.section]} />
+                  <SidebarLink key={item.section} item={item} active={current === item.section} collapsed={collapsed} badge={badges[item.section]} onNavigate={setPendingSection} />
                 ))}
               </ul>
             </>
           ) : null}
         </nav>
 
-        <div className={`shrink-0 ${collapsed ? "border-t border-line px-2 py-3" : "p-4"}`}>
+        {/* The person's row, set off by the same hairline as the sidebar's sections, not a boxed card. */}
+        <div className={`shrink-0 border-t border-line ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
           <AccountMenu viewer={viewer} trigger="card" collapsed={collapsed} />
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
+      <div className="flex min-w-0 flex-1 flex-col bg-canvas">
+        <header className="sticky top-0 z-30 border-b border-line-strong/60 bg-canvas/90 backdrop-blur">
           <div className="mx-auto flex h-16 w-full max-w-[86rem] items-center gap-2 pl-4 pr-2 sm:pl-6 lg:px-10">
             <div className="lg:hidden">
               <BrandMark compact />
@@ -258,7 +277,7 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
           </div>
         </header>
 
-        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[86rem] flex-1 px-4 pb-32 pt-6 outline-none sm:px-6 sm:pt-8 lg:px-10 lg:pb-14">
+        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[86rem] flex-1 has-[>[data-fill-page]]:flex has-[>[data-fill-page]]:flex-col px-4 pb-32 pt-6 outline-none sm:px-6 sm:pt-8 lg:px-10 lg:pb-14">
           {children}
         </main>
 
@@ -279,11 +298,12 @@ export function DashboardShell({ viewer, children }: { viewer: Viewer; children:
                   <li key={item.section}>
                     <Link
                       href={item.href}
+                      onClick={(event) => plainClick(event) && setPendingSection(item.section)}
                       aria-current={active ? "page" : undefined}
                       className={`flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-center text-xs leading-tight ${active ? "font-medium text-ink" : "text-ink-muted"}`}
                     >
-                      <span aria-hidden className={`relative grid h-7 w-12 place-items-center rounded-full transition-colors duration-200 ${active ? "text-wheat-deep" : ""}`}>
-                        {active ? <motion.span layoutId="tab-current" transition={SLIDE} className="absolute inset-0 rounded-full bg-wheat-soft" /> : null}
+                      <span aria-hidden className={`relative grid h-7 w-12 place-items-center rounded-full transition-colors duration-200 ${active ? "text-ink" : ""}`}>
+                        {active ? <motion.span layoutId="tab-current" transition={SLIDE} className="absolute inset-0 rounded-full bg-ink/[0.07]" /> : null}
                         <Icon className="relative size-5" strokeWidth={2.1} />
                       </span>
                       <span className="line-clamp-2">{t(item.labelKey)}</span>

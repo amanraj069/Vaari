@@ -22,7 +22,7 @@ export function SeeAllMyFields({ number }: { number: string }) {
         href={myFieldsUrl(number)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-[0.9375rem] font-medium sm:text-base hover:border-ink/50"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line-strong bg-raised px-4 text-[0.9375rem] font-medium sm:text-base hover:border-ink/50 shadow-control"
       >
         <MessageCircle aria-hidden className="size-5 text-field" strokeWidth={1.75} />
         {t("seeAllMyFields")}

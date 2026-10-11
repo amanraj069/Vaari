@@ -75,7 +75,7 @@ export function WelcomeForm({ chcs, suggestedName, currentRole, locale, pickedRo
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoComplete="name"
-          className="mt-2 min-h-12 w-full rounded-control border border-line-strong bg-surface px-3"
+          className="mt-2 min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 shadow-control"
         />
       </label>
 

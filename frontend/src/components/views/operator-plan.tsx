@@ -16,7 +16,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { operatorPlanSchema, type Lane, type LaneStop, type OperatorPlan } from "@/shared";
 import { AttentionList } from "@/components/attention-list";
-import { DashHeader, NextStep, Panel, DayTransition } from "@/components/dashboard/kit";
+import { DashHeader, DayLoading, NextStep, Panel, DayTransition } from "@/components/dashboard/kit";
 import { EASE_OUT } from "@/components/dashboard/motion";
 import { MachineDownDialog } from "@/components/machine-down-dialog";
 import { MachineLane } from "@/components/machine-lane";
@@ -100,7 +100,11 @@ export function OperatorPlanView() {
   const current = view.plan;
   const isDraft = current?.status === "draft";
   const hasChangedFarmers = Boolean(view.changes && Object.values(view.changes).some((rows) => rows.length > 0));
-  const selectedDay = view.days.find((day) => day.date === view.selectedDate) ?? null;
+  // The picked day answers the click at once (highlight and title); its lanes load behind it. While
+  // the previous day's data stands in, the lanes show a loading state instead of the wrong day.
+  const loadingDay = Boolean(pickedDate && plan.isPlaceholderData && pickedDate !== view.selectedDate);
+  const shownDate = loadingDay && pickedDate ? pickedDate : view.selectedDate;
+  const selectedDay = view.days.find((day) => day.date === shownDate) ?? null;
   const stopLabel = (stop: LaneStop) =>
     `#${String(stop.token).padStart(3, "0")} ${stop.farmerName}, ${stop.villageName}, ${stop.start}–${stop.end}${stop.risk === "at_risk" || stop.risk === "tight" ? `, ${tr(stop.risk)}` : ""}. ${t("moveSubmit")}`;
 
@@ -141,7 +145,7 @@ export function OperatorPlanView() {
 
       <div className="mt-4 space-y-4">
         {notice ? (
-          <p role="alert" className="rounded-control border border-wheat-deep/30 bg-wheat-soft px-4 py-3 text-sm">
+          <p role="alert" className="rounded-control border border-wheat/45 bg-surface px-4 py-3 text-sm">
             {notice}
           </p>
         ) : null}
@@ -179,7 +183,7 @@ export function OperatorPlanView() {
             // The decision, once: what approving does (consequences first), and the button beside it.
             <section
               aria-labelledby="plan-changes"
-              className={`mt-6 rounded-card border px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5 ${view.changes.broken.length + view.changes.unplaced.length > 0 ? "border-ember/40 bg-ember-soft/30" : "border-wheat-deep/35 bg-wheat-soft/40"}`}
+              className={`mt-6 rounded-card border px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5 ${view.changes.broken.length + view.changes.unplaced.length > 0 ? "border-ember/40 bg-ember-soft/30" : "border-wheat/45 bg-surface"}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -227,12 +231,11 @@ export function OperatorPlanView() {
               </AnimatePresence>
             </section>
           ) : null}
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-          <div className="space-y-6">
-            <Panel id="calendar-title" title={ts("calendarTitle")} bodyClassName="p-3">
-              <DayList days={view.days} selected={view.selectedDate} onSelect={setPickedDate} />
-            </Panel>
-          </div>
+        {/* Side by side (xl), both cards stretch to the taller one; the day rows share the extra height. */}
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[20rem_minmax(0,1fr)] xl:items-stretch">
+          <Panel id="calendar-title" title={ts("calendarTitle")} className="flex flex-col" bodyClassName="flex flex-1 flex-col p-3">
+            <DayList days={view.days} selected={shownDate} onSelect={setPickedDate} className="flex-1" />
+          </Panel>
 
           <Panel
             id="plan-lanes"
@@ -249,29 +252,33 @@ export function OperatorPlanView() {
               ) : null
             }
           >
-            <DayTransition dayKey={view.selectedDate}>
-              <LayoutGroup>
-                <ul aria-busy={plan.isFetching}>
-                  {view.lanes.map((lane, index) => (
-                    <MachineLane
-                      key={lane.machine.id}
-                      variant="row"
-                      lane={lane}
-                      index={index}
-                      dayStart="08:00"
-                      busy={busy}
-                      onMarkDown={() => setDownMachine(lane.machine)}
-                      onMarkBack={() => markBack.mutate(lane.machine.id)}
-                      onSelectStop={(stop) => {
-                        setMoveError(null);
-                        setMoving({ stop, machineId: lane.machine.id });
-                      }}
-                      selectLabel={stopLabel}
-                    />
-                  ))}
-                </ul>
-              </LayoutGroup>
-            </DayTransition>
+            {loadingDay ? (
+              <DayLoading label={ts("loadingDay", { date: dates.full(shownDate) })} rows={view.lanes.length} />
+            ) : (
+              <DayTransition dayKey={view.selectedDate}>
+                <LayoutGroup>
+                  <ul aria-busy={plan.isFetching}>
+                    {view.lanes.map((lane, index) => (
+                      <MachineLane
+                        key={lane.machine.id}
+                        variant="row"
+                        lane={lane}
+                        index={index}
+                        dayStart="08:00"
+                        busy={busy}
+                        onMarkDown={() => setDownMachine(lane.machine)}
+                        onMarkBack={() => markBack.mutate(lane.machine.id)}
+                        onSelectStop={(stop) => {
+                          setMoveError(null);
+                          setMoving({ stop, machineId: lane.machine.id });
+                        }}
+                        selectLabel={stopLabel}
+                      />
+                    ))}
+                  </ul>
+                </LayoutGroup>
+              </DayTransition>
+            )}
           </Panel>
         </div>
         </>

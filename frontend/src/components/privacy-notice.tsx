@@ -60,7 +60,7 @@ export function PrivacyNotice({ contactEmail }: { contactEmail: string }) {
         <ol className="mt-3 flex flex-wrap gap-2 text-sm">
           {SECTIONS.map((id) => (
             <li key={id}>
-              <a href={`#${id}`} className="inline-flex min-h-11 min-w-11 items-center rounded-full border border-line-strong px-4 hover:border-ink/50">{t(`${id}Title`)}</a>
+              <a href={`#${id}`} className="inline-flex min-h-11 min-w-11 items-center rounded-full border border-line-strong bg-raised px-4 hover:border-ink/50 shadow-control">{t(`${id}Title`)}</a>
             </li>
           ))}
         </ol>

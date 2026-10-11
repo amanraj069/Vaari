@@ -45,7 +45,7 @@ export function Panel({
   return (
     <motion.section variants={RISE} aria-labelledby={title && id ? id : undefined} className={`min-w-0 rounded-card border border-line bg-surface ${className}`}>
       {title ? (
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-t-[inherit] border-b border-line bg-sunken/70 px-5 py-4">
           <div className="min-w-0">
             <h2 id={id} className="text-base font-semibold">
               {title}
@@ -60,13 +60,12 @@ export function Panel({
   );
 }
 
-/** A thin bar for a share: the track is a lighter step of the fill's colour. */
+/** A thin bar for a share: a coloured fill on a neutral track, so the colour is only the amount. */
 export function Meter({ value, max, tone = "good", label }: { value: number; max: number; tone?: "good" | "risk" | "warn" | "accent"; label?: string }) {
   const share = max <= 0 ? 0 : Math.min(1, value / max);
   const fill = { good: "bg-field", risk: "bg-ember", warn: "bg-wheat", accent: "bg-wheat-deep" }[tone];
-  const track = { good: "bg-field-soft", risk: "bg-ember-soft", warn: "bg-wheat-soft", accent: "bg-wheat-soft" }[tone];
   return (
-    <div role={label ? "meter" : undefined} aria-label={label} aria-valuenow={label ? value : undefined} aria-valuemin={label ? 0 : undefined} aria-valuemax={label ? max : undefined} className={`h-1.5 w-full overflow-hidden rounded-full ${track}`}>
+    <div role={label ? "meter" : undefined} aria-label={label} aria-valuenow={label ? value : undefined} aria-valuemin={label ? 0 : undefined} aria-valuemax={label ? max : undefined} className="h-1.5 w-full overflow-hidden rounded-full bg-line/80">
       <div className={`h-full rounded-full ${fill}`} style={{ width: `${Math.round(share * 100)}%` }} />
     </div>
   );
@@ -140,13 +139,13 @@ export function Segmented<Value extends string>({
             className="relative flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-control px-1 py-1.5 text-sm font-medium sm:px-2 sm:py-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:min-w-[7.5rem] sm:flex-row sm:gap-1.5"
           >
             {checked ? (
-              <motion.span layoutId={`segmented-${slideId}`} aria-hidden className="absolute inset-0 rounded-control border border-line-strong bg-surface" transition={{ type: "spring", stiffness: 520, damping: 42 }} />
+              <motion.span layoutId={`segmented-${slideId}`} aria-hidden className="absolute inset-0 rounded-control border border-line-strong bg-raised shadow-control" transition={{ type: "spring", stiffness: 520, damping: 42 }} />
             ) : null}
-            {Icon ? <Icon aria-hidden className={`relative size-4 shrink-0 transition-colors duration-200 ${checked ? "text-wheat-deep" : "text-ink-muted"}`} strokeWidth={1.75} /> : null}
+            {Icon ? <Icon aria-hidden className={`relative size-4 shrink-0 transition-colors duration-200 ${checked ? "text-ink" : "text-ink-muted"}`} strokeWidth={1.75} /> : null}
             {/* Phones: up to two lines of smaller type, never a cut word; wider screens: one line. */}
             <span className={`relative line-clamp-2 max-w-full text-center text-xs leading-tight transition-colors duration-200 sm:line-clamp-none sm:truncate sm:text-sm ${checked ? "text-ink" : "text-ink-muted hover:text-ink"}`}>{option.label}</span>
             {option.count !== undefined ? (
-              <span className={`relative rounded-full px-1.5 text-xs tabular ${checked ? "bg-wheat-soft text-wheat-deep" : "text-ink-muted"}`}>{option.count}</span>
+              <span className={`relative rounded-full px-1.5 text-xs tabular transition-colors duration-200 ${checked ? "bg-ink text-paper" : "text-ink-muted"}`}>{option.count}</span>
             ) : null}
           </button>
         );
@@ -165,19 +164,23 @@ export function SearchBox({ label, value, onChange, placeholder }: { label: stri
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder ?? label}
-        className="min-h-11 w-full rounded-control border border-line-strong bg-surface pl-9 pr-3 text-sm placeholder:text-ink-muted/80 focus:border-ink/50 focus:outline-none"
+        className="min-h-11 w-full rounded-control border border-line-strong bg-raised pl-9 pr-3 text-sm placeholder:text-ink-muted/80 focus:border-ink/50 focus:outline-none shadow-control"
       />
     </label>
   );
 }
 
-/** "What to do now": one sentence, why, and the one button that does it. */
+/**
+ * "What to do now": one sentence, why, and the one button that does it. Always a surface card with a
+ * hairline (never a tinted box); the tone is a solid mark beside the words: wheat for "waiting for
+ * you", green for "all done", neutral otherwise.
+ */
 export function NextStep({ icon: Icon, title, body, action, tone = "neutral" }: { icon: LucideIcon; title: string; body?: ReactNode; action?: ReactNode; tone?: "neutral" | "warn" | "good" }) {
-  const frame = tone === "warn" ? "border-wheat-deep/35 bg-wheat-soft/50" : tone === "good" ? "border-field/25 bg-field-soft/40" : "border-line bg-surface";
-  const iconTone = tone === "warn" ? "bg-wheat-soft text-wheat-deep" : tone === "good" ? "bg-field-soft text-field" : "bg-paper text-ink-muted";
+  const frame = tone === "warn" ? "border-wheat/45" : "border-line";
+  const iconTone = tone === "warn" ? "bg-wheat-solid text-on-solid" : tone === "good" ? "bg-field-solid text-on-solid" : "bg-paper text-ink-muted ring-1 ring-inset ring-line";
   return (
-    <motion.section variants={RISE} aria-live="polite" className={`flex flex-wrap items-center gap-4 rounded-card border p-4 sm:p-5 ${frame}`}>
-      <span aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-control ${iconTone}`}>
+    <motion.section variants={RISE} aria-live="polite" className={`flex flex-wrap items-center gap-4 rounded-card border bg-surface p-4 sm:p-5 ${frame}`}>
+      <span aria-hidden className={`icon-tile grid size-10 shrink-0 place-items-center rounded-control ${iconTone}`}>
         <Icon className="size-5" strokeWidth={1.75} />
       </span>
       <div className="min-w-0 flex-1">
@@ -272,6 +275,32 @@ export function MetricStrip({ metrics, label, columns = "xl:grid-cols-4" }: { me
  * Content that belongs to one day (the machines' lanes): switching days slides the old day out and
  * the new one in, in the direction of travel (a later day comes from the right), never a hard cut.
  */
+/**
+ * The machines' lanes while a picked day loads: the day's name with a spinner, and one quiet row per
+ * machine in the lanes' shape, so the click answers at once and the panel keeps its height.
+ */
+export function DayLoading({ label, rows }: { label: string; rows: number }) {
+  return (
+    <div aria-busy="true">
+      <p role="status" className="flex items-center gap-2 border-b border-line px-5 py-3 text-sm text-ink-muted">
+        <span aria-hidden className="size-4 animate-spin rounded-full border-2 border-line border-t-wheat-deep" />
+        {label}
+      </p>
+      <ul aria-hidden>
+        {Array.from({ length: Math.max(1, rows) }, (_, index) => (
+          <li key={index} className="grid gap-4 border-b border-line px-5 py-4 last:border-b-0 md:grid-cols-[14rem_minmax(0,1fr)]">
+            <div className="space-y-2">
+              <div className="h-4 w-32 animate-pulse rounded-full bg-line/60" />
+              <div className="h-3 w-24 animate-pulse rounded-full bg-line/60" />
+            </div>
+            <div className="h-20 animate-pulse rounded-control bg-line/40" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function DayTransition({ dayKey, children, className = "" }: { dayKey: string; children: ReactNode; className?: string }) {
   const previous = useRef(dayKey);
   const direction = dayKey >= previous.current ? 1 : -1;

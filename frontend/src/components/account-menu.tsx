@@ -6,10 +6,10 @@
  * Bookings, Book a field; officer: District; farmer: My fields, Book a field), the proof, their
  * profile and sign out. A new staff member who has not finished /welcome gets "Finish setting up".
  * `trigger="card"` is the sidebar's foot: the avatar, name and role open the profile, and the
- * button beside them opens the menu upwards with only the options (the name is already on screen).
+ * three dots beside them open the menu upwards with only the options (the name is already on screen).
  * Folded sidebar: the avatar alone opens the menu, which then starts with the name.
  */
-import { ChevronRight, ChevronsUpDown, FlaskConical, LogOut, Moon, Settings2, Sun } from "lucide-react";
+import { ChevronRight, Ellipsis, FlaskConical, LogOut, Moon, Settings2, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -58,15 +58,15 @@ export function AccountMenu({ viewer, trigger = "avatar", collapsed = false }: {
   const nameOnCard = trigger === "card" && !collapsed;
   const onProfile = pathname === profileHref;
 
-  const buttonContent = nameOnCard ? <ChevronsUpDown aria-hidden className="size-4" strokeWidth={2} /> : <Avatar name={name} size={trigger === "card" ? "sm" : "md"} />;
+  const buttonContent = nameOnCard ? <Ellipsis aria-hidden className="size-[18px]" strokeWidth={2} /> : <Avatar name={name} size={trigger === "card" ? "sm" : "md"} />;
 
   const profileLink = nameOnCard ? (
-    <Link href={profileHref} aria-current={onProfile ? "page" : undefined} className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-chip p-1 text-ink transition-colors hover:bg-ink/5 aria-[current=page]:bg-wheat-soft/60">
+    <Link href={profileHref} aria-current={onProfile ? "page" : undefined} className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-chip py-1 pl-1.5 pr-1 text-ink focus-visible:outline-offset-0">
       <Avatar name={name} size="sm" />
-      <span className="min-w-0 flex-1 text-left">
+      <span className="min-w-0 flex-1 text-left leading-tight">
         <span className="block truncate text-sm font-medium">{displayName}</span>
         {/* The role alone: the centre is already in the sidebar's workspace card. */}
-        <span className="block truncate text-xs text-ink-muted">{roleLine.split(" · ")[0]}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">{roleLine.split(" · ")[0]}</span>
       </span>
     </Link>
   ) : null;
@@ -75,11 +75,11 @@ export function AccountMenu({ viewer, trigger = "avatar", collapsed = false }: {
     <Dropdown
       label={t("accountMenu")}
       placement={trigger === "card" ? "above" : "below"}
-      className={nameOnCard ? "flex w-full items-center gap-1 rounded-control border border-line bg-paper/60 p-1.5" : trigger === "card" ? "w-full" : ""}
+      className={nameOnCard ? "flex w-full items-center gap-1 rounded-control p-1 transition-colors duration-150 hover:bg-ink/[0.045] has-[[aria-current=page]]:bg-ink/[0.055] has-[[aria-expanded=true]]:bg-ink/[0.045]" : trigger === "card" ? "w-full" : ""}
       panelClassName={trigger === "card" ? (collapsed ? "w-64" : "w-full min-w-60") : "w-72"}
       buttonClassName={
         nameOnCard
-          ? "grid size-11 shrink-0 place-items-center rounded-chip text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink aria-expanded:bg-ink/5 aria-expanded:text-ink"
+          ? "grid size-11 shrink-0 place-items-center rounded-chip text-ink-muted transition-colors duration-150 hover:bg-ink/[0.07] hover:text-ink aria-expanded:bg-ink/[0.07] aria-expanded:text-ink"
           : trigger === "card"
             ? "flex min-h-14 w-full items-center justify-center rounded-control p-1.5 text-ink transition-colors hover:bg-paper"
             : "grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-paper hover:ring-2 hover:ring-line-strong aria-expanded:ring-2 aria-expanded:ring-wheat"
@@ -116,7 +116,7 @@ export function AccountMenu({ viewer, trigger = "avatar", collapsed = false }: {
                 const Icon = item.icon;
                 return (
                   <Link key={item.section} href={item.href} role="menuitem" aria-current={current === item.section ? "page" : undefined} onClick={close} className={`${MENU_ITEM_CLASS} aria-[current=page]:font-medium`}>
-                    <Icon aria-hidden className={`size-4 ${current === item.section ? "text-wheat-deep" : "text-ink-muted"}`} strokeWidth={2} />
+                    <Icon aria-hidden className={`size-4 ${current === item.section ? "text-ink" : "text-ink-muted"}`} strokeWidth={2} />
                     {td(item.labelKey)}
                   </Link>
                 );
@@ -146,6 +146,7 @@ export function AccountMenu({ viewer, trigger = "avatar", collapsed = false }: {
             {theme === "dark" ? <Sun aria-hidden className="size-4 text-ink-muted" strokeWidth={2} /> : <Moon aria-hidden className="size-4 text-ink-muted" strokeWidth={2} />}
             {theme === "dark" ? tc("themeToLight") : tc("themeToDark")}
           </button>
+          <div className="my-1 border-t border-line" />
           <button type="button" role="menuitem" onClick={() => void signOut()} className={MENU_ITEM_CLASS}>
             <LogOut aria-hidden className="size-4 text-ink-muted" strokeWidth={2} />
             {tc("signOut")}

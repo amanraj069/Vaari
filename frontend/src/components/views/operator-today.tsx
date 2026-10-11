@@ -2,25 +2,26 @@
 
 /**
  * /dashboard for an operator: "Today", the machine centre's control room. Answer first: what
- * tomorrow looks like in one sentence (the page's lead, under its title), then the one thing waiting for the operator (a re-plan to
- * approve, new requests to plan, or nothing) as a card with its button. Four numbers with a small
+ * tomorrow looks like in one sentence (the page's lead, under its title), with "Start tomorrow" as
+ * the header's main button, then the one thing waiting for the operator (today's work to record, a
+ * re-plan to approve, new requests to plan) as a card with its button; no card when nothing waits. Four numbers with a small
  * picture each (promises on track, fields at burn risk by risk, machines working, fairness), the
  * schedule for any day of the approved plan (a strip of the ten days, then each machine's stops
  * that day), the ten-day workload per machine, and the fields to watch. Marking a machine as in
  * the workshop makes a re-plan at once; it waits on the Plan page for approval.
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarCheck2, ClipboardCheck, CloudRain, CloudSun, Inbox, RotateCcw } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardCheck, CloudRain, CloudSun, Inbox, RotateCcw } from "lucide-react";
 import { LayoutGroup } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { operatorBoardSchema, operatorPlanSchema, type Lane, type OperatorBoard } from "@/shared";
 import { AttentionList } from "@/components/attention-list";
-import { DashHeader, Meter, MetricStrip, NextStep, Panel, SplitBar, DayTransition } from "@/components/dashboard/kit";
+import { DashHeader, DayLoading, Meter, MetricStrip, NextStep, Panel, SplitBar, DayTransition } from "@/components/dashboard/kit";
 import { FuseBar } from "@/components/fuse-bar";
 import { MachineDownDialog } from "@/components/machine-down-dialog";
-import { DayClose } from "@/components/operator/day-close";
+import { DayClose, StartDay } from "@/components/operator/day-close";
 import { MachineLane } from "@/components/machine-lane";
 import { DayStrip } from "@/components/operator/plan-calendar";
 import { WorkloadGrid } from "@/components/operator/workload-grid";
@@ -35,10 +36,9 @@ export const RISK_COLOUR = {
   unplanned: "var(--color-line-strong)",
 } as const;
 
-/** The one thing waiting for the operator, or a calm "nothing waiting". */
+/** The one thing waiting for the operator; nothing at all when nothing waits (the header has the next step). */
 function WhatNow({ board }: { board: OperatorBoard }) {
   const t = useTranslations("operator");
-  const ts = useTranslations("schedule");
   const { draft, newRequests } = board;
   if (draft) {
     return (
@@ -76,7 +76,7 @@ function WhatNow({ board }: { board: OperatorBoard }) {
       />
     );
   }
-  return <NextStep icon={CalendarCheck2} tone="good" title={ts("allSetTitle")} body={ts("allSetBody")} />;
+  return null;
 }
 
 export function OperatorTodayView() {
@@ -84,6 +84,7 @@ export function OperatorTodayView() {
   const ts = useTranslations("schedule");
   const tc = useTranslations("common");
   const tr = useTranslations("risk");
+  const td = useTranslations("day");
   const dates = useDates();
   const queryClient = useQueryClient();
   const [downMachine, setDownMachine] = useState<Lane["machine"] | null>(null);
@@ -99,7 +100,10 @@ export function OperatorTodayView() {
     placeholderData: keepPreviousData,
     refetchInterval: 10_000,
   });
-  const lanesFrom = pickedDate && board.data && pickedDate !== board.data.selectedDate ? dayBoard.data ?? board.data : board.data;
+  const otherDayPicked = Boolean(pickedDate && board.data && pickedDate !== board.data.selectedDate);
+  const lanesFrom = otherDayPicked ? dayBoard.data ?? board.data : board.data;
+  // Until the picked day's lanes arrive, the lanes say they are loading rather than show another day.
+  const loadingDay = otherDayPicked && (dayBoard.isPending || (dayBoard.isPlaceholderData && dayBoard.data?.selectedDate !== pickedDate));
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["operator-board"] });
@@ -171,18 +175,29 @@ export function OperatorTodayView() {
             <>
               <Pill kind="approved">{t("approved")}</Pill>
               {data.published.approvedBy ? <span>{t("publishedBy", { name: data.published.approvedBy })}</span> : null}
+              {data.day.closed && data.day.stops.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span aria-hidden>·</span>
+                  <CheckCircle2 aria-hidden className="size-4 text-field" strokeWidth={1.75} />
+                  {td("recorded")}
+                </span>
+              ) : null}
             </>
           ) : null
         }
         actions={
-          // One call to action per state: when something waits for the operator, "What to do now"
-          // carries its button; only when nothing waits does the header offer a quiet way to the plan.
-          nothingWaiting ? (
-            <ButtonLink href="/dashboard/plan" variant="secondary">
-              {ts("openPlan")}
-              <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />
-            </ButtonLink>
-          ) : undefined
+          // The day's main step sits here: "Start tomorrow" (disabled with its reason while a plan
+          // waits). When something waits for the operator, its card below carries that button, so
+          // the quiet way to the plan shows only when nothing waits.
+          <>
+            {nothingWaiting ? (
+              <ButtonLink href="/dashboard/plan" variant="secondary">
+                {ts("openPlan")}
+                <ArrowRight aria-hidden className="size-4" strokeWidth={1.75} />
+              </ButtonLink>
+            ) : null}
+            <StartDay day={data.day} />
+          </>
         }
       />
 
@@ -261,24 +276,28 @@ export function OperatorTodayView() {
           ) : null}
           {data.published ? (
             <>
-              <DayTransition dayKey={lanesFrom?.selectedDate ?? data.selectedDate}>
-                <LayoutGroup>
-                  <ul aria-busy={dayBoard.isFetching}>
-                    {lanes.map((lane, index) => (
-                      <MachineLane
-                        key={lane.machine.id}
-                        variant="row"
-                        lane={lane}
-                        index={index}
-                        dayStart="08:00"
-                        busy={busy}
-                        onMarkDown={() => setDownMachine(lane.machine)}
-                        onMarkBack={() => markBack.mutate(lane.machine.id)}
-                      />
-                    ))}
-                  </ul>
-                </LayoutGroup>
-              </DayTransition>
+              {loadingDay && selectedDate ? (
+                <DayLoading label={ts("loadingDay", { date: dates.full(selectedDate) })} rows={lanes.length} />
+              ) : (
+                <DayTransition dayKey={lanesFrom?.selectedDate ?? data.selectedDate}>
+                  <LayoutGroup>
+                    <ul aria-busy={dayBoard.isFetching}>
+                      {lanes.map((lane, index) => (
+                        <MachineLane
+                          key={lane.machine.id}
+                          variant="row"
+                          lane={lane}
+                          index={index}
+                          dayStart="08:00"
+                          busy={busy}
+                          onMarkDown={() => setDownMachine(lane.machine)}
+                          onMarkBack={() => markBack.mutate(lane.machine.id)}
+                        />
+                      ))}
+                    </ul>
+                  </LayoutGroup>
+                </DayTransition>
+              )}
               <p className="border-t border-line px-5 py-3 text-xs text-ink-muted">{t("lanesHint")}</p>
             </>
           ) : (
@@ -294,7 +313,7 @@ export function OperatorTodayView() {
             title={t("atRiskTitle")}
             bodyClassName=""
             action={
-              <Link href="/dashboard/queue" className="inline-flex min-h-11 items-center text-sm font-medium text-wheat-deep underline decoration-wheat-deep/40 underline-offset-4 hover:decoration-wheat-deep">
+              <Link href="/dashboard/queue" className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
                 {t("fullQueue")}
               </Link>
             }

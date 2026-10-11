@@ -11,7 +11,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { Button } from "./ui";
 
-export const FIELD_INPUT = "mt-2 min-h-12 w-full rounded-control border border-line-strong bg-paper px-3";
+export const FIELD_INPUT = "mt-2 min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 shadow-control";
 
 /**
  * `askConsent={false}`: on sign-in the farmer is asked on the phone step, before any code, so only

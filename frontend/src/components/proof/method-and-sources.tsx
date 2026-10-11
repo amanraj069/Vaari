@@ -48,7 +48,7 @@ export function MethodAndSources({ results }: { results: ProofResults }) {
           <p className="mt-1 text-sm text-ink-muted">{t("methodBody")}</p>
         </div>
         {/* The visible state; the button's aria-expanded says the same to screen readers. */}
-        <span aria-hidden className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-line-strong bg-paper px-4 text-sm font-medium">
+        <span aria-hidden className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-line-strong bg-raised px-4 text-sm font-medium shadow-control">
           {open ? t("methodHide") : t("methodShow")}
           <ChevronDown className={`size-4 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "rotate-180" : ""}`} strokeWidth={1.75} />
         </span>

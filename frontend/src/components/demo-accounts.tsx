@@ -2,7 +2,9 @@
 
 /**
  * The demo people (farmer, helper, operator, officer), one card each with a "Demo" tag and a "Use
- * this account" button that signs in as them. Shown inside the chooser's "Try with demo accounts".
+ * this account" button that signs in as them. Listed at the bottom of /signin
+ * (SignInChooser); on wide screens the four share the column's leftover height
+ * evenly, so the list ends level with the photo.
  */
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -14,8 +16,8 @@ function DemoCard({ person }: { person: DemoPerson }) {
   const t = useTranslations("signin");
   const { state, go } = useDemoSignIn(person.role);
   return (
-    <li className="rounded-control border border-line bg-paper px-3.5 py-3 sm:px-4">
-      <div className="flex items-center gap-3">
+    <li className="card-lift flex items-center rounded-control border border-line bg-surface px-3.5 py-3 sm:px-4 lg:flex-1 lg:py-2.5">
+      <div className="flex w-full items-center gap-3">
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-medium leading-tight">{person.name}</span>
@@ -32,7 +34,7 @@ function DemoCard({ person }: { person: DemoPerson }) {
           type="button"
           onClick={go}
           disabled={state === "working"}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control border border-wheat-deep/40 bg-wheat-soft/40 px-4 text-sm font-medium text-wheat-deep transition-colors duration-150 hover:bg-wheat-soft/70 disabled:opacity-60"
+          className="inline-flex min-h-11 shrink-0 lg:min-h-10 items-center gap-1.5 rounded-control border border-wheat-deep/40 bg-wheat-soft/40 px-4 text-sm font-medium text-wheat-deep transition-colors duration-150 hover:bg-wheat-soft/70 disabled:opacity-60"
         >
           {state === "working" ? (
             <>
@@ -53,7 +55,7 @@ function DemoCard({ person }: { person: DemoPerson }) {
 
 export function DemoAccounts({ people }: { people: DemoPerson[] }) {
   return (
-    <ul className="space-y-2">
+    <ul className="flex flex-col gap-2 lg:flex-1">
       {people.map((person) => (
         <DemoCard key={person.role} person={person} />
       ))}

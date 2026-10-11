@@ -67,7 +67,9 @@ export function FuseBar({ readyDate, deadlineDate, plannedDate, today, showLabel
             {t("readyOn")} · <span className="tabular">{dates.short(readyDate)}</span>
           </span>
           <span className="text-right">
-            {t("waitUntil")} · <span className="tabular text-ember-deep">{dates.short(deadlineDate)}</span>
+            {/* The last waiting day is red only when the plan misses it (or there is no plan): a column of
+                red dates on healthy rows would cry wolf. */}
+            {t("waitUntil")} · <span className={`tabular ${slackDays === null || late ? "font-medium text-ember-deep" : "text-ink"}`}>{dates.short(deadlineDate)}</span>
           </span>
         </figcaption>
       ) : null}

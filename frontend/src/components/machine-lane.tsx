@@ -85,19 +85,19 @@ export function MachineLane({ lane, index, dayStart, busy, onMarkDown, onMarkBac
           ) : null}
         </div>
         {away ? null : lane.down && onMarkBack ? (
-          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-field/40 px-2.5 text-sm text-field hover:bg-field-soft disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={onMarkBack} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-field/40 bg-raised px-2.5 shadow-control text-sm text-field hover:bg-field-soft disabled:opacity-50">
             <Tractor aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markBack")}
           </button>
         ) : !lane.down && onMarkDown ? (
-          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line-strong px-2.5 text-sm text-ink-muted hover:border-ink/50 hover:text-ink disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={onMarkDown} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line-strong bg-raised px-2.5 text-sm text-ink hover:border-ink/50 disabled:opacity-50 shadow-control">
             <Wrench aria-hidden className="size-4" strokeWidth={1.75} />
             {t("markDown")}
           </button>
         ) : null}
       </div>
 
-      <div className="overflow-x-auto rounded-chip" tabIndex={0} role="region" aria-label={t("laneTimeline", { machine: lane.machine.name })}>
+      <div className="overflow-x-auto rounded-control bg-sunken p-1.5 ring-1 ring-inset ring-line" tabIndex={0} role="region" aria-label={t("laneTimeline", { machine: lane.machine.name })}>
         <div className="min-w-[32rem]">
           {away && loan ? (
             <div className="flex h-16 items-center justify-center gap-2 rounded-chip border border-dashed border-sky/40 bg-sky-soft/40 text-sm text-sky">

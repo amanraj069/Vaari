@@ -85,7 +85,7 @@ function MachineCard({ machine, busy, onDown, onBack, onRemove }: { machine: Mac
           </Button>
         )}
         {machine.removable ? (
-          <Button variant="quiet" disabled={busy} onClick={onRemove} className="ml-auto text-ember-deep hover:bg-ember-soft/60">
+          <Button variant="dangerQuiet" disabled={busy} onClick={onRemove} className="ml-auto">
             <Trash2 aria-hidden className="size-4" strokeWidth={1.75} />
             {t("remove")}
           </Button>
@@ -130,7 +130,7 @@ function AddMachineDialog({ open, onClose, onAdd, busy }: { open: boolean; onClo
             onChange={(event) => setName(event.target.value)}
             maxLength={40}
             placeholder={t("namePlaceholder")}
-            className="mt-1.5 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-base focus:border-ink/50 focus:outline-none"
+            className="mt-1.5 min-h-11 w-full rounded-control border border-line-strong bg-raised px-3 text-base focus:border-ink/50 focus:outline-none shadow-control"
           />
         </label>
         <fieldset>
@@ -215,8 +215,9 @@ export function OperatorMachinesView() {
   const workingTomorrow = data.machines.filter((machine) => machine.status === "working");
   const canSow = Math.round(workingTomorrow.reduce((sum, machine) => sum + machine.promiseAcresPerDay, 0));
 
+  // data-fill-page lets this page fill the dashboard's main area, so the footnote sits near the bottom.
   return (
-    <>
+    <div data-fill-page className="flex flex-1 flex-col">
       <DashHeader
         context={data.chc.name}
         title={t("title")}
@@ -253,7 +254,7 @@ export function OperatorMachinesView() {
           />
         ))}
       </ul>
-      <p className="mt-6 text-xs text-ink-muted">{t("footnote")}</p>
+      <p className="mt-auto pt-10 text-xs text-ink-muted">{t("footnote")}</p>
 
       <AddMachineDialog open={adding} onClose={() => setAdding(false)} onAdd={(input) => add.mutate(input)} busy={add.isPending} />
       <Dialog
@@ -267,13 +268,13 @@ export function OperatorMachinesView() {
             <Button variant="secondary" onClick={() => setRemoving(null)}>
               {t("cancel")}
             </Button>
-            <Button disabled={remove.isPending} onClick={() => removing && remove.mutate(removing.id)} className="border-ember-deep bg-ember-deep hover:bg-ember-deep/90">
+            <Button variant="danger" disabled={remove.isPending} onClick={() => removing && remove.mutate(removing.id)}>
               {t("removeConfirm")}
             </Button>
           </>
         }
       />
       <MachineDownDialog machine={downMachine} onClose={() => setDownMachine(null)} onConfirm={(input) => markDown.mutate(input)} />
-    </>
+    </div>
   );
 }

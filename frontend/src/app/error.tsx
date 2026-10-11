@@ -27,7 +27,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
           action={
             <div className="flex flex-wrap justify-center gap-3">
               <Button onClick={() => reset()}>{t("retry")}</Button>
-              <Link href="/" className="inline-flex min-h-11 items-center rounded-control border border-line-strong px-5 font-medium">
+              <Link href="/" className="inline-flex min-h-11 items-center rounded-control border border-line-strong bg-raised px-5 font-medium shadow-control">
                 {t("goHome")}
               </Link>
             </div>

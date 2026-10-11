@@ -162,7 +162,7 @@ export function TokenCard({
             type="button"
             aria-expanded={whyOpen}
             onClick={() => setWhyOpen((open) => !open)}
-            className="inline-flex min-h-12 items-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-[0.9375rem] font-medium hover:border-ink/50 sm:text-base"
+            className="inline-flex min-h-12 items-center gap-2 rounded-control border border-line-strong bg-raised px-4 text-[0.9375rem] font-medium hover:border-ink/50 sm:text-base shadow-control"
           >
             <Sparkles aria-hidden className="size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
             <span className="flex-1 text-left">{t("why")}</span>
