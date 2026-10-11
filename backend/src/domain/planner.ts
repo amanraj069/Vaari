@@ -45,6 +45,7 @@ import {
   type WorkLogRecord,
 } from "../store/types";
 import { currentPromise, lastDay, nextStatus, planChanges, promiseStatus } from "./promises";
+import { machineOff, offDays } from "./machines";
 
 export { currentPromise } from "./promises";
 
@@ -63,6 +64,13 @@ const PROMISE_REASON_BY_CAUSE: Record<PlanCause, PromiseReason> = {
   rain: "rain",
   manual_move: "manual_move",
   farmer_update: "replan",
+  machine_added: "replan",
+  day_closed: "replan",
+  rain_day: "rain",
+  machine_removed: "replan",
+  loan_in: "replan",
+  loan_out: "replan",
+  loan_ended: "replan",
 };
 
 /** Promise records of a CHC grouped by field, each history oldest version first. */
@@ -98,9 +106,33 @@ export class Planner {
     private readonly config: Config,
   ) {}
 
-  /** Today is DATE_TODAY (simulated, labelled as such in the UI; fixed per deployment). */
+  // Days the season has moved past DATE_TODAY (the operator closes a day, then starts the next).
+  // Cached so today() stays synchronous; refreshClock reads the store before each request.
+  private dayOffset = 0;
+
+  /** Today is DATE_TODAY (simulated, labelled so in the UI) plus the days the season has moved on. */
   today(): number {
-    return dateToDay(this.config.SEASON_START_DATE, this.config.DATE_TODAY);
+    return dateToDay(this.config.SEASON_START_DATE, this.config.DATE_TODAY) + this.dayOffset;
+  }
+
+  async refreshClock(): Promise<void> {
+    this.dayOffset = await this.store.getSeasonDayOffset();
+  }
+
+  /** Moves the site's today one day on, for everyone (never past the season's end). */
+  async advanceDay(): Promise<number> {
+    await this.refreshClock();
+    const lastDay = dateToDay(this.config.SEASON_START_DATE, this.config.SEASON_END_DATE);
+    if (this.today() >= lastDay) throw new ConflictError("the season has ended");
+    this.dayOffset += 1;
+    await this.store.setSeasonDayOffset(this.dayOffset);
+    return this.today();
+  }
+
+  /** Back to DATE_TODAY (a demo reset). */
+  async resetClock(): Promise<void> {
+    this.dayOffset = 0;
+    await this.store.setSeasonDayOffset(0);
   }
 
   dayToIso(day: number): string {
@@ -171,7 +203,8 @@ export class Planner {
           name: machine.name,
           hoursPerDay: machine.hoursPerDay,
           rate: { promiseAcresPerHour: rate.promiseAcresPerHour, planAcresPerHour: rate.planAcresPerHour },
-          downDays: machine.downDays,
+          // In the workshop, lent away, or (borrowed) outside the loan: the engine sees one list.
+          downDays: offDays(machine, this.today(), this.today() + HORIZON_DAYS),
         };
       }),
       fields: activeFields.map((field) => {
@@ -269,6 +302,7 @@ export class Planner {
       if (!this.planDays().includes(day)) throw new ImpossibleMoveError("that day is outside the plan");
       if (day < field.readyDay) throw new ImpossibleMoveError("the field is not ready by that day");
       if (machine.downDays.includes(day)) throw new ImpossibleMoveError("the machine is in the workshop that day");
+      if (machineOff(machine, day)) throw new ImpossibleMoveError("the machine is not at this centre that day (on loan)");
       const chc = await this.store.getChc(chcId);
       if (chc?.rainDays.includes(day)) throw new ImpossibleMoveError("no sowing that day because of rain");
       const latest = await this.store.latestPlan(chcId);
@@ -490,6 +524,44 @@ export class Planner {
     });
   }
 
+  /**
+   * The farmer's harvest moved (the combine came early or late). The old promise was for a field
+   * that was not ready then, so it ends as "replaced" (the farmer changed it; the centre did not
+   * break it), and the field waits for a date from the next plan; a draft is made at once.
+   */
+  async changeHarvest(chcId: string, fieldId: string, readyDay: number): Promise<FieldRecord> {
+    return this.withChcWork(chcId, async () => {
+      const field = await this.store.getField(chcId, fieldId);
+      if (!field) throw new NotFoundError("field not found");
+      if (field.state === "done") throw new ConflictError("this field has already been sown");
+      const lastSeasonDay = dateToDay(this.config.SEASON_START_DATE, this.config.SEASON_END_DATE);
+      if (readyDay < this.today() - 14 || readyDay > lastSeasonDay) throw new ConflictError("the harvest day must be in this season");
+      if (readyDay === field.readyDay) return field;
+      await this.releasePromiseLocked(field);
+      const updated: FieldRecord = { ...field, readyDay, state: "waiting", plannedDay: null, plannedMachineId: null, soonerRequestedAt: null };
+      await this.store.putField(updated);
+      await this.generateLocked(chcId, "farmer_update", null, []);
+      return updated;
+    });
+  }
+
+  /** The farmer no longer needs the machine: the booking goes, its promise ends, and the next plan has the room. */
+  async cancelBooking(chcId: string, fieldId: string): Promise<void> {
+    return this.withChcWork(chcId, async () => {
+      const field = await this.store.getField(chcId, fieldId);
+      if (!field) throw new NotFoundError("field not found");
+      if (field.state === "done") throw new ConflictError("this field has already been sown");
+      await this.releasePromiseLocked(field);
+      await this.store.deleteField(chcId, fieldId);
+      await this.generateLocked(chcId, "farmer_update", null, []);
+    });
+  }
+
+  private async releasePromiseLocked(field: FieldRecord): Promise<void> {
+    const held = currentPromise(await this.store.promiseHistory(field.chcId, field.id));
+    if (held) await this.store.putPromise({ ...held, state: "replaced", at: new Date().toISOString() });
+  }
+
   async setMachineDown(chcId: string, machineId: string, downDayCount: number): Promise<PlanRecord> {
     return this.withChcWork(chcId, async () => {
       const machine = (await this.store.listMachines(chcId)).find((item) => item.id === machineId);
@@ -514,6 +586,113 @@ export class Planner {
   }
 
   /**
+   * The operator expects rain on a day of the plan (or the forecast cleared): no field is sown on
+   * a rain day. Promises stay hard; if rain makes one impossible, the draft says which would break.
+   */
+  async setRainDay(chcId: string, day: number, rain: boolean): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
+      if (!this.planDays().includes(day)) throw new ConflictError("rain can be marked only on the plan's days");
+      const chc = await this.store.getChc(chcId);
+      if (!chc) throw new NotFoundError(`CHC ${chcId} not found`);
+      const rainDays = new Set(chc.rainDays);
+      if (rain) rainDays.add(day);
+      else rainDays.delete(day);
+      await this.store.putChc({ ...chc, rainDays: [...rainDays].sort((left, right) => left - right) });
+      return this.generateLocked(chcId, "rain_day", null, []);
+    });
+  }
+
+  /**
+   * The operator adds a machine to the centre (bought or rented in). It works from tomorrow; the
+   * new draft gives it fields, and nothing a farmer sees changes until the operator approves.
+   */
+  async addMachine(chcId: string, input: { name: string; kind: MachineRecord["kind"] }): Promise<{ machine: MachineRecord; plan: PlanRecord }> {
+    return this.withChcWork(chcId, async () => {
+      const machine: MachineRecord = { chcId, id: `m-${randomUUID().slice(0, 8)}`, name: input.name, kind: input.kind, hoursPerDay: 8, downDays: [] };
+      await this.store.putMachine(machine);
+      return { machine, plan: await this.generateLocked(chcId, "machine_added", machine.id, []) };
+    });
+  }
+
+  /**
+   * The operator takes one of the centre's own machines out (sold, or a rental returned). A machine
+   * on loan cannot be removed here (the officer ends the loan), and a centre keeps at least one.
+   * Promises stay hard: if the rest cannot keep them, the draft says which would break.
+   */
+  async removeMachine(chcId: string, machineId: string): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
+      const machines = await this.store.listMachines(chcId);
+      const machine = machines.find((item) => item.id === machineId);
+      if (!machine) throw new NotFoundError(`machine ${machineId} not found`);
+      if (machine.loan) throw new ConflictError("this machine is on loan; the district officer ends the loan");
+      if (machines.filter((item) => !item.loan).length <= 1) throw new ConflictError("a centre keeps at least one machine of its own");
+      await this.store.deleteMachine(chcId, machineId);
+      return this.generateLocked(chcId, "machine_removed", null, []);
+    });
+  }
+
+  /**
+   * The district officer lends one machine from a centre to another, from tomorrow for the days
+   * they chose (at most the plan's ten). The lender's machine is the one that works on every one of those days and
+   * has the fewest fields planned in them. Both centres get a new draft at once; promises stay hard
+   * at both, and each operator approves their own draft.
+   */
+  async arrangeLoan(fromChcId: string, toChcId: string, arrangedBy: string, days: number = HORIZON_DAYS): Promise<{ loanId: string; lenderPlan: PlanRecord; borrowerPlan: PlanRecord }> {
+    if (fromChcId === toChcId) throw new ConflictError("a centre cannot lend to itself");
+    // From tomorrow (the machine travels today) for the days the officer chose, within the plan.
+    const [startDay, endDay] = [this.today() + 1, this.today() + Math.min(HORIZON_DAYS, Math.max(1, days))];
+    const arrangedAt = new Date().toISOString();
+    let loanId = "";
+    let lent: MachineRecord | null = null;
+    const lenderPlan = await this.withChcWork(fromChcId, async () => {
+      const [machines, fields] = await Promise.all([this.store.listMachines(fromChcId), this.store.listFields(fromChcId)]);
+      const plannedInLoan = (machine: MachineRecord) =>
+        fields.filter((field) => field.plannedMachineId === machine.id && field.plannedDay !== null && field.plannedDay >= startDay && field.plannedDay <= endDay).length;
+      const free = machines
+        .filter((machine) => !machine.loan && !machine.downDays.some((day) => day >= startDay && day <= endDay))
+        .sort((left, right) => plannedInLoan(left) - plannedInLoan(right) || left.id.localeCompare(right.id));
+      if (machines.filter((machine) => !machine.loan).length <= 1 || free.length === 0) throw new ConflictError("this centre has no machine it can lend for those days");
+      lent = free[0]!;
+      loanId = `${fromChcId}~${lent.id}`;
+      await this.store.putMachine({ ...lent, loan: { loanId, direction: "out", otherChcId: toChcId, lenderMachineId: lent.id, startDay, endDay, arrangedBy, arrangedAt } });
+      return this.generateLocked(fromChcId, "loan_out", lent.id, []);
+    });
+    const borrowerPlan = await this.withChcWork(toChcId, async () => {
+      const borrowed: MachineRecord = {
+        chcId: toChcId,
+        id: borrowedMachineId(fromChcId, lent!.id),
+        name: lent!.name,
+        kind: lent!.kind,
+        hoursPerDay: lent!.hoursPerDay,
+        downDays: [],
+        loan: { loanId, direction: "in", otherChcId: fromChcId, lenderMachineId: lent!.id, startDay, endDay, arrangedBy, arrangedAt },
+      };
+      await this.store.putMachine(borrowed);
+      return this.generateLocked(toChcId, "loan_in", borrowed.id, []);
+    });
+    return { loanId, lenderPlan, borrowerPlan };
+  }
+
+  /** The district officer ends a loan: the machine goes home, and both centres get a new draft. */
+  async endLoan(loanId: string): Promise<{ fromChcId: string; toChcId: string; lenderPlan: PlanRecord; borrowerPlan: PlanRecord }> {
+    const [fromChcId, machineId] = loanId.split("~");
+    if (!fromChcId || !machineId) throw new NotFoundError("loan not found");
+    const lender = (await this.store.listMachines(fromChcId)).find((machine) => machine.id === machineId);
+    if (!lender?.loan || lender.loan.direction !== "out") throw new NotFoundError("loan not found");
+    const toChcId = lender.loan.otherChcId;
+    const lenderPlan = await this.withChcWork(fromChcId, async () => {
+      const { loan: _ended, ...home } = lender;
+      await this.store.putMachine(home);
+      return this.generateLocked(fromChcId, "loan_ended", machineId, []);
+    });
+    const borrowerPlan = await this.withChcWork(toChcId, async () => {
+      await this.store.deleteMachine(toChcId, borrowedMachineId(fromChcId, machineId));
+      return this.generateLocked(toChcId, "loan_ended", null, []);
+    });
+    return { fromChcId, toChcId, lenderPlan, borrowerPlan };
+  }
+
+  /**
    * The machine has sown a field (on the demo clock's today). Sown by the promised day keeps the
    * promise; later breaks it. A field without a promise cannot be marked sown here.
    */
@@ -521,15 +700,69 @@ export class Planner {
     return this.withChcWork(chcId, async () => {
       const field = await this.store.getField(chcId, fieldId);
       if (!field) throw new NotFoundError("field not found");
-      const history = await this.store.promiseHistory(chcId, fieldId);
-      const held = currentPromise(history);
-      const sownDay = this.today();
-      const onTime = held?.promise ? sownDay <= lastDay(held.promise) : false;
-      const status = nextStatus(promiseStatus(history), onTime ? "sow_on_time" : "sow_late");
-      if (held) await this.store.putPromise({ ...held, state: status === "kept" ? "kept" : "broken", at: new Date().toISOString() });
-      const sown: FieldRecord = { ...field, state: "done", plannedDay: sownDay, soonerRequestedAt: null };
-      await this.store.putField(sown);
-      return sown;
+      return this.sowLocked(field, this.today());
+    });
+  }
+
+  /** A field sown on a day: its promise is kept (by the promised day) or broken (later). Callers hold the lock. */
+  private async sowLocked(field: FieldRecord, sownDay: number): Promise<FieldRecord> {
+    const history = await this.store.promiseHistory(field.chcId, field.id);
+    const held = currentPromise(history);
+    const onTime = held?.promise ? sownDay <= lastDay(held.promise) : false;
+    const status = nextStatus(promiseStatus(history), onTime ? "sow_on_time" : "sow_late");
+    if (held) await this.store.putPromise({ ...held, state: status === "kept" ? "kept" : "broken", at: new Date().toISOString() });
+    const sown: FieldRecord = { ...field, state: "done", plannedDay: sownDay, soonerRequestedAt: null };
+    await this.store.putField(sown);
+    return sown;
+  }
+
+  /**
+   * Today's work at a centre: the fields the approved plan put on today, each with its machine and
+   * planned hours (from the route), and whether today has been recorded yet.
+   */
+  async todaysWork(chcId: string): Promise<{ closed: boolean; stops: { field: FieldRecord; machineId: string; minutes: number }[] }> {
+    const today = this.today();
+    const [chc, fields, published] = await Promise.all([this.store.getChc(chcId), this.store.listFields(chcId), this.publishedPlan(chcId)]);
+    const byId = new Map(fields.map((field) => [field.id, field]));
+    const stops: { field: FieldRecord; machineId: string; minutes: number }[] = [];
+    for (const route of published?.solve.routes ?? []) {
+      if (route.day !== today) continue;
+      for (const stop of route.stops) {
+        const field = byId.get(stop.fieldId);
+        // Sown already (recorded), moved off today by a later plan, or a "stretch" stop: not today's work.
+        if (!field || stop.stretch || field.state === "done" || field.plannedDay !== today) continue;
+        const existing = stops.find((item) => item.field.id === field.id && item.machineId === route.machineId);
+        if (existing) existing.minutes += stop.endMinute - stop.startMinute;
+        else stops.push({ field, machineId: route.machineId, minutes: stop.endMinute - stop.startMinute });
+      }
+    }
+    return { closed: (chc?.closedDay ?? -1) >= today, stops };
+  }
+
+  /**
+   * The operator records the day: each of today's fields sown or not. A sown field's promise is
+   * kept or broken, and a work log (its acres, the planned hours) teaches the machine's speed. A
+   * field not sown stays for the next plan. Then a draft for tomorrow, to check and approve.
+   */
+  async recordDay(chcId: string, outcomes: { fieldId: string; sown: boolean }[]): Promise<PlanRecord> {
+    return this.withChcWork(chcId, async () => {
+      const today = this.today();
+      const work = await this.todaysWork(chcId);
+      const sownIds = new Set(outcomes.filter((outcome) => outcome.sown).map((outcome) => outcome.fieldId));
+      const date = this.dayToIso(today);
+      const loggedAt = new Date().toISOString();
+      const sown = new Set<string>();
+      for (const stop of work.stops) {
+        if (!sownIds.has(stop.field.id)) continue;
+        await this.store.putWorkLog({ chcId, date, machineId: stop.machineId, fieldId: stop.field.id, acres: stop.field.acres * (stop.minutes / Math.max(1, work.stops.filter((item) => item.field.id === stop.field.id).reduce((sum, item) => sum + item.minutes, 0))), hours: stop.minutes / 60, loggedAt });
+        if (!sown.has(stop.field.id)) {
+          await this.sowLocked(stop.field, today);
+          sown.add(stop.field.id);
+        }
+      }
+      const chc = await this.store.getChc(chcId);
+      if (chc) await this.store.putChc({ ...chc, closedDay: today });
+      return this.generateLocked(chcId, "day_closed", null, []);
     });
   }
 
@@ -540,6 +773,11 @@ export class Planner {
   publishedPlan(chcId: string): Promise<PlanRecord | null> {
     return this.store.latestApprovedPlan(chcId);
   }
+}
+
+/** The borrowing centre's id for a lent machine: one per lending centre and machine. */
+export function borrowedMachineId(fromChcId: string, machineId: string): string {
+  return `loan-${fromChcId}-${machineId}`;
 }
 
 /** True when the promise is met by the planned day (on or before a firm day, inside a window). */

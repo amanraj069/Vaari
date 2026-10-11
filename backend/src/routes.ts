@@ -15,7 +15,12 @@ import { randomUUID } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import {
+  addMachineInputSchema,
+  arrangeLoanInputSchema,
   bookingInputSchema,
+  harvestInputSchema,
+  rainInputSchema,
+  recordDayInputSchema,
   dateToDay,
   demoPersonaSchema,
   farmerAccountInputSchema,
@@ -41,11 +46,13 @@ import { createFarmerAccount, createFarmerOtp, isRefusal } from "./auth/farmer-o
 import { assertCurrentLink, mintSlotToken, verifySlotToken } from "./auth/slot-token";
 import { authorize, fieldResource, type Action, type Resource } from "./authz/cedar";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE, DEMO_USERS } from "./demo/seed";
-import { NotFoundError } from "./domain/planner";
+import { approveForSimulatedOperator } from "./demo/district";
+import { ConflictError, NotFoundError } from "./domain/planner";
 import { bookFieldForPhone } from "./domain/farmer-booking";
 import type { FieldRecord } from "./store/types";
-import { buildBoard, buildBookedFields, buildFarmerPhoneHome, buildOfficerOverview, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
+import { buildBoard, buildBookedFields, buildMachinesView, buildFarmerPhoneHome, buildOfficerOverview, buildOneFarmerField, buildPlanView, buildQueue } from "./domain/views";
 import { loadDistrictOutlines } from "./data/boundaries";
+import { loadOutlookContext } from "./data/outlook-context";
 import { explainField as explainFieldFor } from "./domain/why";
 import { clientRateLimit } from "./http/client-ip";
 
@@ -141,7 +148,7 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         chc.villageIds.forEach((id) => villageIds.add(id));
       }
       response.json({
-        today: config.DATE_TODAY,
+        today: dependencies.planner.dayToIso(dependencies.planner.today()),
         seasonStartDate: config.SEASON_START_DATE,
         optimumLastDate: config.OPTIMUM_LAST_DATE,
         chcCount: chcs.length,
@@ -434,6 +441,24 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // A farmer changes their own booking: the harvest moved, or they no longer need the machine.
+  const farmerChange = (kind: "harvest" | "cancel") =>
+    asyncHandler<FarmerRequest>(async (request, response) => {
+      const field = await dependencies.store.getField(String(request.params.chcId), String(request.params.fieldId));
+      if (!field) throw new NotFoundError("field not found");
+      requireCedar(request.farmer, "ChangeBooking", fieldResource(field));
+      if (kind === "cancel") {
+        await dependencies.planner.cancelBooking(field.chcId, field.id);
+        response.json({ cancelled: true });
+        return;
+      }
+      const { readyDate } = harvestInputSchema.parse(request.body);
+      await dependencies.planner.changeHarvest(field.chcId, field.id, dependencies.planner.isoToDay(readyDate));
+      response.json({ changed: true });
+    });
+  router.post("/farmer/fields/:chcId/:fieldId/harvest", authenticateFarmer, farmerChange("harvest"));
+  router.post("/farmer/fields/:chcId/:fieldId/cancel", authenticateFarmer, farmerChange("cancel"));
+
   // --- Booking ------------------------------------------------------------------------------
 
   // A facilitator books for a farmer, who has no account: name, phone (stored as E.164) and the
@@ -526,6 +551,23 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // The helper who booked it (or the centre's operator) changes a booking on the farmer's word.
+  const staffChange = (kind: "harvest" | "cancel") =>
+    asyncHandler(async (request, response) => {
+      const field = await callerField(request.principal, String(request.params.fieldId));
+      requireCedar(request.principal, "ChangeBooking", fieldResource(field));
+      if (kind === "cancel") {
+        await dependencies.planner.cancelBooking(field.chcId, field.id);
+        response.json({ cancelled: true });
+        return;
+      }
+      const { readyDate } = harvestInputSchema.parse(request.body);
+      await dependencies.planner.changeHarvest(field.chcId, field.id, dependencies.planner.isoToDay(readyDate));
+      response.json({ changed: true });
+    });
+  router.post("/fields/:fieldId/harvest", authenticate, staffChange("harvest"));
+  router.post("/fields/:fieldId/cancel", authenticate, staffChange("cancel"));
+
   // --- Slot link (no sign-in) ------------------------------------------------------------------
 
   // The slot token is the permission: it names exactly one field (chcId + fieldId, from the token
@@ -569,6 +611,28 @@ export function buildRoutes(dependencies: AppDependencies): Router {
     }),
   );
 
+  // The slot link can also say the harvest moved, or cancel the booking (the link then stops working).
+  router.post(
+    "/slot/:token/harvest",
+    slotLimiter,
+    asyncHandler(async (request, response) => {
+      const field = await fieldFromSlot(String(request.params.token));
+      const { readyDate } = harvestInputSchema.parse(request.body);
+      const updated = await dependencies.planner.changeHarvest(field.chcId, field.id, dependencies.planner.isoToDay(readyDate));
+      response.json(await buildOneFarmerField(dependencies.planner, dependencies.store, updated, localeOf(request)));
+    }),
+  );
+
+  router.post(
+    "/slot/:token/cancel",
+    slotLimiter,
+    asyncHandler(async (request, response) => {
+      const field = await fieldFromSlot(String(request.params.token));
+      await dependencies.planner.cancelBooking(field.chcId, field.id);
+      response.json({ cancelled: true });
+    }),
+  );
+
   // --- Facilitator --------------------------------------------------------------------------
 
   // Fields this facilitator booked for farmers, via the booked-by-index; Cedar re-checks each one.
@@ -599,8 +663,45 @@ export function buildRoutes(dependencies: AppDependencies): Router {
         await buildOfficerOverview(dependencies.planner, dependencies.store, chcs, {
           optimumLastDate: config.OPTIMUM_LAST_DATE,
           districts: loadDistrictOutlines(config.DATA_DIR),
+          outlook: loadOutlookContext(config.DATA_DIR, config.SEASON_START_DATE),
         }),
       );
+    }),
+  );
+
+  // The officer arranges a loan: one machine from a centre to another for the plan's days. Cedar
+  // is asked for both centres. Both get a new draft; a simulated centre's simulated operator
+  // approves one that breaks no promise, a real operator approves their own.
+  router.post(
+    "/officer/loans",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
+      const input = arrangeLoanInputSchema.parse(request.body);
+      for (const chcId of [input.fromChcId, input.toChcId]) {
+        requireCedar(principal, "ArrangeLoan", { type: "Chc", id: chcId });
+        if (!(await dependencies.store.getChc(chcId))) throw new NotFoundError("centre not found");
+      }
+      const loan = await dependencies.planner.arrangeLoan(input.fromChcId, input.toChcId, principal.userId, input.days);
+      for (const plan of [loan.lenderPlan, loan.borrowerPlan]) await approveForSimulatedOperator(dependencies.planner, plan);
+      response.status(201).json({ loanId: loan.loanId });
+    }),
+  );
+
+  router.delete(
+    "/officer/loans/:loanId",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const { principal } = request;
+      if (principal.role !== "officer") throw new ForbiddenError(["not an officer"]);
+      const loanId = String(request.params.loanId);
+      const fromChcId = loanId.split("~")[0] ?? "";
+      requireCedar(principal, "ArrangeLoan", { type: "Chc", id: fromChcId });
+      const ended = await dependencies.planner.endLoan(loanId);
+      requireCedar(principal, "ArrangeLoan", { type: "Chc", id: ended.toChcId });
+      for (const plan of [ended.lenderPlan, ended.borrowerPlan]) await approveForSimulatedOperator(dependencies.planner, plan);
+      response.json({ ended: loanId });
     }),
   );
 
@@ -711,6 +812,83 @@ export function buildRoutes(dependencies: AppDependencies): Router {
       requireCedar(request.principal, "ReportBreakdown", { type: "Chc", id: chcId });
       await dependencies.planner.setMachineBack(chcId, String(request.params.machineId));
       response.json(await buildPlanView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // The centre's fleet: add a machine (bought or rented in) or take one out. Each makes a draft
+  // the operator checks and approves on the plan page, like a breakdown does.
+  router.get(
+    "/operator/machines",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "ViewBoard", { type: "Chc", id: chcId });
+      response.json(await buildMachinesView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  router.post(
+    "/operator/machines",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "ManageMachines", { type: "Chc", id: chcId });
+      await dependencies.planner.addMachine(chcId, addMachineInputSchema.parse(request.body));
+      response.status(201).json(await buildMachinesView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  router.delete(
+    "/operator/machines/:machineId",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "ManageMachines", { type: "Chc", id: chcId });
+      await dependencies.planner.removeMachine(chcId, String(request.params.machineId));
+      response.json(await buildMachinesView(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // Rain expected on a day of the plan, or cleared: a new draft that sows nothing that day.
+  router.post(
+    "/operator/rain",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "ReportBreakdown", { type: "Chc", id: chcId });
+      const input = rainInputSchema.parse(request.body);
+      await dependencies.planner.setRainDay(chcId, dependencies.planner.isoToDay(input.date), input.rain);
+      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId, input.date));
+    }),
+  );
+
+  // The evening: what each of today's fields came to. Sown fields keep (or break) their promise
+  // and teach the machine's speed; the rest go to the draft for tomorrow, made at once.
+  router.post(
+    "/operator/day/record",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "MarkSown", { type: "Chc", id: chcId });
+      await dependencies.planner.recordDay(chcId, recordDayInputSchema.parse(request.body).outcomes);
+      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
+    }),
+  );
+
+  // "Start tomorrow": the shared season clock moves on one day. Only the demo centre's operator,
+  // once today is recorded and tomorrow's plan approved (the board's day.blockedBy says which).
+  router.post(
+    "/operator/day/next",
+    authenticate,
+    asyncHandler(async (request, response) => {
+      const chcId = requireChc(request.principal);
+      requireCedar(request.principal, "AdvanceDay", { type: "Chc", id: chcId });
+      if (chcId !== DEMO_CHC_ID) throw new ForbiddenError(["only the demo centre moves the season's day"]);
+      const board = await buildBoard(dependencies.planner, dependencies.store, chcId);
+      if (board.day.blockedBy === "record") throw new ConflictError("record today's work first");
+      if (board.day.blockedBy === "approve") throw new ConflictError("approve tomorrow's plan first");
+      await dependencies.startNextDay();
+      response.json(await buildBoard(dependencies.planner, dependencies.store, chcId));
     }),
   );
 

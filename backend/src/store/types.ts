@@ -15,6 +15,8 @@ export type ChcRecord = {
   operatorPhone: string;
   settings: { fairnessKDays: number };
   rainDays: number[];
+  // The last season day the operator recorded (what each machine sowed); absent before the first.
+  closedDay?: number;
 };
 
 export type MachineRecord = {
@@ -23,7 +25,23 @@ export type MachineRecord = {
   name: string;
   kind: "super_seeder" | "happy_seeder";
   hoursPerDay: number;
+  // Days in the workshop. "Back in work" clears the coming ones, so a loan is never kept here.
   downDays: number[];
+  // A loan the district officer arranged: on the lending centre's machine ("out", away for the
+  // loan's days) and on the borrowing centre's copy of it ("in", here only for those days).
+  loan?: MachineLoan;
+};
+
+export type MachineLoan = {
+  loanId: string;
+  direction: "out" | "in";
+  // The other centre: where it went ("out") or where it came from ("in").
+  otherChcId: string;
+  lenderMachineId: string;
+  startDay: number;
+  endDay: number;
+  arrangedBy: string;
+  arrangedAt: string;
 };
 
 /** One machine's work on one field on one day. Machine speed is learned from these. */
@@ -85,7 +103,7 @@ export type PromiseRecord = {
  * Why a draft plan was made. generate: the operator asked for tomorrow's plan; manual_move: the
  * operator moved a field; farmer_update: a farmer shortened their waiting limit from a slot link.
  */
-export type PlanCause = "generate" | "breakdown" | "machine_back" | "rain" | "manual_move" | "farmer_update";
+export type PlanCause = "generate" | "breakdown" | "machine_back" | "rain" | "manual_move" | "farmer_update" | "machine_added" | "machine_removed" | "loan_in" | "loan_out" | "loan_ended" | "day_closed" | "rain_day";
 
 /** What publishing a plan does to promises (computed by domain/promises.ts `planChanges`). */
 export type PlanChanges = {
@@ -243,15 +261,24 @@ export class StoreConflictError extends Error {}
 
 export interface VaariStore {
   listChcs(): Promise<ChcRecord[]>;
+  /**
+   * The season's day count: how many days the site's today has moved past DATE_TODAY (the operator
+   * closes a day and starts the next). One record for the whole deployment; 0 when never moved.
+   */
+  getSeasonDayOffset(): Promise<number>;
+  setSeasonDayOffset(offset: number): Promise<void>;
   getChc(chcId: string): Promise<ChcRecord | null>;
   putChc(chc: ChcRecord): Promise<void>;
 
   listMachines(chcId: string): Promise<MachineRecord[]>;
   putMachine(machine: MachineRecord): Promise<void>;
+  deleteMachine(chcId: string, machineId: string): Promise<void>;
 
   listFields(chcId: string): Promise<FieldRecord[]>;
   getField(chcId: string, fieldId: string): Promise<FieldRecord | null>;
   putField(field: FieldRecord): Promise<void>;
+  // A cancelled booking: the field goes (its promise records stay, marked replaced).
+  deleteField(chcId: string, fieldId: string): Promise<void>;
   /**
    * Publishing's field write: sets the planned day, machine and state and clears a "sooner"
    * request. Safe to repeat. Skips a field that no longer exists or has been sown since.

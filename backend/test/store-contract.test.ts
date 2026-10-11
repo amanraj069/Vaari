@@ -77,6 +77,17 @@ for (const { name, make } of stores) {
       expect((await store.listFieldsByFarmer(chcId, "farmer-b")).map((item) => item.id)).toEqual(["f2"]);
     });
 
+    it("keeps one season clock, never listed as a centre, and deletes a machine", async () => {
+      const before = await store.getSeasonDayOffset();
+      await store.setSeasonDayOffset(before + 3);
+      expect(await store.getSeasonDayOffset()).toBe(before + 3);
+      expect((await store.listChcs()).every((chc) => chc.id.startsWith("chc-"))).toBe(true);
+      await store.setSeasonDayOffset(before);
+      await store.putMachine({ chcId, id: "m-gone", name: "Gone", kind: "happy_seeder", hoursPerDay: 8, downDays: [] });
+      await store.deleteMachine(chcId, "m-gone");
+      expect((await store.listMachines(chcId)).map((machine) => machine.id)).not.toContain("m-gone");
+    });
+
     it("lists a facilitator's bookings through booked-by-index, oldest first, and nobody else's", async () => {
       const facilitator = `facilitator-${run}`;
       await store.putField(field(chcId, "b2", { bookedBy: facilitator, createdAt: "2026-10-08T10:00:00.000Z" }));

@@ -110,7 +110,15 @@ export class DynamoStore implements VaariStore {
       items.push(...((page.Items as Item[] | undefined) ?? []));
       startKey = page.LastEvaluatedKey;
     } while (startKey);
-    return items.map(fromChcItem).sort((left, right) => (left.id < right.id ? -1 : 1));
+    // The season clock shares the table under a key no centre can have (see SEASON_CLOCK_KEY).
+    return items.filter((item) => item.chcId !== SEASON_CLOCK_KEY).map(fromChcItem).sort((left, right) => (left.id < right.id ? -1 : 1));
+  }
+  async getSeasonDayOffset() {
+    const item = await this.get("chcs", { chcId: SEASON_CLOCK_KEY });
+    return typeof item?.offset === "number" ? item.offset : 0;
+  }
+  async setSeasonDayOffset(offset: number) {
+    await this.put("chcs", { chcId: SEASON_CLOCK_KEY, offset });
   }
   async getChc(chcId: string) {
     const item = await this.get("chcs", { chcId });
@@ -128,6 +136,9 @@ export class DynamoStore implements VaariStore {
   async putMachine(machine: MachineRecord) {
     await this.put("machines", { ...omit(machine, ["id"]), machineId: machine.id });
   }
+  async deleteMachine(chcId: string, machineId: string) {
+    await this.documents.send(new DeleteCommand({ TableName: this.table("machines"), Key: { chcId, machineId } }));
+  }
 
   // --- Fields ------------------------------------------------------------------------------
 
@@ -140,6 +151,9 @@ export class DynamoStore implements VaariStore {
   }
   async putField(field: FieldRecord) {
     await this.put("fields", withoutNullKeys({ ...omit(field, ["id"]), fieldId: field.id }, ["bookedBy", "farmerPhone"]));
+  }
+  async deleteField(chcId: string, fieldId: string) {
+    await this.documents.send(new DeleteCommand({ TableName: this.table("fields"), Key: { chcId, fieldId } }));
   }
   async setFieldPlan(chcId: string, update: FieldPlanUpdate) {
     try {
@@ -538,6 +552,12 @@ export class DynamoStore implements VaariStore {
 function fromChcItem(item: Item): ChcRecord {
   return { ...omit(item, ["chcId"]), id: item.chcId } as ChcRecord;
 }
+/**
+ * The season clock is one item in the chcs table rather than a table of its own, so a deployment
+ * needs no new table; listChcs never returns it. Centre ids are "chc-…", so this key cannot clash.
+ */
+const SEASON_CLOCK_KEY = "__season-clock";
+
 function fromMachineItem(item: Item): MachineRecord {
   return { ...omit(item, ["machineId"]), id: item.machineId } as MachineRecord;
 }
