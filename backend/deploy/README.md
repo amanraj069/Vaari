@@ -103,9 +103,19 @@ sudo systemctl enable --now docker          # containers come back after the ins
 docker compose version                      # the compose plugin is there
 sudo systemctl restart amazon-ssm-agent     # picks up the SSM policy from step 1b
 cd ~/Vaari && git checkout main && git status   # on main and clean: the pipeline fast-forwards it
-# The repo is public, so fetch over HTTPS and SSM needs no SSH key:
-git remote set-url origin https://github.com/amanraj069/Vaari.git
+git fetch origin && echo "fetch ok"             # must work with no prompt: SSM cannot type a password
 ```
+
+The deploy runs `git fetch` as `ec2-user` with no terminal. While the repo is private, keep the SSH remote (`git@github.com:amanraj069/Vaari.git`) with a key that has no passphrase. If the key has one, add a read-only deploy key:
+
+```bash
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/vaari_deploy -C vaari-ec2
+printf 'Host github.com\n  IdentityFile ~/.ssh/vaari_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config && chmod 600 ~/.ssh/config
+cat ~/.ssh/vaari_deploy.pub   # GitHub repo > Settings > Deploy keys > Add (no write access)
+ssh -T git@github.com         # "successfully authenticated"
+```
+
+Once the repo is public, the HTTPS remote (`https://github.com/amanraj069/Vaari.git`) also works, with no key.
 
 From your laptop, check that SSM sees the instance (`PingStatus` should be `Online`; it can take a minute):
 
