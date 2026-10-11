@@ -360,6 +360,7 @@ export class DynamoStore implements VaariStore {
   // --- Farmers and users -------------------------------------------------------------------
 
   async getFarmer(farmerId: string) {
+    if (!farmerId) return null;
     const item = await this.get("farmers", { farmerId });
     return item ? ({ ...omit(item, ["farmerId"]), id: item.farmerId, facilitatorId: item.facilitatorId ?? null } as FarmerRecord) : null;
   }
@@ -459,6 +460,7 @@ export class DynamoStore implements VaariStore {
   // --- Farmer accounts and one-time codes --------------------------------------------------
 
   async getFarmerAccount(phone: string) {
+    if (!phone) return null;
     return (await this.get("farmerAccounts", { phone })) as FarmerAccountRecord | null;
   }
   async createFarmerAccount(record: FarmerAccountRecord) {

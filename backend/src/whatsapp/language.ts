@@ -36,8 +36,9 @@ export function storedLanguage(records: FarmerRecord[], account: FarmerAccountRe
 
 /** storedLanguage for one phone, read from the store; `farmerId` is the field's own farmer record. */
 export async function phoneLanguage(store: Pick<VaariStore, "getFarmerAccount" | "getFarmer">, phone: string, farmerId?: string): Promise<Locale | null> {
-  const account = await store.getFarmerAccount(phone);
-  const record = await store.getFarmer(account?.farmerId ?? farmerId ?? "");
+  const account = phone ? await store.getFarmerAccount(phone) : null;
+  const targetFarmerId = account?.farmerId ?? farmerId;
+  const record = targetFarmerId ? await store.getFarmer(targetFarmerId) : null;
   return storedLanguage(record ? [record] : [], account);
 }
 
