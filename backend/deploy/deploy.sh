@@ -5,7 +5,7 @@
 #   deploy/deploy.sh current    the release running now again (after editing backend/.env)
 # Why it exists: every check that used to be a debugging session runs here first, against the new
 # image and the real .env, before the running containers are touched. If the new containers are
-# not healthy, the previous release (or, on the first run, the old systemd service) comes back.
+# not healthy, the previous release (or, on the first run, the old systemd services) comes back.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,7 +20,10 @@ env_value() {
     sed -E "s/^[[:space:]]*(export[[:space:]]+)?$1=//; s/^['\"]//; s/['\"]$//"
 }
 
-LEGACY_SERVICE=vaari-backend
+# The systemd services the containers replaced: the API (`node dist/server.js`) and, on hosts that
+# had one, the WhatsApp worker (`node dist/worker.js`). A leftover worker service would read the same
+# SQS queue as the worker container, answering some farmers with old code.
+LEGACY_SERVICES="vaari-backend vaari-worker"
 RELEASE_FILE=deploy/.deployed-release
 TAG="${1:-}"
 [ -f .env ] || fail "backend/.env is missing. Copy backend/.env.example to backend/.env and fill it in."
@@ -92,14 +95,18 @@ if [ "$(env_value REPO)" = "dynamo" ] && [ -z "$(env_value DYNAMODB_ENDPOINT)" ]
     fail "the containers cannot use DynamoDB. 'Could not load credentials' means the instance metadata hop limit is 1 (set it to 2, see backend/deploy/README.md); 'ResourceNotFoundException' means the tables for TABLE_PREFIX do not exist in AWS_REGION; 'AccessDenied' means the instance role lacks DynamoDB rights. Nothing was changed."
 fi
 
-# First container deploy: the old `node dist/server.js` service holds the port. Stop it only now,
-# after every check passed, so the API is down for seconds; it comes back if the containers fail.
-legacy_stopped=false
-if command -v systemctl >/dev/null && systemctl is-active --quiet "$LEGACY_SERVICE" 2>/dev/null; then
-  log "Stopping the old ${LEGACY_SERVICE} systemd service (replaced by the containers)"
-  sudo -n systemctl disable --now "$LEGACY_SERVICE" ||
-    fail "could not stop ${LEGACY_SERVICE} (no passwordless sudo). Run once: sudo systemctl disable --now ${LEGACY_SERVICE}"
-  legacy_stopped=true
+# The old systemd services (running, or enabled to start at boot) are stopped only now, after every
+# check passed, so the API is down for seconds; they come back if the containers fail.
+legacy_stopped=""
+if command -v systemctl >/dev/null; then
+  for legacy in $LEGACY_SERVICES; do
+    if systemctl is-active --quiet "$legacy" 2>/dev/null || systemctl is-enabled --quiet "$legacy" 2>/dev/null; then
+      log "Stopping the old ${legacy} systemd service (replaced by the containers)"
+      sudo -n systemctl disable --now "$legacy" ||
+        fail "could not stop ${legacy} (no passwordless sudo). Run once: sudo systemctl disable --now ${legacy}"
+      legacy_stopped="${legacy_stopped} ${legacy}"
+    fi
+  done
 fi
 
 # A worker container from a release that ran one, now unwanted (WHATSAPP_QUEUE is no longer sqs):
@@ -164,10 +171,10 @@ fi
 log "The new containers are not healthy. Last log lines:"
 # shellcheck disable=SC2086 # $services is a list of service names
 docker compose logs --no-color --tail 60 $services || true
-if $legacy_stopped; then
-  log "Bringing the old ${LEGACY_SERVICE} service back"
+if [ -n "$legacy_stopped" ]; then
+  log "Bringing the old systemd services back:${legacy_stopped}"
   docker compose down || true
-  sudo -n systemctl enable --now "$LEGACY_SERVICE" || true
+  for legacy in $legacy_stopped; do sudo -n systemctl enable --now "$legacy" || true; done
 elif [ -n "$TAG" ] && [ -n "$previous_tag" ] && [ "$previous_tag" != "$TAG" ]; then
   log "Rolling back to ${previous_tag}"
   IMAGE_REGISTRY="$previous_registry" IMAGE_TAG="$previous_tag" docker compose up -d --remove-orphans || true
