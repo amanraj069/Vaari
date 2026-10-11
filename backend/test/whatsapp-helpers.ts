@@ -20,16 +20,17 @@ export const VERIFY_TOKEN = "test-verify-token";
 let messageCount = 0;
 export const nextMessageId = () => `wamid.in-${Date.now()}-${++messageCount}`;
 
-type Inbound = { id?: string; from?: string | null; text?: string; button?: string; listRow?: string; audio?: boolean };
+/** `title`: the tapped button or row's title, as WhatsApp sends it back (default "x"). */
+type Inbound = { id?: string; from?: string | null; text?: string; button?: string; listRow?: string; title?: string; audio?: boolean };
 
 /** One inbound message in Meta's webhook shape (`from` without "+", as Meta sends it). */
 export function messageBody(message: Inbound): string {
   const id = message.id ?? nextMessageId();
   const from = message.from === undefined ? "447700900017" : message.from;
   const content = message.button
-    ? { type: "interactive", interactive: { type: "button_reply", button_reply: { id: message.button, title: "x" } } }
+    ? { type: "interactive", interactive: { type: "button_reply", button_reply: { id: message.button, title: message.title ?? "x" } } }
     : message.listRow
-      ? { type: "interactive", interactive: { type: "list_reply", list_reply: { id: message.listRow, title: "x" } } }
+      ? { type: "interactive", interactive: { type: "list_reply", list_reply: { id: message.listRow, title: message.title ?? "x" } } }
       : message.audio
         ? { type: "audio", audio: { id: "media-1", mime_type: "audio/ogg; codecs=opus", voice: true } }
         : { type: "text", text: { body: message.text ?? "hello" } };
