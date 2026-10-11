@@ -1,23 +1,27 @@
 /**
  * A conversation on WhatsApp, not one message at a time: the model's question back reaches the
- * farmer (only when it holds no number or date), and the reply language follows the script the
- * farmer writes or taps in, and is remembered. The model is a stand-in (no Bedrock call).
+ * farmer (only when it holds no number or date); the reply language follows the script the farmer
+ * writes or taps in, and is remembered; the model sees the last few exchanges with this phone, never
+ * a one-time link, never another phone's, and none after a quiet spell. The model is a stand-in
+ * (no Bedrock call).
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFarmerAccount } from "../src/auth/farmer-otp";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
-import type { AgentRunner } from "../src/whatsapp/agent";
+import type { AgentInput, AgentRunner } from "../src/whatsapp/agent";
 import { words } from "../src/whatsapp/messages";
+import { checkReply } from "../src/whatsapp/output-check";
 import { parseWebhook } from "../src/whatsapp/payload";
 import type { SentMessage } from "../src/whatsapp/sender";
-import type { FarmerTool } from "../src/whatsapp/tools";
+import { FarmerSession, type FarmerTool } from "../src/whatsapp/tools";
+import { RecentExchanges } from "../src/whatsapp/worker";
 import { ScriptedRunner, messageBody, whatsappRuntime } from "./whatsapp-helpers";
 
 const JASWINDER = "447700900017"; // DEMO_FARMER_PHONE as Meta sends it; has fields
 const HARPREET = "+447700900981"; // registered on the web in English, no field yet
+const MANJIT = "+447700900982"; // registered on the web in English, no field yet
+const en = words("en");
 const hi = words("hi");
-
-type AgentInput = Parameters<AgentRunner["run"]>[0];
 
 /** A stand-in model that records what it was given, then runs `script` against the tools. */
 class RecordingRunner implements AgentRunner {
@@ -41,6 +45,7 @@ const accountFarmer = async (phone: string) => {
 beforeAll(async () => {
   runtime = await whatsappRuntime({ config: { AGENT_ENABLED: true }, runner });
   await createFarmerAccount(runtime.runtime.dependencies.store, HARPREET, "Harpreet Singh", "en");
+  await createFarmerAccount(runtime.runtime.dependencies.store, MANJIT, "Manjit Kaur", "en");
 });
 
 describe("a question back reaches the farmer", () => {
@@ -85,9 +90,72 @@ describe("the reply language", () => {
   });
 });
 
+describe("the model sees the last few exchanges with this phone", () => {
+  it("'Book a field', then the details: the model knows what the farmer is answering", async () => {
+    await runtime.deliver(messageBody({ from: from(MANJIT), listRow: "menu:book", title: en.menuBook }));
+    runner.script = async () => "";
+    await runtime.deliver(messageBody({ from: from(MANJIT), text: "Balian, 4 acres, till 3 November" }));
+    const input = runner.inputs.at(-1)!;
+    expect(input.text).toBe("Balian, 4 acres, till 3 November");
+    expect(input.history).toEqual([{ farmer: en.menuBook, vaari: en.bookAsk }]);
+  });
+
+  it("a one-time login link never reaches the model, and another phone's exchanges never do", async () => {
+    await runtime.deliver(messageBody({ from: JASWINDER, listRow: "menu:page", title: "x" }));
+    expect(JSON.stringify(lastTo(DEMO_FARMER_PHONE))).toContain("/farmer/login/");
+    runner.script = async () => "";
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "thanks" }));
+    const history = JSON.stringify(runner.inputs.at(-1)!.history);
+    expect(history).toContain("[link]");
+    expect(history).not.toMatch(/https?:|\/farmer\/login/);
+    expect(history).not.toContain("Manjit");
+    expect(history).not.toContain("Balian, 4 acres");
+  });
+
+  it("after a quiet spell of 15 minutes the model starts afresh", async () => {
+    runtime.clock.now = new Date(runtime.clock.now.getTime() + 16 * 60_000);
+    runner.script = async () => "";
+    await runtime.deliver(messageBody({ from: from(MANJIT), text: "hello" }));
+    expect(runner.inputs.at(-1)!.history).toEqual([]);
+  });
+});
+
+describe("RecentExchanges", () => {
+  const exchange = (index: number) => ({ farmer: `farmer ${index}`, vaari: `vaari ${index}` });
+
+  it("keeps the last few exchanges per phone, oldest first", () => {
+    const recent = new RecentExchanges(3, 15);
+    for (let index = 1; index <= 5; index += 1) recent.add("+1", exchange(index), index * 1_000);
+    recent.add("+2", exchange(9), 6_000);
+    expect(recent.recent("+1", 6_000)).toEqual([exchange(3), exchange(4), exchange(5)]);
+    expect(recent.recent("+2", 6_000)).toEqual([exchange(9)]);
+  });
+
+  it("forgets a conversation 15 minutes after its last message, not its first", () => {
+    const recent = new RecentExchanges(3, 15);
+    recent.add("+1", exchange(1), 0);
+    recent.add("+1", exchange(2), 10 * 60_000);
+    expect(recent.recent("+1", 24 * 60_000)).toEqual([exchange(1), exchange(2)]);
+    expect(recent.recent("+1", 25 * 60_000)).toEqual([]);
+    // A quiet conversation is dropped when anyone else writes, and does not come back.
+    recent.add("+2", exchange(3), 26 * 60_000);
+    recent.add("+1", exchange(4), 26 * 60_000);
+    expect(recent.recent("+1", 26 * 60_000)).toEqual([exchange(4)]);
+  });
+});
+
 describe("the parts that make this work", () => {
   it("a tapped button or row carries its title as the message text", () => {
     const [message] = parseWebhook(messageBody({ from: JASWINDER, listRow: "menu:book", title: hi.menuBook })).messages;
     expect(message).toMatchObject({ kind: "reply", replyId: "menu:book", text: hi.menuBook });
+  });
+
+  it("a booking problem comes back with what was understood, so a question that repeats it passes the check", async () => {
+    const session = new FarmerSession(runtime.runtime.dependencies, { kind: "farmerPhone", phone: MANJIT }, "en");
+    const output = await session.tool("book_field").run({ village: "Atlantis", acres: 4, moreDaysYouCanWait: 3 });
+    expect(output).toMatchObject({ error: expect.stringMatching(/no machine centre serves/), understood: { village: "Atlantis", acres: 4 } });
+    expect(checkReply("Which village is your 4 acre field in?", session.calls).ok).toBe(true);
+    // Still nothing the tools did not say.
+    expect(checkReply("Which village is your 5 acre field in?", session.calls).ok).toBe(false);
   });
 });

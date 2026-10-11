@@ -117,6 +117,24 @@ describe("a voice note goes through the agent and comes back as text and a voice
   });
 });
 
+describe("a voice note is part of the conversation", () => {
+  it("the next message's model sees what was heard and the answer, never the 'I heard' line", async () => {
+    speech.heard = { text: "मुझे मशीन चाहिए", locale: "hi" };
+    const question = "आपका खेत किस गाँव में है?";
+    runner.current = new ScriptedRunner(async () => question);
+    const { sent, spoken } = await sendNote();
+    expect(sent.map((message) => message.type)).toEqual(["text", "text", "voice"]);
+    expect(sent[1]).toMatchObject({ type: "text", body: question });
+    expect(spoken.map((item) => item.text)).toEqual([question]);
+
+    let history: Parameters<AgentRunner["run"]>[0]["history"] = [];
+    runner.current = { run: async (input) => ((history = input.history), "") };
+    // Latin letters: the farmer's remembered language (Punjabi, which later tests expect) stays.
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "Balian" }));
+    expect(history.at(-1)).toEqual({ farmer: "मुझे मशीन चाहिए", vaari: question });
+  });
+});
+
 describe("failures fall back to text", () => {
   it("nothing heard: the menu with 'say it again', and the model is never called", async () => {
     speech.heard = null;

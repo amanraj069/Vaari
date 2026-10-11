@@ -8,9 +8,10 @@
  *   - known: a FarmerPhone principal, a per-phone rate limit, the reply language (the script the
  *     farmer just wrote or tapped in, remembered on their farmer records; else the remembered one), then
  *       a button or list reply -> the tools directly (no model),
- *       text -> the agent when AGENT_ENABLED (its reply checked against this turn's tool results,
- *               else the template reply; a reply with no tool call is sent only if it holds no
- *               number or date: a question back, or "I can only help with ..."), otherwise the menu,
+ *       text -> the agent when AGENT_ENABLED, with the last few exchanges with this phone (its reply
+ *               checked against this turn's tool results, else the template reply; a reply with no
+ *               tool call is sent only if it holds no number or date: a question back, or "I can
+ *               only help with ..."), otherwise the menu,
  *       a voice note -> with VOICE_ENABLED and the agent: Transcribe's words (and language) go
  *               through the same agent turn as text, the farmer first reads what was heard, and
  *               Polly reads back what that turn sent as a voice note after the text; otherwise
@@ -32,7 +33,7 @@ import { ConflictError } from "../domain/planner";
 import { formatDate } from "../explain/templates";
 import { logger } from "../logger";
 import type { FarmerAccountRecord, FarmerRecord } from "../store/types";
-import type { AgentRunner } from "./agent";
+import type { AgentRunner, Exchange } from "./agent";
 import { checkReply } from "./output-check";
 import { chooseLocale, scriptLocale } from "./language";
 import { MENU_ACTIONS, promiseWords, words, type MenuAction } from "./messages";
@@ -45,6 +46,13 @@ import { toDevanagari, type Heard, type SpeechService } from "./voice";
 const DEDUPE_DAYS = 3;
 /** Polly takes up to 3,000 billed characters; a spoken reply is cut well before that. */
 const SPOKEN_CHARACTERS = 1_500;
+/** How much of a conversation the model sees: enough for "which village?" -> "Balian". */
+const HISTORY_EXCHANGES = 3;
+const HISTORY_MINUTES = 15;
+const HISTORY_CHARACTERS = 600;
+
+/** One inbound message being handled: the farmer's words (typed, tapped or heard) and every body sent back. */
+type Turn = { farmerWords: string | null; sent: string[] };
 
 /** At most `limit` messages per phone per rolling hour (one worker process; SQS runs one worker). */
 export class PhoneRateLimiter {
@@ -62,21 +70,52 @@ export class PhoneRateLimiter {
   }
 }
 
+/**
+ * The last few exchanges with each phone, so the model reads "Balian, 4 acres" as the answer to the
+ * question Vaari just asked. Kept in this process only (SQS runs one worker), forgotten
+ * HISTORY_MINUTES after a conversation's last message, never logged and never written to the store:
+ * a restart forgets, and the farmer says it again.
+ */
+export class RecentExchanges {
+  private readonly byPhone = new Map<string, { exchanges: Exchange[]; lastAt: number }>();
+  constructor(private readonly keep: number, private readonly minutes: number) {}
+
+  recent(phone: string, now: number): Exchange[] {
+    const conversation = this.byPhone.get(phone);
+    return conversation && now - conversation.lastAt < this.minutes * 60_000 ? conversation.exchanges : [];
+  }
+
+  add(phone: string, exchange: Exchange, now: number) {
+    const exchanges = [...this.recent(phone, now), exchange].slice(-this.keep);
+    // Drop every conversation that has gone quiet, so the map only ever holds recent phones.
+    for (const [otherPhone, conversation] of this.byPhone) if (now - conversation.lastAt >= this.minutes * 60_000) this.byPhone.delete(otherPhone);
+    this.byPhone.set(phone, { exchanges, lastAt: now });
+  }
+}
+
+/**
+ * Words kept for the model's history. One-time login links are replaced: a link must never reach
+ * the model (it is a live credential), and the model never needs one.
+ */
+const forHistory = (text: string) => text.replace(/https?:\/\/\S+/g, "[link]").slice(0, HISTORY_CHARACTERS);
+
 export type WorkerDeps = FarmerToolDeps & { sender: WhatsAppSender; runner: AgentRunner | null; speech?: SpeechService | null; now?: () => Date };
 
 export function createWorker(deps: WorkerDeps) {
   const now = deps.now ?? (() => new Date());
   const limiter = new PhoneRateLimiter(deps.config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR);
+  const exchanges = new RecentExchanges(HISTORY_EXCHANGES, HISTORY_MINUTES);
   const { store, config } = deps;
   const speech = deps.speech ?? null;
 
-  // During a voice turn, every body sent (text, buttons, list) is also collected here, so the voice
-  // reply says exactly what the farmer can read, and every send path stays as it is.
-  const spokenTurn = new AsyncLocalStorage<string[]>();
+  // While a message is handled, every body sent (text, buttons, list) is also collected on its turn,
+  // so the exchange can be remembered and a voice reply says exactly what the farmer can read;
+  // every send path stays as it is.
+  const currentTurn = new AsyncLocalStorage<Turn>();
   const sender: WhatsAppSender = {
-    text: (to, body, options) => (spokenTurn.getStore()?.push(body), deps.sender.text(to, body, options)),
-    buttons: (to, body, buttons) => (spokenTurn.getStore()?.push(body), deps.sender.buttons(to, body, buttons)),
-    list: (to, body, buttonLabel, rows) => (spokenTurn.getStore()?.push(body), deps.sender.list(to, body, buttonLabel, rows)),
+    text: (to, body, options) => (currentTurn.getStore()?.sent.push(body), deps.sender.text(to, body, options)),
+    buttons: (to, body, buttons) => (currentTurn.getStore()?.sent.push(body), deps.sender.buttons(to, body, buttons)),
+    list: (to, body, buttonLabel, rows) => (currentTurn.getStore()?.sent.push(body), deps.sender.list(to, body, buttonLabel, rows)),
     template: (...args) => deps.sender.template(...args),
     authCode: (...args) => deps.sender.authCode(...args),
     voice: (...args) => deps.sender.voice(...args),
@@ -284,7 +323,7 @@ export function createWorker(deps: WorkerDeps) {
     let reply: string | null = null;
     let failed = false;
     try {
-      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools() });
+      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools(), history: exchanges.recent(phone, now().getTime()) });
     } catch (error) {
       failed = true;
       // Bedrock's error names the problem (AccessDeniedException, ThrottlingException, a timeout);
@@ -355,9 +394,12 @@ export function createWorker(deps: WorkerDeps) {
     }
     const heardText = heard.text;
     await sender.text(phone, said.heard(heardText));
-    const spoken: string[] = [];
-    await spokenTurn.run(spoken, () => agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null));
-    const voiced = await speakReply(session, spoken);
+    // The answer starts after "I heard": only the answer is spoken, and remembered with the heard words.
+    const turn = currentTurn.getStore()!;
+    turn.farmerWords = heardText;
+    turn.sent.length = 0;
+    await agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null);
+    const voiced = await speakReply(session, turn.sent);
     return `answered voice note (${heard.locale}) with the agent${voiced ? " and a voice reply" : ", text only"}`;
   }
 
@@ -385,6 +427,17 @@ export function createWorker(deps: WorkerDeps) {
     const written = scriptLocale(message.text);
     if (written) await rememberLanguage(records, written);
     const session = new FarmerSession(deps, principal, chooseLocale(records[0]?.language ?? account?.language ?? null, message.text), now);
+
+    const turn: Turn = { farmerWords: message.text, sent: [] };
+    const outcome = await currentTurn.run(turn, () => answer(message, session, account));
+    if (turn.farmerWords && turn.sent.length > 0) {
+      exchanges.add(phone, { farmer: forHistory(turn.farmerWords), vaari: forHistory(turn.sent.join("\n\n")) }, at.getTime());
+    }
+    return outcome;
+  }
+
+  /** A known phone's message, by kind; returns what was done. */
+  async function answer(message: InboundMessage, session: FarmerSession, account: FarmerAccountRecord | null): Promise<string> {
     const noFieldsLead = account ? words(session.locale).noBookingsYet(account.name) : null;
     if (message.kind === "reply" && message.replyId) {
       await handleReply(session, message.replyId);
@@ -400,7 +453,7 @@ export function createWorker(deps: WorkerDeps) {
     }
     if (message.kind === "audio") {
       if (config.VOICE_ENABLED && speech && config.AGENT_ENABLED && deps.runner && message.mediaId) {
-        return voiceTurn(message, principal, session.locale, account?.name ?? null);
+        return voiceTurn(message, session.principal, session.locale, account?.name ?? null);
       }
       await sendMenu(session, words(session.locale).voiceNotSupported);
       return "voice note: sent 'please type' and the menu";
