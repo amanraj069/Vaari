@@ -49,7 +49,8 @@ describe("GET /public/proof", () => {
     expect(results.simulated).toBe(true);
     expect(results.runs).toBe(2);
     expect(response.body).toEqual(JSON.parse(readFileSync(out, "utf8")));
-  });
+    // A real simulator run (both scenarios and the sweeps): about 170 s on a 2-core CI runner.
+  }, 300_000);
 
   it("the committed results file (if present) matches the schema", () => {
     const committed = path.join(runtime.dependencies.config.DATA_DIR, "sim", "results.json");
