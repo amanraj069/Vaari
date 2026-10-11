@@ -62,4 +62,26 @@ describe("checkConfig", () => {
     expect(report.ok).toBe(true);
     expect(report.warnings.join()).toContain("COMPOSE_PROFILES=worker");
   });
+
+  it("names the settings that would quietly turn voice notes off, and shows whether voice is on", () => {
+    const whatsapp = {
+      WHATSAPP_ENABLED: "true",
+      WHATSAPP_TOKEN: "token",
+      WHATSAPP_APP_SECRET: "secret",
+      WHATSAPP_VERIFY_TOKEN: "verify",
+      WHATSAPP_PHONE_NUMBER_ID: "1",
+      WHATSAPP_TEMPLATE_NEW_DATE: "new_date",
+      WHATSAPP_TEMPLATE_FIRM_DATE: "firm_date",
+      WHATSAPP_TEMPLATE_DATE_CHANGED: "date_changed",
+    };
+    const noBucket = checkConfig(production({ ...whatsapp, AGENT_ENABLED: "true", VOICE_ENABLED: "true" }));
+    expect(noBucket.ok).toBe(true);
+    expect(noBucket.warnings.join()).toContain("VOICE_S3_BUCKET is not set");
+    expect(noBucket.summary.join("\n")).toContain("VOICE_ENABLED=true VOICE_S3_BUCKET=(unset)");
+    const noAgent = checkConfig(production({ ...whatsapp, VOICE_ENABLED: "true", VOICE_S3_BUCKET: "vaari-voice" }));
+    expect(noAgent.warnings.join()).toContain("AGENT_ENABLED=false");
+    const ready = checkConfig(production({ ...whatsapp, AGENT_ENABLED: "true", VOICE_ENABLED: "true", VOICE_S3_BUCKET: "vaari-voice" }));
+    expect(ready.warnings).toEqual([]);
+    expect(ready.summary.join("\n")).toContain("VOICE_ENABLED=true VOICE_S3_BUCKET=vaari-voice");
+  });
 });

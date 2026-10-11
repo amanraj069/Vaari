@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadConfig } from "./config";
+import { whatsappSetupProblems } from "./whatsapp";
 
 export type ConfigReport = { ok: boolean; errors: string[]; warnings: string[]; summary: string[] };
 
@@ -33,6 +34,9 @@ export function checkConfig(environment: NodeJS.ProcessEnv): ConfigReport {
   if (config.WHATSAPP_ENABLED && config.WHATSAPP_QUEUE === "sqs") {
     warnings.push("WHATSAPP_QUEUE=sqs: replies need the worker service running (COMPOSE_PROFILES=worker)");
   }
+  // The settings that make WhatsApp (or its voice notes) quietly do nothing, as the API and the
+  // worker log them at start-up: shown at deploy time too, where someone is looking.
+  warnings.push(...whatsappSetupProblems(config));
   if (config.NODE_ENV === "production" && config.WEB_BASE_URL.startsWith("http://localhost")) {
     warnings.push("WEB_BASE_URL is localhost: farmer login links sent on WhatsApp will not open");
   }
@@ -41,6 +45,7 @@ export function checkConfig(environment: NodeJS.ProcessEnv): ConfigReport {
     `ENGINE_MODE=${config.ENGINE_MODE}${config.ENGINE_MODE === "http" ? ` ENGINE_URL=${config.ENGINE_URL}` : ""} ENGINE_METHOD=${config.ENGINE_METHOD} DATA_DIR=${config.DATA_DIR}`,
     `DATE_TODAY=${config.DATE_TODAY} WEB_BASE_URL=${config.WEB_BASE_URL} TRUST_PROXY=${config.TRUST_PROXY}`,
     `WHATSAPP_ENABLED=${config.WHATSAPP_ENABLED} WHATSAPP_QUEUE=${config.WHATSAPP_QUEUE} AGENT_ENABLED=${config.AGENT_ENABLED} FARMER_OTP_DELIVERY=${config.FARMER_OTP_DELIVERY}`,
+    `VOICE_ENABLED=${config.VOICE_ENABLED}${config.VOICE_ENABLED ? ` VOICE_S3_BUCKET=${config.VOICE_S3_BUCKET || "(unset)"}` : ""}`,
   ];
   return { ok: errors.length === 0, errors, warnings, summary };
 }
