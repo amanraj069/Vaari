@@ -11,7 +11,9 @@
  *       text -> the agent when AGENT_ENABLED, with the last few exchanges with this phone (its reply
  *               checked against this turn's tool results, else the template reply; a reply with no
  *               tool call is sent only if it holds no number or date: a question back, or "I can
- *               only help with ..."), otherwise the menu,
+ *               only help with ..."; a booking that is not ready is always answered by code, with
+ *               exactly what is missing or wrong, and the details said so far are kept for 15
+ *               minutes), otherwise the menu,
  *       a voice note -> with VOICE_ENABLED and the agent: Transcribe's words (and language) go
  *               through the same agent turn as text, the farmer first reads what was heard, and
  *               Polly reads back what that turn sent as a voice note after the text; otherwise
@@ -35,13 +37,13 @@ import { logger } from "../logger";
 import type { FarmerAccountRecord, FarmerRecord } from "../store/types";
 import type { AgentRunner, Exchange } from "./agent";
 import { checkReply } from "./output-check";
-import { chooseLocale, scriptLocale } from "./language";
+import { chooseLocale, scriptLocale, toDevanagari } from "./language";
 import { MENU_ACTIONS, promiseWords, words, type MenuAction } from "./messages";
 import { parseWebhook, type InboundMessage } from "./payload";
 import { fromWhatsAppNumber, maskPhone } from "./phone";
 import type { WhatsAppSender } from "./sender";
-import { FarmerSession, type BookingDetails, type FarmerToolDeps, type ToolCall } from "./tools";
-import { toDevanagari, type Heard, type SpeechService } from "./voice";
+import { FarmerSession, MAX_WAIT_DAYS, type BookingDetail, type BookingDetails, type BookingProblem, type BookingSoFar, type FarmerToolDeps, type ToolCall } from "./tools";
+import { type Heard, type SpeechService } from "./voice";
 
 const DEDUPE_DAYS = 3;
 /** Polly takes up to 3,000 billed characters; a spoken reply is cut well before that. */
@@ -71,27 +73,51 @@ export class PhoneRateLimiter {
 }
 
 /**
- * The last few exchanges with each phone, so the model reads "Balian, 4 acres" as the answer to the
- * question Vaari just asked. Kept in this process only (SQS runs one worker), forgotten
- * HISTORY_MINUTES after a conversation's last message, never logged and never written to the store:
- * a restart forgets, and the farmer says it again.
+ * Short-lived memory per phone, in this process only (SQS runs one worker): forgotten `minutes` after
+ * it was last written, never logged and never written to the store. A restart forgets, and the
+ * farmer says it again.
  */
+export class PhoneMemory<Value> {
+  private readonly byPhone = new Map<string, { value: Value; lastAt: number }>();
+  constructor(private readonly minutes: number) {}
+
+  get(phone: string, now: number): Value | undefined {
+    const entry = this.byPhone.get(phone);
+    return entry && now - entry.lastAt < this.minutes * 60_000 ? entry.value : undefined;
+  }
+
+  set(phone: string, value: Value, now: number) {
+    // Drop every entry that has gone quiet, so the map only ever holds recent phones.
+    for (const [otherPhone, entry] of this.byPhone) if (now - entry.lastAt >= this.minutes * 60_000) this.byPhone.delete(otherPhone);
+    this.byPhone.set(phone, { value, lastAt: now });
+  }
+
+  delete(phone: string) {
+    this.byPhone.delete(phone);
+  }
+}
+
+/** The last few exchanges with each phone, so the model reads "Balian, 4 acres" as the answer to the question Vaari just asked. */
 export class RecentExchanges {
-  private readonly byPhone = new Map<string, { exchanges: Exchange[]; lastAt: number }>();
-  constructor(private readonly keep: number, private readonly minutes: number) {}
+  private readonly memory: PhoneMemory<Exchange[]>;
+  constructor(
+    private readonly keep: number,
+    minutes: number,
+  ) {
+    this.memory = new PhoneMemory(minutes);
+  }
 
   recent(phone: string, now: number): Exchange[] {
-    const conversation = this.byPhone.get(phone);
-    return conversation && now - conversation.lastAt < this.minutes * 60_000 ? conversation.exchanges : [];
+    return this.memory.get(phone, now) ?? [];
   }
 
   add(phone: string, exchange: Exchange, now: number) {
-    const exchanges = [...this.recent(phone, now), exchange].slice(-this.keep);
-    // Drop every conversation that has gone quiet, so the map only ever holds recent phones.
-    for (const [otherPhone, conversation] of this.byPhone) if (now - conversation.lastAt >= this.minutes * 60_000) this.byPhone.delete(otherPhone);
-    this.byPhone.set(phone, { exchanges, lastAt: now });
+    this.memory.set(phone, [...this.recent(phone, now), exchange].slice(-this.keep), now);
   }
 }
+
+/** Words the number check refused, for the log: names and short numbers as they are, a longer number (a phone?) by its length only. */
+const refusedForLog = (unsupported: string[]) => unsupported.slice(0, 10).map((token) => (/^\d[\d.,]{4,}$/.test(token) ? `<${token.length}-digit number>` : token));
 
 /**
  * Words kept for the model's history. One-time login links are replaced: a link must never reach
@@ -105,6 +131,8 @@ export function createWorker(deps: WorkerDeps) {
   const now = deps.now ?? (() => new Date());
   const limiter = new PhoneRateLimiter(deps.config.WHATSAPP_MESSAGES_PER_PHONE_PER_HOUR);
   const exchanges = new RecentExchanges(HISTORY_EXCHANGES, HISTORY_MINUTES);
+  // What a farmer has said so far towards a booking ("4 acres", then "Balian", then "till 3 November").
+  const bookings = new PhoneMemory<BookingSoFar>(HISTORY_MINUTES);
   const { store, config } = deps;
   const speech = deps.speech ?? null;
 
@@ -155,6 +183,8 @@ export function createWorker(deps: WorkerDeps) {
   async function askForBooking(session: FarmerSession) {
     const said = words(session.locale);
     const phone = session.principal.phone;
+    // A new booking starts from nothing, whatever was said towards an earlier one.
+    bookings.delete(phone);
     if (config.AGENT_ENABLED && deps.runner) return sender.text(phone, said.bookAsk);
     const link = await mintFarmerLoginLink(config, store, phone);
     // Link previews off: a preview fetch would use up the one-time link.
@@ -164,17 +194,45 @@ export function createWorker(deps: WorkerDeps) {
   /** A booking's dates in words, for the Confirm and "booked" messages. */
   const bookingWords = (booking: BookingDetails, locale: Locale) => ({ ...booking, readyDate: formatDate(booking.readyDate, locale), lastDay: formatDate(booking.lastDay, locale) });
 
-  /** The reply built only from this turn's tool results, with the en/pa/hi sentences in explain/. */
+  /** A booking that drafted nothing, in the farmer's language: exactly what is still missing or wrong. */
+  function bookingProblemWords(output: Record<string, unknown>, said: ReturnType<typeof words>): string {
+    const missing = (output.missing as BookingDetail[] | undefined) ?? [];
+    const suggestions = (output.suggestions as string[] | undefined) ?? [];
+    const named = (output.understood as { village?: string | null } | undefined)?.village;
+    switch (output.problem as BookingProblem | undefined) {
+      case "missingDetails": {
+        if (missing.length >= 3) return said.bookAsk;
+        const needs = said.bookNeeds(missing.map((detail) => said.bookDetail[detail]).join(", "));
+        return suggestions.length > 0 ? `${needs}\n${suggestions.join("\n")}` : needs;
+      }
+      case "whichVillage":
+        return said.bookWhichVillage(suggestions.join("\n"));
+      case "unknownVillage":
+        return named ? said.bookUnknownVillage(named) : said.bookFailed;
+      case "badDate":
+        return said.bookBadDay(MAX_WAIT_DAYS);
+      case "tooManyFields":
+        return said.bookTooMany;
+      default:
+        return said.bookFailed;
+    }
+  }
+
+  /** The reply built only from this turn's tool results, with the en/pa/hi sentences in explain/ and messages.ts. */
   function templateReply(calls: ToolCall[], locale: Locale): string {
     const said = words(locale);
+    // A booking drafted in this turn is announced by its Confirm message; an earlier call's problem is then moot.
+    const drafted = calls.some((call) => call.tool === "book_field" && call.output.needsConfirmation === true);
     const parts: string[] = [];
     for (const call of calls) {
       const output = call.output;
-      if (typeof output.error === "string") {
-        parts.push(call.tool === "book_field" ? said.bookFailed : said.cannotShorten);
+      if (call.tool === "book_field") {
+        if (!drafted) parts.push(bookingProblemWords(output, said));
+      } else if (typeof output.error === "string") {
+        parts.push(call.tool === "cannot_wait_longer" ? said.cannotShorten : call.tool === "send_my_fields_page" ? said.noFields : said.fieldNotFound);
       } else if (call.tool === "list_my_fields") {
         const fields = output.fields as { token: number; village: string; promise: Parameters<typeof promiseWords>[0] }[];
-        parts.push(fields.map((field) => `#${String(field.token).padStart(3, "0")} ${field.village}: ${promiseWords(field.promise, locale)}`).join("\n"));
+        parts.push(fields.length === 0 ? said.noFields : fields.map((field) => `#${String(field.token).padStart(3, "0")} ${field.village}: ${promiseWords(field.promise, locale)}`).join("\n"));
       } else if (call.tool === "get_slot") {
         parts.push(`${output.sentence as string}\n${said.lastDayYouCanWait(formatDate(output.lastDayYouCanWait as string, locale))}`);
       } else if (call.tool === "why_this_day") {
@@ -211,8 +269,10 @@ export function createWorker(deps: WorkerDeps) {
     session.pending.length = 0;
   }
 
+  /** The template reply and what follows it; the menu when the turn would otherwise send nothing at all. */
   async function sendCalls(session: FarmerSession) {
     const text = templateReply(session.calls, session.locale);
+    if (!text && session.pending.length === 0) return sendMenu(session);
     if (text) await sender.text(session.principal.phone, text);
     await flushPending(session);
   }
@@ -316,38 +376,66 @@ export function createWorker(deps: WorkerDeps) {
     return sendMenu(session);
   }
 
-  /** `noFieldsLead`: what a registered farmer with no field yet reads above the menu. */
-  async function agentTurn(session: FarmerSession, text: string, noFieldsLead: string | null) {
+  /**
+   * One message through the agent; returns which path answered, for the "whatsapp message handled"
+   * log line. `noFieldsLead`: what a registered farmer with no field yet reads above the menu.
+   */
+  async function agentTurn(session: FarmerSession, text: string, noFieldsLead: string | null): Promise<string> {
     const phone = session.principal.phone;
     const said = words(session.locale);
+    const startedAt = now().getTime();
+    session.bookingSoFar = bookings.get(phone, startedAt) ?? {};
     let reply: string | null = null;
     let failed = false;
     try {
-      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools(), history: exchanges.recent(phone, now().getTime()) });
+      reply = await deps.runner!.run({ text, locale: session.locale, tools: session.tools(), history: exchanges.recent(phone, startedAt) });
     } catch (error) {
       failed = true;
       // Bedrock's error names the problem (AccessDeniedException, ThrottlingException, a timeout);
       // it never echoes the farmer's words.
       logger.warn({ phone: maskPhone(phone), err: error instanceof Error ? `${error.name}: ${error.message}` : "unknown" }, "whatsapp agent failed; template reply");
     }
+    // The booking details so far outlive the turn; none left (drafted, or never started): forgotten.
+    if (session.calls.some((call) => call.tool === "book_field")) {
+      if (Object.keys(session.bookingSoFar).length > 0) bookings.set(phone, session.bookingSoFar, startedAt);
+      else bookings.delete(phone);
+    }
+
     if (session.calls.length === 0) {
       // No tool, no facts. With no tool result the check allows no number or date at all, so a reply
-      // that passes is a question back ("which village, how many acres?") or "I can only help with
-      // ...": sent as it is. Otherwise the model failed or made something up: the menu (a farmer
-      // with no field yet is shown how to book one).
-      if (reply && checkReply(reply, []).ok) return sender.text(phone, reply);
-      return sendMenu(session, failed ? said.agentUnavailable : (noFieldsLead ?? said.offTopic));
+      // that passes is a question back or "I can only help with ...": sent as it is. Otherwise the
+      // model failed or wrote a number or date of its own: the menu (a farmer with no field yet is
+      // shown how to book one), and the log says why.
+      const check = reply ? checkReply(reply, []) : null;
+      if (reply && check?.ok) {
+        await sender.text(phone, reply);
+        return "agent: its reply (no tool)";
+      }
+      if (!failed) logger.warn({ phone: maskPhone(phone), empty: !reply, refused: refusedForLog(check?.unsupported ?? []) }, "whatsapp agent reply without a tool was not usable; menu");
+      await sendMenu(session, failed ? said.agentUnavailable : (noFieldsLead ?? said.offTopic));
+      return failed ? "agent failed: menu" : "agent: menu (no tool, reply not usable)";
     }
     // A drafted change or booking is announced only by our own Confirm message: the model's words
     // could say "done" for something that has not happened, and that is not a number the check could catch.
-    if (session.pending.some((action) => action.kind === "confirm" || action.kind === "confirmBooking")) return sendCalls(session);
+    if (session.pending.some((action) => action.kind === "confirm" || action.kind === "confirmBooking")) {
+      await sendCalls(session);
+      return "agent: Confirm buttons";
+    }
+    // A booking that is not ready: code says exactly what is missing or wrong (with its example),
+    // never the model, whose question could carry a number of its own and be refused.
+    if (session.calls.some((call) => call.tool === "book_field")) {
+      await sendCalls(session);
+      return `agent: booking (${session.calls.filter((call) => call.tool === "book_field").map((call) => String(call.output.problem)).join(", ")})`;
+    }
     const check = reply ? checkReply(reply, session.calls) : { ok: false, unsupported: [] };
     if (reply && check.ok) {
       await sender.text(phone, reply);
-      return flushPending(session);
+      await flushPending(session);
+      return "agent: its reply";
     }
-    if (reply) logger.warn({ phone: maskPhone(phone), unsupported: check.unsupported.length }, "whatsapp agent reply failed the number check; template reply");
-    return sendCalls(session);
+    if (reply) logger.warn({ phone: maskPhone(phone), refused: refusedForLog(check.unsupported) }, "whatsapp agent reply failed the number check; template reply");
+    await sendCalls(session);
+    return failed ? "agent failed: template reply" : "agent: template reply";
   }
 
   /** Polly reads what a voice turn sent, as a voice note. A failure leaves the text the farmer already has. */
@@ -398,9 +486,9 @@ export function createWorker(deps: WorkerDeps) {
     const turn = currentTurn.getStore()!;
     turn.farmerWords = heardText;
     turn.sent.length = 0;
-    await agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null);
+    const answered = await agentTurn(session, heardText, accountName ? said.noBookingsYet(accountName) : null);
     const voiced = await speakReply(session, turn.sent);
-    return `answered voice note (${heard.locale}) with the agent${voiced ? " and a voice reply" : ", text only"}`;
+    return `voice note (${heard.locale}), ${answered}${voiced ? ", spoken" : ", text only"}`;
   }
 
   /** Handles one message; returns what was done, for the "whatsapp message handled" log line. */
@@ -445,8 +533,7 @@ export function createWorker(deps: WorkerDeps) {
     }
     if (message.kind === "text" && message.text) {
       if (config.AGENT_ENABLED && deps.runner) {
-        await agentTurn(session, message.text, noFieldsLead);
-        return "answered text with the agent";
+        return `text, ${await agentTurn(session, message.text, noFieldsLead)}`;
       }
       await sendMenu(session, noFieldsLead ?? undefined);
       return "answered text with the menu (AGENT_ENABLED=false)";

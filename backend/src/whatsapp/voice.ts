@@ -9,7 +9,7 @@
  * transcript) are deleted as soon as the job ends. A lifecycle rule on the prefix catches leftovers.
  *
  * Polly has no Punjabi voice. Its Hindi voice reads Devanagari, and Gurmukhi maps onto Devanagari
- * letter for letter, so a Punjabi reply is written in Devanagari (toDevanagari) and read by the Hindi
+ * letter for letter, so a Punjabi reply is written in Devanagari (toDevanagari, language.ts) and read by the Hindi
  * voice: Punjabi words in a Hindi accent. A Punjabi speaker must listen before the demo.
  */
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
@@ -104,38 +104,4 @@ export class AwsSpeech implements SpeechService {
     if (!result.AudioStream) throw new Error("Polly returned no audio");
     return result.AudioStream.transformToByteArray();
   }
-}
-
-const GURMUKHI_ADDAK = 0x0a71;
-const isGurmukhiConsonant = (code: number) => (code >= 0x0a15 && code <= 0x0a39) || (code >= 0x0a59 && code <= 0x0a5e);
-
-/**
- * Punjabi in Gurmukhi -> the same words in Devanagari, so the Hindi voice can read them. The Unicode
- * blocks line up (Devanagari = Gurmukhi - 0x100) for every letter, vowel sign, nukta, virama and
- * digit. The rest: tippi (ੰ) is a nasal like bindi -> anusvara (ं); addak (ੱ) doubles the consonant
- * after it (ਪੱਕਾ -> पक्का); ੲ and ੳ (bare vowel carriers) -> इ and उ; ੴ -> ॐ. Anything else passes through.
- */
-export function toDevanagari(text: string): string {
-  let out = "";
-  for (let index = 0; index < text.length; index += 1) {
-    const code = text.charCodeAt(index);
-    if (code < 0x0a00 || code > 0x0a7f) {
-      out += text[index];
-    } else if (code === GURMUKHI_ADDAK) {
-      const next = text.charCodeAt(index + 1);
-      if (isGurmukhiConsonant(next)) out += `${String.fromCharCode(next - 0x100)}\u094d`;
-    } else if (code === 0x0a70) {
-      out += "\u0902";
-    } else if (code === 0x0a72) {
-      out += "\u0907";
-    } else if (code === 0x0a73) {
-      out += "\u0909";
-    } else if (code === 0x0a74) {
-      out += "\u0950";
-    } else if (code <= 0x0a6f) {
-      out += String.fromCharCode(code - 0x100);
-    }
-    // Gurmukhi-only marks without a Devanagari match (udaat, yakash) are dropped.
-  }
-  return out;
 }

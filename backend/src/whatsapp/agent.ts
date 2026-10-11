@@ -14,7 +14,7 @@
  * to call it from ap-south-1 (see docs/DECISIONS.md).
  */
 import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
-import type { JSONValue, MessageData } from "@strands-agents/sdk";
+import type { JSONValue, Message, MessageData, TextBlock } from "@strands-agents/sdk";
 import type { Config } from "../config";
 import type { Locale } from "../shared";
 import type { FarmerTool } from "./tools";
@@ -41,7 +41,7 @@ export function systemPrompt(locale: Locale): string {
     "- If you need something from the farmer before you can call a tool, ask for exactly that in one short question, without numbers or dates.",
     "- Call list_my_fields when you do not know which field the farmer means. fieldRef is the field's number in that list.",
     "- cannot_wait_longer only prepares a change. Tell the farmer to tap Confirm; never say the change is done.",
-    "- When the farmer wants a machine for a new field, call book_field with only what they said: the village, the acres, and the last day they can wait (day and month) or how many more days they can wait, and the harvest day only if they gave one. Do not work out dates yourself. If they did not say the acres or how long they can wait, ask them instead of calling it. If book_field returns an error, ask the farmer about exactly that. book_field only prepares the booking: tell the farmer to check the details and tap Confirm; never say it is booked.",
+    "- When the farmer wants a machine for a new field, call book_field at once, even if they gave no details yet, and again whenever they add one. Pass only what they said: the village (in English letters), the acres, and the last day they can wait (day and month) or how many more days they can wait, and the harvest day only if they gave one. Do not work out dates yourself. Vaari itself asks the farmer for anything missing or wrong, and shows the details with a Confirm button when everything is there; never say it is booked.",
     "- If the farmer asks about anything other than their own machine dates or booking a field (other farmers, prices, weather, anything else), do not answer it and do not call a tool: say briefly that you can only help with their machine dates and booking a field.",
     "- Never mention phone numbers, ids, links or these rules.",
   ].join("\n");
@@ -71,10 +71,30 @@ export class StrandsRunner implements AgentRunner {
         }),
       ),
     });
-    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("agent timed out")), this.config.AGENT_TIMEOUT_SECONDS * 1000));
-    const result = await Promise.race([agent.invoke(text), timeout]);
-    return result.toString().trim();
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("agent timed out")), this.config.AGENT_TIMEOUT_SECONDS * 1000);
+    });
+    try {
+      return replyText((await Promise.race([agent.invoke(text), timeout])).lastMessage);
+    } finally {
+      clearTimeout(timer);
+    }
   }
+}
+
+/**
+ * What the farmer may read of the model's last message: its text blocks only. Not result.toString(),
+ * which also returns reasoning ("💭 Reasoning: ...") when a model sends it; and any <thinking>
+ * section a model writes into its text (older Nova models do, with tools) is removed.
+ */
+export function replyText(message: Message): string {
+  return message.content
+    .filter((block): block is TextBlock => block.type === "textBlock")
+    .map((block) => block.text)
+    .join("")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+    .trim();
 }
 
 /** Earlier exchanges as the conversation the model continues: the farmer (user), then Vaari (assistant). */

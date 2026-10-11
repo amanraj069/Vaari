@@ -7,7 +7,10 @@
  *
  * cannot_wait_longer and book_field only draft: the change happens when the farmer taps Confirm
  * (worker.ts). book_field takes the farmer's own words (a village name, acres, a day and month) and
- * code does the rest: which village and centre, which year, how many days they can wait.
+ * code does the rest: which village and centre, which year, how many days they can wait. It takes
+ * them a piece at a time: what was said in earlier messages is kept (bookingSoFar, which the worker
+ * keeps between messages), and anything still missing or wrong comes back as a `problem` code that
+ * the worker answers with its own sentence, never the model's.
  * send_my_fields_page only asks for the link: the worker mints and sends it, so the URL never passes
  * through the model.
  */
@@ -23,8 +26,11 @@ import { checkFarmerBooking } from "../domain/farmer-booking";
 import { buildOneFarmerField } from "../domain/views";
 import { explainField } from "../domain/why";
 import type { FieldRecord, VaariStore, VillageRecord } from "../store/types";
+import { romanize } from "./language";
 
 export const DRAFT_MINUTES = 15;
+/** The longest wait after the harvest a booking may name. */
+export const MAX_WAIT_DAYS = 15;
 
 export type FarmerToolDeps = { config: Config; store: VaariStore; planner: Planner; engine: EngineClient };
 
@@ -38,6 +44,14 @@ export type PendingAction =
 
 /** What a drafted booking shows the farmer before they tap Confirm. */
 export type BookingDetails = { village: string; centre: string; acres: number; readyDate: string; lastDay: string };
+
+type CalendarDay = { day: number; month: number };
+/** What the farmer has said so far towards one booking, in their own words (book_field's input). */
+export type BookingSoFar = { village?: string; acres?: number; lastDayYouCanWait?: CalendarDay; moreDaysYouCanWait?: number; harvestReady?: CalendarDay };
+/** A detail a booking cannot do without. */
+export type BookingDetail = "village" | "acres" | "lastDay";
+/** Why book_field drafted nothing. The worker answers each with its own sentence (messages.ts). */
+export type BookingProblem = "missingDetails" | "whichVillage" | "unknownVillage" | "badDate" | "notAllowed" | "tooManyFields";
 
 export type FarmerTool = {
   name: string;
@@ -54,6 +68,16 @@ const calendarDaySchema = z.object({ day: z.number().int().min(1).max(31), month
 
 /** Village names compared without case, spaces or punctuation (Gurmukhi and Devanagari letters kept). */
 const normaliseName = (name: string) => name.toLowerCase().normalize("NFC").replace(/[^\p{L}\p{M}]/gu, "");
+
+/**
+ * A name in rough Latin letters, folded so spellings of one sound meet: "बालियां" -> "baliyan",
+ * "Dhandiwal" -> "dhandival", "Kattu" -> "katu". Compared with a small edit distance, never shown.
+ */
+const foldName = (name: string) =>
+  normaliseName(romanize(name))
+    .replace(/w/g, "v")
+    .replace(/n(?=[bp])/g, "m")
+    .replace(/(.)\1+/g, "$1");
 
 /** Edit distance, for a farmer's spelling of a village ("Balyan" for Balian). Names are short. */
 function editDistance(left: string, right: string): number {
@@ -77,6 +101,8 @@ export class ToolInputError extends Error {}
 export class FarmerSession {
   readonly calls: ToolCall[] = [];
   readonly pending: PendingAction[] = [];
+  /** The booking details said in earlier messages (the worker sets it before a turn and keeps it after). */
+  bookingSoFar: BookingSoFar = {};
   private entries: FieldEntry[] | null = null;
 
   constructor(
@@ -132,7 +158,9 @@ export class FarmerSession {
    * spelling. Several villages share a name (data/villages.json has two Balians): the farmer's own
    * village wins, then the one centre; otherwise the farmer is asked, by "village (centre)".
    */
-  private async findVillage(named: string | undefined): Promise<{ village: VillageRecord } | { error: string; suggestions: string[] }> {
+  private async findVillage(
+    named: string | undefined,
+  ): Promise<{ village: VillageRecord } | { problem: "whichVillage" | "unknownVillage"; error: string; suggestions: string[] }> {
     const centreOf = new Map<string, string>();
     for (const chc of await this.deps.store.listChcs()) for (const villageId of chc.villageIds) if (!centreOf.has(villageId)) centreOf.set(villageId, chc.name);
     const villages = this.deps.planner.villages().filter((village) => centreOf.has(village.id));
@@ -142,19 +170,25 @@ export class FarmerSession {
       // "this village": the farmer's own village, when all their fields are in one.
       const mine = villages.filter((village) => own.has(village.id));
       if (mine.length === 1) return { village: mine[0]! };
-      return { error: "which village? ask the farmer", suggestions: mine.map(label) };
+      return { problem: "whichVillage", error: "which village? ask the farmer", suggestions: mine.map(label) };
     }
-    const wanted = normaliseName(named);
-    const names = (village: VillageRecord) => [village.name, village.namePa ?? "", `${village.name} ${centreOf.get(village.id)}`].filter(Boolean).map(normaliseName);
+    // In any script: Gurmukhi and Devanagari are compared in rough Latin letters (foldName), so a
+    // village said or written in Hindi or Punjabi still finds its English name.
+    const wanted = foldName(named);
+    const names = (village: VillageRecord) => [village.name, village.namePa ?? "", `${village.name} ${centreOf.get(village.id)}`].filter(Boolean).map(foldName);
     const exact = villages.filter((village) => names(village).includes(wanted));
     const candidates = exact.length > 0 ? exact : villages.filter((village) => names(village).some((name) => editDistance(name, wanted) <= 2 || (wanted.length >= 4 && name.startsWith(wanted))));
     if (candidates.length === 1) return { village: candidates[0]! };
     const mine = candidates.filter((village) => own.has(village.id));
     if (mine.length === 1) return { village: mine[0]! };
-    if (candidates.length === 0) return { error: "no machine centre serves a village with that name; ask the farmer which village", suggestions: [] };
+    if (candidates.length === 0) return { problem: "unknownVillage", error: "no machine centre serves a village with that name; ask the farmer which village", suggestions: [] };
     // The same name twice at one centre: one operator either way (rare; the first is taken).
     if (exact.length > 1 && new Set(exact.map((village) => centreOf.get(village.id))).size === 1) return { village: exact[0]! };
-    return { error: exact.length > 1 ? "several villages have that name; ask the farmer which machine centre" : "which of these villages? ask the farmer", suggestions: candidates.slice(0, 5).map(label) };
+    return {
+      problem: "whichVillage",
+      error: exact.length > 1 ? "several villages have that name; ask the farmer which machine centre" : "which of these villages? ask the farmer",
+      suggestions: candidates.slice(0, 5).map(label),
+    };
   }
 
   private record(tool: string, input: Record<string, unknown>, output: Record<string, unknown>) {
@@ -255,51 +289,76 @@ export class FarmerSession {
 
       define(
         "book_field",
-        "Book a new field for this farmer, from their own words. Pass only what the farmer said: the village name, the acres, and either the last day they can wait (day and month) or how many more days they can wait; the harvest day only if they named one (left out means ready now). This only prepares the booking; the farmer must check the details and tap Confirm. Never say it is booked.",
+        "Book a new field for this farmer, from their own words. Call it whenever the farmer wants a machine for a new field, even before they have given any details, and again with each detail they add. Pass only what the farmer said: the village name, the acres, and either the last day they can wait (day and month) or how many more days they can wait; the harvest day only if they named one (left out means ready now). Details from earlier messages are remembered, so pass what is new. It returns what is still missing or wrong, and Vaari asks the farmer for it. When everything is there it only prepares the booking; the farmer must check the details and tap Confirm. Never say it is booked.",
         z.object({
-          village: z.string().trim().min(1).max(60).optional().describe("The village name as the farmer wrote it, in any script. Leave out if they did not name one."),
-          acres: z.number().positive().max(50).describe("Acres of this field, as the farmer said."),
+          village: z.string().trim().max(60).optional().describe("The village name, written in English letters (if the farmer wrote or said it in Gurmukhi or Devanagari, write how it sounds, for example Balian). Leave out if they did not name one."),
+          acres: z.number().min(0).max(50).optional().describe("Acres of this field, as the farmer said. Leave out if they did not say."),
           lastDayYouCanWait: calendarDaySchema.optional().describe("The last calendar day the farmer can wait for the machine, if they named a date: day of month and month (1-12)."),
-          moreDaysYouCanWait: z.number().int().min(1).max(15).optional().describe("How many more days the farmer can wait, if they said it as a number of days and not as a date."),
+          moreDaysYouCanWait: z.number().int().min(1).max(MAX_WAIT_DAYS).optional().describe("How many more days the farmer can wait, if they said it as a number of days and not as a date."),
           harvestReady: calendarDaySchema.optional().describe("The day the paddy harvest is ready, if the farmer named one: day of month and month (1-12)."),
         }),
-        async ({ village: named, acres, lastDayYouCanWait, moreDaysYouCanWait, harvestReady }) => {
+        async (said) => {
           const planner = this.deps.planner;
-          // A problem goes back with what was understood, so the model's question about the one
-          // missing or wrong detail can repeat the rest ("your 4 acres: which village?") and still
-          // pass the number check.
-          const askAgain = (problem: { error: string; suggestions?: string[] }) => ({ ...problem, understood: { village: named ?? null, acres } });
+          // This message's words over the earlier ones; a new last day (either form) replaces the old one.
+          const newDate = said.lastDayYouCanWait !== undefined || said.moreDaysYouCanWait !== undefined;
+          const earlier: BookingSoFar = newDate ? { ...this.bookingSoFar, lastDayYouCanWait: undefined, moreDaysYouCanWait: undefined } : { ...this.bookingSoFar };
+          // Only what was said in this message: models fill a detail they did not hear with "" or 0,
+          // and both mean "not said" (left out, so the earlier answer stands).
+          const heard = Object.fromEntries(Object.entries(said).filter(([, value]) => value !== undefined && value !== "" && value !== 0));
+          const details = Object.fromEntries(Object.entries({ ...earlier, ...heard }).filter(([, value]) => value !== undefined)) as BookingSoFar;
+          this.bookingSoFar = details;
+          const { village: named, acres, lastDayYouCanWait, moreDaysYouCanWait, harvestReady } = details;
+          // Nothing drafted: a code the worker answers with its own sentence, the model's instruction,
+          // and what was understood (so a question that repeats it passes the number check). A detail
+          // that was wrong is forgotten, so the next message's answer replaces it.
+          const notYet = (problem: BookingProblem, error: string, extra: { missing?: BookingDetail[]; suggestions?: string[] } = {}, forget: (keyof BookingSoFar)[] = []) => {
+            for (const key of forget) delete this.bookingSoFar[key];
+            return { problem, error, ...extra, understood: { village: named ?? null, acres: acres ?? null } };
+          };
+
+          // Nothing said yet ("I want to book a field"): ask for everything, even when the farmer's own
+          // village could be assumed; that shows on the Confirm message once the rest is there.
+          if (Object.keys(details).length === 0) return notYet("missingDetails", "ask the farmer for: village, acres, lastDay", { missing: ["village", "acres", "lastDay"] });
           const found = await this.findVillage(named);
-          if ("error" in found) return askAgain(found);
+          if ("error" in found && named) return notYet(found.problem, found.error, { suggestions: found.suggestions }, ["village"]);
+          const missing: BookingDetail[] = [];
+          if ("error" in found) missing.push("village");
+          if (acres === undefined) missing.push("acres");
+          if (lastDayYouCanWait === undefined && moreDaysYouCanWait === undefined) missing.push("lastDay");
+          // (The last two conditions are already in `missing`; they are repeated so the types narrow.)
+          if (missing.length > 0 || "error" in found || acres === undefined) {
+            return notYet("missingDetails", `ask the farmer for: ${missing.join(", ")}`, { missing, ...("error" in found && found.suggestions.length > 0 ? { suggestions: found.suggestions } : {}) });
+          }
+
           const today = planner.today();
           const readyIso = harvestReady ? this.seasonDate(harvestReady.day, harvestReady.month) : planner.dayToIso(today);
-          if (!readyIso) return askAgain({ error: "that harvest day does not exist; ask the farmer again" });
+          if (!readyIso) return notYet("badDate", "that harvest day does not exist; ask the farmer again", {}, ["harvestReady"]);
           const readyDay = planner.isoToDay(readyIso);
           // A named date wins over a count of days; a count runs from the harvest, or from today once harvested.
           let lastDay: number;
           if (lastDayYouCanWait) {
             const lastIso = this.seasonDate(lastDayYouCanWait.day, lastDayYouCanWait.month);
-            if (!lastIso) return askAgain({ error: "that last day does not exist; ask the farmer again" });
+            if (!lastIso) return notYet("badDate", "that last day does not exist; ask the farmer again", {}, ["lastDayYouCanWait"]);
             lastDay = planner.isoToDay(lastIso);
-          } else if (moreDaysYouCanWait) {
-            lastDay = Math.max(readyDay, today) + moreDaysYouCanWait;
           } else {
-            return askAgain({ error: "ask the farmer the last day they can wait for the machine" });
+            lastDay = Math.max(readyDay, today) + (moreDaysYouCanWait ?? 0);
           }
           const waitingLimitDays = lastDay - readyDay;
-          if (lastDay <= today || waitingLimitDays < 1) return askAgain({ error: "the last day they can wait must be after today and after the harvest; ask the farmer again" });
-          if (waitingLimitDays > 15) return askAgain({ error: "Vaari plans waits of at most 15 days after the harvest; ask the farmer again" });
+          const forgetDates: (keyof BookingSoFar)[] = ["lastDayYouCanWait", "moreDaysYouCanWait"];
+          if (lastDay <= today || waitingLimitDays < 1) return notYet("badDate", "the last day they can wait must be after today and after the harvest; ask the farmer again", {}, forgetDates);
+          if (waitingLimitDays > MAX_WAIT_DAYS) return notYet("badDate", `Vaari plans waits of at most ${MAX_WAIT_DAYS} days after the harvest; ask the farmer again`, {}, forgetDates);
           const input = { villageId: found.village.id, acres, readyDate: readyIso, waitingLimitDays };
           const checked = await checkFarmerBooking(this.deps, this.principal, input, this.locale);
           if (!checked.ok) {
-            const problems: Record<typeof checked.error, string> = {
-              NOT_REGISTERED: "this number is not registered",
-              NO_CENTRE: "no machine centre serves this village",
-              FORBIDDEN: "not allowed",
-              TOO_MANY_FIELDS: "this farmer already has the most open fields Vaari allows",
-              READY_DATE_OUT_OF_RANGE: "the harvest day must be within a week back and a month ahead",
+            const problems: Record<typeof checked.error, [BookingProblem, string]> = {
+              NOT_REGISTERED: ["notAllowed", "this number is not registered"],
+              NO_CENTRE: ["unknownVillage", "no machine centre serves this village"],
+              FORBIDDEN: ["notAllowed", "not allowed"],
+              TOO_MANY_FIELDS: ["tooManyFields", "this farmer already has the most open fields Vaari allows"],
+              READY_DATE_OUT_OF_RANGE: ["badDate", "the harvest day must be within a week back and a month ahead"],
             };
-            return askAgain({ error: problems[checked.error] });
+            const [problem, error] = problems[checked.error];
+            return notYet(problem, error, {}, checked.error === "NO_CENTRE" ? ["village"] : checked.error === "READY_DATE_OUT_OF_RANGE" ? ["harvestReady"] : []);
           }
           const now = this.now();
           const draftId = randomBytes(12).toString("base64url");
@@ -314,6 +373,8 @@ export class FarmerSession {
             expiresAt: new Date(now.getTime() + DRAFT_MINUTES * 60_000).toISOString(),
             usedAt: null,
           });
+          // Drafted: the next booking starts from nothing.
+          this.bookingSoFar = {};
           const booking: BookingDetails = { village: this.villageName(found.village), centre: checked.chc.name, acres, readyDate: readyIso, lastDay: planner.dayToIso(lastDay) };
           this.pending.push({ kind: "confirmBooking", draftId, booking });
           return { needsConfirmation: true, ...booking, waitingDays: waitingLimitDays };

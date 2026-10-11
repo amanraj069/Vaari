@@ -30,6 +30,15 @@ type Words = {
   bookConfirmBody: (booking: BookingWords) => string;
   booked: (booking: BookingWords & { token: string }) => string;
   bookFailed: string;
+  /** What a booking still needs, from `bookDetail` (all three missing: bookAsk instead). */
+  bookNeeds: (details: string) => string;
+  bookDetail: Record<"village" | "acres" | "lastDay", string>;
+  bookWhichVillage: (options: string) => string;
+  bookUnknownVillage: (named: string) => string;
+  bookBadDay: (maxDays: number) => string;
+  bookTooMany: string;
+  noFields: string;
+  fieldNotFound: string;
   pickField: string;
   pickFieldButton: string;
   pickDays: (lastDay: string) => string;
@@ -76,6 +85,14 @@ const WORDS: Record<Locale, Words> = {
     booked: (booking) =>
       `Booked. Your token is ${booking.token}: ${booking.acres} acres in ${booking.village}, harvest ready ${booking.readyDate}, you can wait until ${booking.lastDay}.\n\nThe operator at ${booking.centre} has been told. You will get your machine date as soon as the operator confirms the plan, and I will send it here with your slot link.`,
     bookFailed: "I could not book this field, so nothing was booked. Please send your village, acres and the last day you can wait again, or ask your village helper.",
+    bookNeeds: (details) => `To book this field, please also tell me ${details}. For example: 4 acres in Balian, I can wait until 3 November.`,
+    bookDetail: { village: "your village", acres: "how many acres", lastDay: "the last day you can wait for the machine" },
+    bookWhichVillage: (options) => `Which village is it? Please send one of these names:\n${options}`,
+    bookUnknownVillage: (named) => `No machine centre on Vaari serves a village called "${named}". Please check the village name and send it again, or ask your village helper.`,
+    bookBadDay: (maxDays) => `I could not use that day. The last day you can wait must be after today, and at most ${maxDays} days after the harvest. Please send it again, for example: I can wait until 3 November.`,
+    bookTooMany: "This number already has the most open fields Vaari allows. Please ask your village helper.",
+    noFields: "You have no field booked on this number yet. Tap Book a field in the menu, or tell me your village, acres and the last day you can wait.",
+    fieldNotFound: "I could not find that field. Tap the menu to choose one of your fields.",
     pickField: "Which field?",
     pickFieldButton: "Fields",
     pickDays: (lastDay) => `Your last waiting day is ${lastDay}. How many days after harvest can you wait now?`,
@@ -121,6 +138,14 @@ const WORDS: Record<Locale, Words> = {
     booked: (booking) =>
       `ਬੁੱਕ ਹੋ ਗਿਆ। ਤੁਹਾਡਾ ਟੋਕਨ ${booking.token} ਹੈ: ${booking.village} ਵਿੱਚ ${booking.acres} ਏਕੜ, ਵਾਢੀ ਤਿਆਰ ${booking.readyDate}, ਤੁਸੀਂ ${booking.lastDay} ਤੱਕ ਉਡੀਕ ਕਰ ਸਕਦੇ ਹੋ।\n\n${booking.centre} ਦੇ ਆਪਰੇਟਰ ਨੂੰ ਦੱਸ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਜਿਵੇਂ ਹੀ ਆਪਰੇਟਰ ਯੋਜਨਾ ਦੀ ਪੁਸ਼ਟੀ ਕਰੇਗਾ, ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਤਰੀਕ ਮਿਲੇਗੀ, ਅਤੇ ਮੈਂ ਇੱਥੇ ਤੁਹਾਡੀ ਵਾਰੀ ਦੇ ਲਿੰਕ ਨਾਲ ਭੇਜਾਂਗਾ।`,
     bookFailed: "ਮੈਂ ਇਹ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਕਰ ਸਕਿਆ, ਕੁਝ ਵੀ ਬੁੱਕ ਨਹੀਂ ਹੋਇਆ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪਿੰਡ, ਏਕੜ ਅਤੇ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ਫਿਰ ਭੇਜੋ, ਜਾਂ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਪੁੱਛੋ।",
+    bookNeeds: (details) => `ਇਹ ਖੇਤ ਬੁੱਕ ਕਰਨ ਲਈ ਮੈਨੂੰ ${details} ਵੀ ਦੱਸੋ। ਜਿਵੇਂ: ਬਾਲੀਆਂ ਵਿੱਚ 4 ਏਕੜ, ਮੈਂ 3 ਨਵੰਬਰ ਤੱਕ ਉਡੀਕ ਕਰ ਸਕਦਾ ਹਾਂ।`,
+    bookDetail: { village: "ਤੁਹਾਡਾ ਪਿੰਡ", acres: "ਕਿੰਨੇ ਏਕੜ", lastDay: "ਮਸ਼ੀਨ ਲਈ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ" },
+    bookWhichVillage: (options) => `ਕਿਹੜਾ ਪਿੰਡ? ਕਿਰਪਾ ਕਰਕੇ ਇਹਨਾਂ ਵਿੱਚੋਂ ਇੱਕ ਨਾਮ ਭੇਜੋ:\n${options}`,
+    bookUnknownVillage: (named) => `ਵਾਰੀ 'ਤੇ ਕੋਈ ਮਸ਼ੀਨ ਕੇਂਦਰ "${named}" ਨਾਮ ਦੇ ਪਿੰਡ ਦੀ ਸੇਵਾ ਨਹੀਂ ਕਰਦਾ। ਕਿਰਪਾ ਕਰਕੇ ਪਿੰਡ ਦਾ ਨਾਮ ਦੇਖ ਕੇ ਫਿਰ ਭੇਜੋ, ਜਾਂ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਪੁੱਛੋ।`,
+    bookBadDay: (maxDays) => `ਮੈਂ ਇਹ ਦਿਨ ਨਹੀਂ ਵਰਤ ਸਕਿਆ। ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ਅੱਜ ਤੋਂ ਬਾਅਦ, ਅਤੇ ਵਾਢੀ ਤੋਂ ਵੱਧ ਤੋਂ ਵੱਧ ${maxDays} ਦਿਨ ਬਾਅਦ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਫਿਰ ਭੇਜੋ, ਜਿਵੇਂ: ਮੈਂ 3 ਨਵੰਬਰ ਤੱਕ ਉਡੀਕ ਕਰ ਸਕਦਾ ਹਾਂ।`,
+    bookTooMany: "ਇਸ ਨੰਬਰ 'ਤੇ ਪਹਿਲਾਂ ਹੀ ਵਾਰੀ ਵੱਲੋਂ ਮਨਜ਼ੂਰ ਸਭ ਤੋਂ ਵੱਧ ਖੁੱਲ੍ਹੇ ਖੇਤ ਹਨ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਪਿੰਡ ਦੇ ਮਦਦਗਾਰ ਨੂੰ ਪੁੱਛੋ।",
+    noFields: "ਇਸ ਨੰਬਰ 'ਤੇ ਅਜੇ ਕੋਈ ਖੇਤ ਬੁੱਕ ਨਹੀਂ ਹੈ। ਮੀਨੂ ਵਿੱਚ \"ਖੇਤ ਬੁੱਕ ਕਰੋ\" ਦਬਾਓ, ਜਾਂ ਮੈਨੂੰ ਆਪਣਾ ਪਿੰਡ, ਏਕੜ ਅਤੇ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ਦੱਸੋ।",
+    fieldNotFound: "ਮੈਨੂੰ ਉਹ ਖੇਤ ਨਹੀਂ ਮਿਲਿਆ। ਆਪਣਾ ਖੇਤ ਚੁਣਨ ਲਈ ਮੀਨੂ ਦਬਾਓ।",
     pickField: "ਕਿਹੜਾ ਖੇਤ?",
     pickFieldButton: "ਖੇਤ",
     pickDays: (lastDay) => `ਤੁਹਾਡੀ ਉਡੀਕ ਦਾ ਆਖਰੀ ਦਿਨ ${lastDay} ਹੈ। ਹੁਣ ਤੁਸੀਂ ਵਾਢੀ ਤੋਂ ਬਾਅਦ ਕਿੰਨੇ ਦਿਨ ਉਡੀਕ ਕਰ ਸਕਦੇ ਹੋ?`,
@@ -166,6 +191,14 @@ const WORDS: Record<Locale, Words> = {
     booked: (booking) =>
       `बुक हो गया। आपका टोकन ${booking.token} है: ${booking.village} में ${booking.acres} एकड़, कटाई तैयार ${booking.readyDate}, आप ${booking.lastDay} तक इंतज़ार कर सकते हैं।\n\n${booking.centre} के ऑपरेटर को बता दिया गया है। जैसे ही ऑपरेटर योजना की पुष्टि करेगा, आपको मशीन की तारीख़ मिलेगी, और मैं यहाँ आपकी बारी के लिंक के साथ भेजूँगा।`,
     bookFailed: "मैं यह खेत बुक नहीं कर सका, कुछ भी बुक नहीं हुआ। कृपया अपना गाँव, एकड़ और इंतज़ार का आख़िरी दिन फिर भेजें, या अपने गाँव के सहायक से पूछें।",
+    bookNeeds: (details) => `यह खेत बुक करने के लिए मुझे ${details} भी बताएँ। जैसे: बालियां में 4 एकड़, मैं 3 नवंबर तक इंतज़ार कर सकता हूँ।`,
+    bookDetail: { village: "आपका गाँव", acres: "कितने एकड़", lastDay: "मशीन के इंतज़ार का आख़िरी दिन" },
+    bookWhichVillage: (options) => `कौन सा गाँव? कृपया इनमें से एक नाम भेजें:\n${options}`,
+    bookUnknownVillage: (named) => `वारी पर कोई मशीन केंद्र "${named}" नाम के गाँव की सेवा नहीं करता। कृपया गाँव का नाम देखकर फिर भेजें, या अपने गाँव के सहायक से पूछें।`,
+    bookBadDay: (maxDays) => `मैं यह दिन इस्तेमाल नहीं कर सका। इंतज़ार का आख़िरी दिन आज के बाद, और कटाई से ज़्यादा से ज़्यादा ${maxDays} दिन बाद होना चाहिए। कृपया फिर भेजें, जैसे: मैं 3 नवंबर तक इंतज़ार कर सकता हूँ।`,
+    bookTooMany: "इस नंबर पर पहले से ही वारी में मंज़ूर सबसे ज़्यादा खुले खेत हैं। कृपया अपने गाँव के सहायक से पूछें।",
+    noFields: "इस नंबर पर अभी कोई खेत बुक नहीं है। मेन्यू में \"खेत बुक करें\" दबाएँ, या मुझे अपना गाँव, एकड़ और इंतज़ार का आख़िरी दिन बताएँ।",
+    fieldNotFound: "मुझे वह खेत नहीं मिला। अपना खेत चुनने के लिए मेन्यू दबाएँ।",
     pickField: "कौन सा खेत?",
     pickFieldButton: "खेत",
     pickDays: (lastDay) => `आपके इंतज़ार का आख़िरी दिन ${lastDay} है। अब आप कटाई के बाद कितने दिन इंतज़ार कर सकते हैं?`,

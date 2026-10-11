@@ -9,7 +9,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { DEMO_CHC_ID, DEMO_FARMER_PHONE } from "../src/demo/seed";
 import { formatDate } from "../src/explain/templates";
 import type { AgentRunner } from "../src/whatsapp/agent";
-import { modelToolSpecs, systemPrompt } from "../src/whatsapp/agent";
+import { modelToolSpecs, replyText, systemPrompt } from "../src/whatsapp/agent";
+import { Message } from "@strands-agents/sdk";
 import { words } from "../src/whatsapp/messages";
 import { checkReply } from "../src/whatsapp/output-check";
 import type { SentMessage } from "../src/whatsapp/sender";
@@ -104,6 +105,23 @@ describe("the output check", () => {
     expect(checkReply("You are number 5 in line.", calls).unsupported).toEqual(["5"]);
     expect(checkReply("ਤੁਸੀਂ ੭ ਨੰਬਰ ਤੇ ਹੋ।", calls).unsupported).toEqual(["7"]);
     expect(checkReply("It may rain, but your date is fixed.", calls).ok).toBe(true); // "may" is not the month
+  });
+
+  it("checkReply: a month or weekday name counts only as a whole word, never inside another word", () => {
+    // शुक्र is the short form of Friday (शुक्रवार); शुक्रिया is "thanks".
+    expect(checkReply("शुक्रिया! आपका खेत किस गाँव में है?", []).ok).toBe(true);
+    expect(checkReply("ਸ਼ੁਕਰੀਆ! ਤੁਹਾਡਾ ਖੇਤ ਕਿਹੜੇ ਪਿੰਡ ਵਿੱਚ ਹੈ?", []).ok).toBe(true);
+    expect(checkReply("गुरुद्वारा के पास वाला खेत? मंगलमय हो!", []).ok).toBe(true);
+    expect(checkReply("आपकी मशीन शुक्रवार को आएगी।", []).unsupported).toEqual(["शुक्रवार"]);
+    expect(checkReply("आपकी मशीन शुक्र को आएगी।", []).unsupported).toEqual(["शुक्र"]);
+  });
+
+  it("the reply is the model's text only: never its reasoning or a <thinking> section", () => {
+    const message = Message.fromMessageData({
+      role: "assistant",
+      content: [{ reasoning: { text: "Today is 31 October; ask for the acres." } }, { text: "<thinking>They said 4 acres?</thinking>Which village is your field in?" }],
+    });
+    expect(replyText(message)).toBe("Which village is your field in?");
   });
 
   it("sends a reply whose every date and number is in the tool results, as the model wrote it", async () => {

@@ -66,6 +66,28 @@ describe("a question back reaches the farmer", () => {
   });
 });
 
+describe("a turn always says something useful", () => {
+  it("a question back that says 'thanks' (शुक्रिया, which holds the short word for Friday) is still sent", async () => {
+    const question = "शुक्रिया! आपका खेत किस गाँव में है?";
+    runner.script = async () => question;
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "मेरा खेत बुक करो" }));
+    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "text", body: question });
+  });
+
+  it("a farmer with no field who asks for their date is told so, never left with no reply", async () => {
+    runner.script = async (tool) => (await tool("list_my_fields").run({}), "");
+    const before = runtime.sender.sent.length;
+    await runtime.deliver(messageBody({ from: from(HARPREET), text: "मेरी मशीन कब आएगी?" }));
+    expect(runtime.sender.sent.slice(before).filter((message) => message.to === HARPREET)).toEqual([expect.objectContaining({ type: "text", body: hi.noFields })]);
+  });
+
+  it("a field that is not in the farmer's list gets 'could not find that field', not a sentence about changes", async () => {
+    runner.script = async (tool) => (await tool("get_slot").run({ fieldRef: 9 }), "");
+    await runtime.deliver(messageBody({ from: JASWINDER, text: "मेरे नौवें खेत की तारीख़?" }));
+    expect(lastTo(DEMO_FARMER_PHONE)).toMatchObject({ type: "text", body: hi.fieldNotFound });
+  });
+});
+
 describe("the reply language", () => {
   it("tapping the Hindi 'खेत बुक करें' row is answered in Hindi, though the farmer registered in English", async () => {
     await runtime.deliver(messageBody({ from: from(HARPREET), listRow: "menu:book", title: hi.menuBook }));
