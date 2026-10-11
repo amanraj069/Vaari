@@ -37,7 +37,7 @@ export function FarmerNewView({ whatsappNumber }: { whatsappNumber: string | nul
 
   return (
     <>
-      <div className="text-lg">
+      <div className="text-base sm:text-lg">
         {noSession ? (
           <div className="mx-auto max-w-xl">
             <StateMessage
@@ -55,11 +55,12 @@ export function FarmerNewView({ whatsappNumber }: { whatsappNumber: string | nul
           <StateMessage tone="error" title={tc("errorTitle")} body={tc("errorBody")} action={<Button onClick={() => options.refetch()}>{tc("retry")}</Button>} />
         ) : (
           <>
-            <PageHeader className="mb-6" back={<BackButton fallback="/dashboard" />} title={t("title")} description={t("subtitle")} />
+            <PageHeader className="mb-6" back={<BackButton fallback="/dashboard" />} title={t("title")} description={t("subtitle")} shortDescription={t("subtitleShort")} />
             <PageColumns
               main={options.isPending ? <Skeleton className="h-96" /> : <FarmerTicketForm villages={options.data.villages} today={options.data.today} onSubmit={book} />}
               aside={
-                <div className="space-y-5">
+                // Tablets: the two help cards side by side under the task instead of one long column.
+                <div className="grid items-start gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-1">
                   <WhatsAppStart number={whatsappNumber} />
                   <DateGuide />
                 </div>

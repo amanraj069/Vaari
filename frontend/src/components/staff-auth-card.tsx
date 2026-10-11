@@ -355,7 +355,7 @@ export function StaffAuthCard({
     <div className="auth-form mx-auto w-full max-w-md">
       <div className="flex items-center gap-1">
         <BackButton fallback={`/signin?pick=${role}`} />
-        <h1 className="min-w-0 font-display text-3xl leading-tight tracking-tight">{title}</h1>
+        <h1 className="min-w-0 font-display text-[1.625rem] leading-tight tracking-tight sm:text-3xl">{title}</h1>
       </div>
 
       {choosing ? (
@@ -387,12 +387,12 @@ export function StaffAuthCard({
             className={choosing ? "" : "mt-6"}
           >
             {mode === "confirm" ? (
-              <p className="mb-4 flex gap-2 text-base text-ink-muted">
+              <p className="mb-4 flex gap-2 text-sm text-ink-muted sm:text-base">
                 <MailCheck aria-hidden className="mt-0.5 size-5 shrink-0 text-wheat-deep" strokeWidth={1.75} />
                 {t("confirmBody", { email: email.trim() })}
               </p>
             ) : mode === "forgot" ? (
-              <p className="mb-4 text-base text-ink-muted">{t("forgotBody")}</p>
+              <p className="mb-4 text-sm text-ink-muted sm:text-base">{t("forgotBody")}</p>
             ) : null}
             {notice ? (
               <p role="status" className="mb-4 rounded-control border border-field/30 bg-field-soft/60 px-3 py-2 text-sm text-ink">

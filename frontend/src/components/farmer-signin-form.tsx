@@ -9,7 +9,7 @@
  * cookie. For a demo farmer's phone nothing is sent: the code is shown on screen, labelled as a demo. Every
  * refusal from the API has its own sentence, and a button never sits dim without saying why.
  */
-import { ArrowLeft, Check, KeyRound } from "lucide-react";
+import { Check, KeyRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { farmerOtpSentSchema, type FarmerOtpSent } from "@/shared";
@@ -168,9 +168,9 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
   const shown = sent ?? CODE_SHAPE;
 
   return (
-    <section aria-label={t("title")} className="auth-form grid min-h-[36rem] sm:min-h-[34rem]">
+    <section aria-label={t("title")} className="auth-form grid min-h-[35rem] sm:min-h-[31rem] lg:min-h-[30rem]">
       <Panel step="phone" current={step}>
-        <form onSubmit={sendCode} noValidate className="flex flex-1 flex-col text-lg">
+        <form onSubmit={sendCode} noValidate className="flex flex-1 flex-col text-base sm:text-lg">
           <label className="block">
             <span className="font-medium">{t("phoneLabel")}</span>
             <span className="mt-2 flex min-h-12 overflow-hidden rounded-control border border-line-strong bg-paper focus-within:ring-2 focus-within:ring-ink">
@@ -192,7 +192,7 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
                 className="min-w-0 flex-1 bg-transparent px-3 tabular outline-none placeholder:text-ink-muted/60"
               />
             </span>
-            <span id="farmer-phone-help" className={`mt-2 block text-base ${phoneInvalid ? "text-ember-deep" : "text-ink-muted"}`}>
+            <span id="farmer-phone-help" className={`mt-2 block text-sm sm:text-base ${phoneInvalid ? "text-ember-deep" : "text-ink-muted"}`}>
               {phoneInvalid ? t("phoneInvalid") : t("phoneHelp")}
             </span>
           </label>
@@ -210,7 +210,7 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
             <span aria-hidden className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md border-2 border-ink-muted transition-colors peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper">
               {consent ? <Check className="size-4" strokeWidth={3} /> : null}
             </span>
-            <span className="text-base">{t("consentLabel")}</span>
+            <span className="text-sm sm:text-base">{t("consentLabel")}</span>
           </label>
           <div className="mt-auto pt-5">
             {step === "phone" ? errorLine : null}
@@ -218,7 +218,7 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
               <WhatsAppGlyph className="size-5" />
               {busy && step === "phone" ? t("sending") : t("sendCode")}
             </Button>
-            <p aria-live="polite" className="mt-2 min-h-6 text-center text-base text-wheat-deep">
+            <p aria-live="polite" className="mt-2 min-h-6 text-center text-sm sm:text-base text-wheat-deep">
               {hint}
             </p>
           </div>
@@ -226,27 +226,32 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
       </Panel>
 
       <Panel step="code" current={step}>
-        <h2 className="flex items-center gap-2 font-display text-2xl">
+        <h2 className="flex items-center gap-2 font-display text-[1.375rem] sm:text-2xl">
           <KeyRound aria-hidden className="size-6 text-wheat-deep" strokeWidth={1.75} />
           {t("codeTitle")}
         </h2>
-        <p className="mt-2 text-base text-ink-muted">{t("codeSentTo", { phone: spaced(shown.digits) })}</p>
-        <Button variant="quiet" className="-ml-3 mt-1 min-h-11 w-fit px-3 text-wheat-deep" onClick={backToPhone}>
-          <ArrowLeft aria-hidden className="size-4" strokeWidth={1.75} />
-          {t("changeNumber")}
-        </Button>
+        {/* "Change it" sits in the sentence, not on its own row, to keep this (the tallest) step short;
+            its vertical padding keeps the tap target tall without moving the lines. */}
+        <p className="mt-2 text-sm sm:text-base text-ink-muted">
+          {t("codeSentTo", { phone: spaced(shown.digits) })}{" "}
+          <button type="button" onClick={backToPhone} className="inline py-2.5 font-medium text-wheat-deep underline decoration-wheat-deep/40 underline-offset-4 hover:decoration-wheat-deep">
+            {t("changeNumber")}
+          </button>
+        </p>
 
         {shown.channel === "demo" && shown.demoCode ? (
-          <div className="mt-3 rounded-control border border-wheat-deep/30 bg-wheat-soft/60 p-4">
-            <p className="text-sm font-medium text-wheat-deep">{t("demoCodeTitle")}</p>
-            <p className="mt-1 text-sm text-ink-muted">{t("demoCodeBody")}</p>
-            <p className="mt-2 font-display text-3xl tabular" data-testid={sent ? "demo-code" : undefined}>
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-control border border-wheat-deep/30 bg-wheat-soft/60 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-wheat-deep">{t("demoCodeTitle")}</p>
+              <p className="mt-0.5 text-sm text-ink-muted">{t("demoCodeBody")}</p>
+            </div>
+            <p className="shrink-0 font-display text-3xl tabular" data-testid={sent ? "demo-code" : undefined}>
               {shown.demoCode}
             </p>
           </div>
         ) : null}
 
-        <form onSubmit={verify} className="mt-5 flex flex-1 flex-col text-lg">
+        <form onSubmit={verify} className="mt-5 flex flex-1 flex-col text-base sm:text-lg">
           <label className="block">
             <span className="font-medium">{t("codeLabel")}</span>
             <input
@@ -275,8 +280,8 @@ export function FarmerSigninForm({ next = "/dashboard", onSignedIn = openPage }:
       </Panel>
 
       <Panel step="name" current={step}>
-        <h2 className="font-display text-2xl">{t("nameTitle")}</h2>
-        <p className="mb-5 mt-2 text-base text-ink-muted">{t("nameBody")}</p>
+        <h2 className="font-display text-[1.375rem] sm:text-2xl">{t("nameTitle")}</h2>
+        <p className="mb-5 mt-2 text-sm sm:text-base text-ink-muted">{t("nameBody")}</p>
         <FarmerNameForm askConsent={false} consentGiven={consent} onDone={() => onSignedIn(next)} />
       </Panel>
     </section>

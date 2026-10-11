@@ -74,7 +74,7 @@ export function SignInChooser({
             <WhatsAppSignInCard />
           </section>
 
-          <section aria-labelledby="signin-staff" className="mt-6">
+          <section aria-labelledby="signin-staff" className="mt-5 sm:mt-6">
             <Eyebrow id="signin-staff">{t("eyebrowStaff")}</Eyebrow>
             <div className={SECTION}>
               <ButtonLink
@@ -93,13 +93,13 @@ export function SignInChooser({
                       <button
               type="button"
               onClick={() => setView("demo")}
-              className={`group mt-6 flex min-h-14 w-full items-center gap-3 text-left transition-colors duration-150 hover:border-ink/50 lg:mt-auto ${SECTION}`}
+              className={`group mt-5 flex min-h-14 w-full items-center gap-3 text-left sm:mt-6 transition-colors duration-150 hover:border-ink/50 lg:mt-auto ${SECTION}`}
             >
               <span className="min-w-0 flex-1">
                 <span className="block font-medium leading-tight">
                   {t("demoOpen")}
                 </span>
-                <span className="block text-sm text-ink-muted">
+                <span className="mt-0.5 block text-[0.8125rem] text-ink-muted sm:text-sm">
                   {t("demoToggleBody")}
                 </span>
               </span>
@@ -130,7 +130,7 @@ export function SignInChooser({
           </Button>
           <h2
             id="signin-demo-title"
-            className="mt-2 font-display text-2xl leading-tight"
+            className="mt-2 font-display text-xl leading-tight sm:text-2xl"
           >
             {t("demoTitle")}
           </h2>

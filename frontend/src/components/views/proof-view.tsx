@@ -60,7 +60,7 @@ export function ProofView() {
       ) : (
         <>
           <ProofHero results={proof.data} />
-          <div className="mt-20">
+          <div className="mt-14 sm:mt-20">
             <ResultsTable results={proof.data} />
           </div>
           <SeasonReplay replay={proof.data.replay} runs={proof.data.runs} seasonStartDate={proof.data.seasonStartDate} />

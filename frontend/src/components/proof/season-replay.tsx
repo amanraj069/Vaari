@@ -47,7 +47,7 @@ function Legend({ optimumDate }: { optimumDate: string }) {
     { outcome: "burned", label: t("outcomeBurned") },
   ];
   return (
-    <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-full border border-line bg-surface px-4 py-2 text-sm">
+    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-line bg-surface px-4 py-2 text-[0.8125rem] sm:gap-x-5 sm:rounded-full sm:text-sm">
       {items.map((item) => (
         <li key={item.outcome} className="flex items-center gap-2">
           <svg aria-hidden width={12} height={12} viewBox="-6 -6 12 12">
@@ -71,7 +71,7 @@ function PolicyMap({ replay, policy, optimumDate, seasonStartDate }: { replay: R
   const summary = { onTime: formatNumber(counts.onTime, "fields"), late: formatNumber(counts.late, "fields"), burned: counts.burned, date: optimumDate };
   const clipId = `district-clip-${policy}`;
   return (
-    <figure className="flex w-full min-w-0 flex-col rounded-card border border-line bg-surface p-5">
+    <figure className="flex w-full min-w-0 flex-col rounded-card border border-line bg-surface p-4 sm:p-5">
       <figcaption className="flex items-center gap-2 font-display text-lg">
         <span aria-hidden className="h-0.5 w-5 rounded-full" style={{ background: POLICY_COLOUR[policy] }} />
         {t(`policy_${policy}`)}
@@ -129,7 +129,7 @@ function PolicyMap({ replay, policy, optimumDate, seasonStartDate }: { replay: R
           </text>
         </g>
       </svg>
-      <p className="mt-4 text-sm text-ink-muted">{t("mapCaption", summary)}</p>
+      <p className="mt-3 text-[0.8125rem] text-ink-muted sm:mt-4 sm:text-sm">{t("mapCaption", summary)}</p>
     </figure>
   );
 }
@@ -139,10 +139,10 @@ export function SeasonReplay({ replay, runs, seasonStartDate }: { replay: Replay
   const dates = useDates();
   const optimumDate = dates.dayMonth(dayToIso(seasonStartDate, replay.optimumLastDay));
   return (
-    <section aria-labelledby="replay-title" className="mt-20">
+    <section aria-labelledby="replay-title" className="mt-14 sm:mt-20">
       <SectionHeader id="replay-title" title={t("replayTitle")} body={t("replayBody", { runs })} aside={<Legend optimumDate={optimumDate} />} />
       {/* The three maps rise one after another, a beat apart. */}
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:mt-8 md:grid-cols-2 xl:grid-cols-3">
         {POLICY_ORDER.map((policy, index) => (
           <Rise key={policy} delay={index * 0.1} className="flex min-w-0">
             <PolicyMap replay={replay} policy={policy} optimumDate={optimumDate} seasonStartDate={seasonStartDate} />

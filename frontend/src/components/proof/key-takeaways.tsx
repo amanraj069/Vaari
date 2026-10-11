@@ -15,13 +15,13 @@ import { Rise, SectionHeader } from "@/components/proof/section-header";
 
 function Takeaway({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
-    <li className="flex gap-4">
-      <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-full border border-wheat-deep/40 text-wheat-deep">
+    <li className="flex gap-3 sm:gap-4">
+      <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full border border-wheat-deep/40 text-wheat-deep sm:size-14">
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block font-display text-xl leading-snug">{title}</span>
-        <span className="mt-1 block text-sm text-ink-muted">{body}</span>
+        <span className="block font-display text-lg leading-snug sm:text-xl">{title}</span>
+        <span className="mt-1 block text-[0.8125rem] text-ink-muted sm:text-sm">{body}</span>
       </span>
     </li>
   );
@@ -44,10 +44,10 @@ export function KeyTakeaways({ results }: { results: ProofResults }) {
   const promises = base.results.promisesKeptPct.vaari;
   const icon = "size-6";
   return (
-    <section aria-labelledby="takeaways-title" className="mt-20">
+    <section aria-labelledby="takeaways-title" className="mt-14 sm:mt-20">
       <SectionHeader id="takeaways-title" title={t("takeawaysTitle")} />
-      <Rise className="mt-8">
-        <ul className="grid gap-8 rounded-card border border-line bg-surface p-6 sm:grid-cols-2 sm:p-8 xl:grid-cols-4">
+      <Rise className="mt-6 sm:mt-8">
+        <ul className="grid gap-6 rounded-card border border-line bg-surface p-5 sm:grid-cols-2 sm:gap-8 sm:p-8 xl:grid-cols-4">
           <Takeaway
             icon={<Users className={icon} strokeWidth={1.5} />}
             title={t("takeFarmersTitle")}
@@ -90,7 +90,7 @@ export function KeyTakeaways({ results }: { results: ProofResults }) {
           />
         </ul>
       </Rise>
-      <p className="mt-4 text-center text-xs text-ink-muted">{t("kpiFootnote", { runs: results.runs })}</p>
+      <p className="mt-3 text-xs text-ink-muted sm:mt-4 sm:text-center">{t("kpiFootnote", { runs: results.runs })}</p>
     </section>
   );
 }

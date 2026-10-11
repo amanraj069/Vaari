@@ -24,7 +24,7 @@ export function Slider({ label, min, max, value, onChange, valueText, minLabel, 
   return (
     <div>
       <label htmlFor={id} className="font-medium">{label}</label>
-      <p className="mt-1 font-display text-3xl tabular" aria-hidden>{valueText}</p>
+      <p className="mt-1 font-display text-2xl leading-tight tabular sm:text-3xl" aria-hidden>{valueText}</p>
       <input
         id={id}
         type="range"

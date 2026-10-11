@@ -14,6 +14,7 @@ import { toE164, type Booking, type BookingInput, type VillageOption } from "@/s
 import { copyText } from "@/lib/api";
 import { useDates } from "@/lib/dates";
 import { AcresStep, ReadyStep, VillageStep, WaitStep, addDays, readyChoices } from "./field-steps";
+import { StackPanel } from "./stack-panel";
 import { StepProgress } from "./step-progress";
 import { useToast } from "./toast";
 import { Button } from "./ui";
@@ -123,8 +124,10 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
         <StepProgress steps={steps} current={step} label={t("progress")} />
       </div>
 
-      <div className="mt-6 text-lg">
-        {step === 0 ? (
+      {/* Every step stays in one grid cell (StackPanel): the box is as tall as its tallest step and
+          keeps that size through every step, so Back and Next never move. */}
+      <div className="mt-6 grid text-lg">
+        {[
           <label className="block">
             <span className="font-display text-2xl">{t("farmerQuestion")}</span>
             <input
@@ -135,8 +138,7 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
               className="mt-3 min-h-12 w-full rounded-control border border-line-strong bg-paper px-3"
             />
             <span className="mt-2 block text-base text-ink-muted">{t("farmerHelp")}</span>
-          </label>
-        ) : step === 1 ? (
+          </label>,
           <div className="space-y-5">
             <label className="block">
               <span className="font-display text-2xl">{t("phoneQuestion", { name: farmerName.trim() })}</span>
@@ -164,16 +166,11 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
               <span className="text-base">{t("consentLabel", { name: farmerName.trim() })}</span>
             </label>
             {!consent && phoneE164 ? <p className="text-sm text-ink-muted">{t("consentRequired")}</p> : null}
-          </div>
-        ) : step === 2 ? (
-          <VillageStep villages={villages} villageId={villageId} onPick={setVillageId} search={search} onSearch={setSearch} />
-        ) : step === 3 ? (
-          <AcresStep acres={acres} onChange={setAcres} />
-        ) : step === 4 ? (
-          <ReadyStep options={readyOptions} readyDate={readyDate} onPick={setReadyDate} />
-        ) : step === 5 ? (
-          <WaitStep question={t("waitQuestion")} help={t("waitHelp")} waitDays={waitDays} onChange={setWaitDays} readyDate={readyDate} />
-        ) : (
+          </div>,
+          <VillageStep villages={villages} villageId={villageId} onPick={setVillageId} search={search} onSearch={setSearch} />,
+          <AcresStep acres={acres} onChange={setAcres} />,
+          <ReadyStep options={readyOptions} readyDate={readyDate} onPick={setReadyDate} />,
+          <WaitStep question={t("waitQuestion")} help={t("waitHelp")} waitDays={waitDays} onChange={setWaitDays} readyDate={readyDate} />,
           <div>
             <h3 className="font-display text-2xl">{t("reviewTitle")}</h3>
             <dl className="mt-4 divide-y divide-line rounded-card border border-line bg-paper">
@@ -202,7 +199,11 @@ export function BookForm({ villages, today, onSubmit, origin }: Props) {
               </p>
             ) : null}
           </div>
-        )}
+        ].map((panel, index) => (
+          <StackPanel key={index} active={index === step} offset={index < step ? -16 : 16}>
+            {panel}
+          </StackPanel>
+        ))}
       </div>
 
       <div className="mt-5 flex gap-3">

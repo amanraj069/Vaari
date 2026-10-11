@@ -46,7 +46,8 @@ const PILL: Record<PillKind, { className: string; Icon: typeof ShieldCheck }> = 
 
 export function Pill({ kind, children, size = "sm" }: { kind: PillKind; children: ReactNode; size?: "sm" | "lg" }) {
   const { className, Icon } = PILL[kind];
-  const sizing = size === "lg" ? "text-base px-3 py-1.5 gap-2" : "text-xs px-2 py-0.5 gap-1";
+  // lg (a token's status) steps down one size on phones, where it shares a row with the token number.
+  const sizing = size === "lg" ? "text-sm px-2.5 py-1 gap-1.5 sm:text-base sm:px-3 sm:py-1.5 sm:gap-2" : "text-xs px-2 py-0.5 gap-1";
   return (
     <span className={`inline-flex items-center rounded-full border font-medium whitespace-nowrap ${sizing} ${className}`}>
       <Icon aria-hidden className={size === "lg" ? "size-4" : "size-3.5"} strokeWidth={1.75} />

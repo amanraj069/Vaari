@@ -58,7 +58,7 @@ export function FarmerNameForm({ onDone, askConsent = true, consentGiven = false
   }
 
   return (
-    <form onSubmit={submit} noValidate className={`flex flex-1 flex-col text-lg ${className}`}>
+    <form onSubmit={submit} noValidate className={`flex flex-1 flex-col text-base sm:text-lg ${className}`}>
       <div className="space-y-5">
         <label className="block">
           <span className="font-medium">{t("nameLabel")}</span>
@@ -72,7 +72,7 @@ export function FarmerNameForm({ onDone, askConsent = true, consentGiven = false
             autoComplete="name"
             className={FIELD_INPUT}
           />
-          <span className="mt-2 block text-base text-ink-muted">{t("nameHelp")}</span>
+          <span className="mt-2 block text-sm sm:text-base text-ink-muted">{t("nameHelp")}</span>
         </label>
         {!askConsent ? null : (
           <>
@@ -90,7 +90,7 @@ export function FarmerNameForm({ onDone, askConsent = true, consentGiven = false
           <span aria-hidden className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md border-2 border-ink-muted transition-colors peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper">
             {consent ? <Check className="size-4" strokeWidth={3} /> : null}
           </span>
-          <span className="text-base">{t("consentLabel")}</span>
+          <span className="text-sm sm:text-base">{t("consentLabel")}</span>
         </label>
           </>
         )}
@@ -104,7 +104,7 @@ export function FarmerNameForm({ onDone, askConsent = true, consentGiven = false
         <Button type="submit" variant="accent" aria-disabled={missing !== null || busy} className={`min-h-12 w-full ${missing ? "opacity-60" : ""}`}>
           {busy ? t("saving") : t("continue")}
         </Button>
-        <p aria-live="polite" className="mt-2 min-h-6 text-center text-base text-wheat-deep">
+        <p aria-live="polite" className="mt-2 min-h-6 text-center text-sm sm:text-base text-wheat-deep">
           {hint}
         </p>
       </div>

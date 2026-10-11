@@ -20,7 +20,7 @@ import { SeeAllMyFields } from "../whatsapp-link";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-1 py-4 sm:grid-cols-[12rem_1fr] sm:gap-6">
+    <div className="grid gap-2 py-4 sm:grid-cols-[12rem_1fr] sm:gap-6">
       <dt className="text-sm text-ink-muted">{label}</dt>
       <dd>{children}</dd>
     </div>
@@ -59,11 +59,11 @@ export function ProfileView({ viewer, whatsappNumber }: { viewer: Viewer; whatsa
     <>
       <DashHeader title={t("title")} />
 
-      <section aria-labelledby="profile-who" className="mt-6 max-w-3xl rounded-card border border-line bg-surface p-5 sm:p-6">
+      <section aria-labelledby="profile-who" className="mt-5 max-w-3xl rounded-card border border-line bg-surface p-4 sm:mt-6 sm:p-6">
         <div className="flex items-center gap-4">
           <Avatar name={name} />
           <div className="min-w-0">
-            <h2 id="profile-who" className="truncate text-xl font-semibold">
+            <h2 id="profile-who" className="truncate text-lg font-semibold sm:text-xl">
               {name ?? td("farmerNoName")}
             </h2>
             <p className="text-sm text-ink-muted">{roleLine}</p>
@@ -86,8 +86,8 @@ export function ProfileView({ viewer, whatsappNumber }: { viewer: Viewer; whatsa
             </>
           ) : (
             <Row label={t("phone")}>
-              <p className="flex items-start gap-2">
-                <Phone aria-hidden className="mt-1 size-4 shrink-0 text-wheat-deep" strokeWidth={1.75} />
+              <p className="flex items-start gap-2 text-sm sm:text-base">
+                <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-wheat-deep" strokeWidth={1.75} />
                 <span>{t("phoneBody")}</span>
               </p>
               {whatsappNumber ? (
@@ -100,7 +100,7 @@ export function ProfileView({ viewer, whatsappNumber }: { viewer: Viewer; whatsa
         </dl>
       </section>
 
-      <section aria-labelledby="profile-settings" className="mt-6 max-w-3xl rounded-card border border-line bg-surface p-5 sm:p-6">
+      <section aria-labelledby="profile-settings" className="mt-4 max-w-3xl rounded-card border border-line bg-surface p-4 sm:mt-6 sm:p-6">
         <h2 id="profile-settings" className="text-base font-semibold">
           {t("settingsTitle")}
         </h2>
@@ -131,7 +131,7 @@ export function ProfileView({ viewer, whatsappNumber }: { viewer: Viewer; whatsa
       </section>
 
       <div className="mt-6 max-w-3xl">
-        <Button variant="secondary" className="min-h-12" onClick={() => void signOut()}>
+        <Button variant="secondary" className="min-h-12 w-full sm:w-auto" onClick={() => void signOut()}>
           <LogOut aria-hidden className="size-4" strokeWidth={1.75} />
           {tc("signOut")}
         </Button>

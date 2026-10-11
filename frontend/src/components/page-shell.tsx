@@ -25,13 +25,14 @@ export function PageMain({ children, measure = "full", className = "" }: { child
 }
 
 /** The one page-title pattern: context line and simulated badge above, serif title (with an optional back chevron to its left), optional lead and actions. */
-export const PAGE_TITLE = "font-display text-3xl leading-tight tracking-tight sm:text-4xl";
+export const PAGE_TITLE = "font-display text-[1.625rem] leading-tight tracking-tight sm:text-4xl";
 
 export function PageHeader({
   title,
   context,
   badge,
   description,
+  shortDescription,
   actions,
   back,
   className = "",
@@ -40,6 +41,8 @@ export function PageHeader({
   context?: ReactNode;
   badge?: ReactNode;
   description?: ReactNode;
+  /** The lead on phones: one short line under the title; `description` from sm up. */
+  shortDescription?: ReactNode;
   actions?: ReactNode;
   back?: ReactNode;
   className?: string;
@@ -61,7 +64,19 @@ export function PageHeader({
         ) : (
           <h1 className={PAGE_TITLE}>{title}</h1>
         )}
-        {description ? <p className="mt-2 max-w-2xl text-ink-muted">{description}</p> : null}
+        {/* Phones: a small lead, so it stays two or three lines under the title; wider screens inherit the page's size. */}
+        {description ? (
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:mt-2 sm:text-[1em] sm:leading-normal">
+            {shortDescription ? (
+              <>
+                <span className="sm:hidden">{shortDescription}</span>
+                <span className="hidden sm:inline">{description}</span>
+              </>
+            ) : (
+              description
+            )}
+          </p>
+        ) : null}
       </div>
       {actions}
     </div>
@@ -81,12 +96,12 @@ export function PageColumns({ main, aside, className = "" }: { main: ReactNode; 
 /** A quiet card for an aside: icon + title, then whatever explains or helps. */
 export function AsideCard({ icon, title, children }: { icon: ReactNode; title: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
-      <h2 className="flex items-center gap-2 font-medium">
+    <section className="rounded-card border border-line bg-surface p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-[0.9375rem] font-medium sm:text-base">
         <span aria-hidden className="text-wheat-deep">{icon}</span>
         {title}
       </h2>
-      <div className="mt-3 text-base text-ink-muted">{children}</div>
+      <div className="mt-3 text-sm sm:text-base text-ink-muted">{children}</div>
     </section>
   );
 }

@@ -80,8 +80,8 @@ export function SlotPageClient({ whatsappNumber }: { whatsappNumber: string | nu
 
   return (
     <>
-      <header className="border-b border-line bg-paper/95">
-        <div className={`flex items-center gap-3 py-3 sm:py-4 ${PAGE_FRAME}`}>
+      <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
+        <div className={`flex min-h-16 items-center gap-3 py-2 sm:py-3 ${PAGE_FRAME}`}>
           <BrandMark />
           <div className="ml-auto flex items-center gap-1">
             <LanguageMenu />

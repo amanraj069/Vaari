@@ -28,11 +28,11 @@ export function MethodAndSources({ results }: { results: ProofResults }) {
   const constants = Object.entries(results.assumptions.constants).filter(([name]) => t.has(`con_${name}`));
 
   return (
-    <section aria-labelledby="method-title" className="mt-20 overflow-hidden rounded-card border border-line bg-surface">
+    <section aria-labelledby="method-title" className="mt-14 sm:mt-20 overflow-hidden rounded-card border border-line bg-surface">
       {/* The title is the toggle; its ::after stretches over the whole header so the card is one big target.
           Its 44px tap height is given back with -my-2, so the header's padding reads an even 20px. */}
-      <div className="relative flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-5 transition-colors duration-300 hover:bg-ink/[0.03] sm:flex-nowrap sm:px-6">
-        <div className="min-w-0 flex-1">
+      <div className="relative flex flex-col items-start gap-3 px-5 py-5 transition-colors duration-300 hover:bg-ink/[0.03] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6">
+        <div className="min-w-0 sm:flex-1">
           <h2 className="font-display text-xl">
             <button
               id="method-title"

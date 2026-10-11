@@ -13,22 +13,36 @@
 import { LineChart, Table2 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PolicyKey, ProofResults } from "@/shared";
 import { POLICY_COLOUR, POLICY_ORDER, formatNumber, sweepValueLabel } from "@/lib/proof";
 import { Rise, SectionHeader } from "@/components/proof/section-header";
 
-// Drawn at about the width a panel is shown, so 11px text stays 11px on a laptop.
-const WIDTH = 560;
-const HEIGHT = 290;
-const MARGIN = { left: 40, right: 74, top: 18, bottom: 46 };
-const LABEL_GAP = 14;
+// Drawn at about the width a panel is shown, so 11px text stays 11px on a laptop. A phone gets its
+// own, narrower drawing with larger type (about 10px on screen instead of 5px), so it neither
+// scrolls sideways nor shrinks the labels past reading.
+const WIDE = { WIDTH: 560, HEIGHT: 290, MARGIN: { left: 40, right: 74, top: 18, bottom: 46 }, LABEL_GAP: 14, AXIS_TEXT: "text-[10px]", LINE_TEXT: "text-[10.5px]" };
+// On a phone the x-axis title is a caption under the drawing (it can wrap there), so the bottom margin holds only the tick labels.
+const PHONE = { WIDTH: 340, HEIGHT: 252, MARGIN: { left: 34, right: 70, top: 20, bottom: 26 }, LABEL_GAP: 16, AXIS_TEXT: "text-[11.5px]", LINE_TEXT: "text-[12.5px]" };
+
+/** Below the sm breakpoint (640px). Starts wide on the server and in tests, then follows the screen. */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
 // Every card's note, front and back, under its title: full width, written to about the same length
 // (close to two full lines) and given the same two lines' space on wide screens, so all charts and
 // tables start on one line.
 const NOTE = "mt-2.5 text-xs leading-5 text-ink-muted md:min-h-10";
 // One face of a panel's two-sided card.
-const FACE = "flex min-w-0 flex-col rounded-card border border-line bg-surface p-5 [backface-visibility:hidden] [grid-area:1/1]";
+const FACE = "flex min-w-0 flex-col rounded-card border border-line bg-surface p-4 sm:p-5 [backface-visibility:hidden] [grid-area:1/1]";
 
 type Sweep = ProofResults["sweeps"][number];
 
@@ -40,6 +54,8 @@ function niceMax(value: number): number {
 function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
   const t = useTranslations("proof");
   const reduceMotion = useReducedMotion();
+  const narrow = useNarrow();
+  const { WIDTH, HEIGHT, MARGIN, LABEL_GAP, AXIS_TEXT, LINE_TEXT } = narrow ? PHONE : WIDE;
   const points = sweep.points;
   const xs = points.map((point) => point.value);
   const [minX, maxX] = [Math.min(...xs), Math.max(...xs)];
@@ -52,6 +68,7 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
   const pct = (value: number) => formatNumber(value, "percent");
   const valueLabel = (value: number) => sweepValueLabel(sweep.parameter, value);
   const title = t(`sweepTitle_${sweep.parameter}`);
+  const axisTitle = sweep.base !== null ? t("sweepAxisXBase", { axis: t(`sweepAxisX_${sweep.parameter}`), base: valueLabel(sweep.base) }) : t(`sweepAxisX_${sweep.parameter}`);
   const [flipped, setFlipped] = useState(false);
   const frontButton = useRef<HTMLButtonElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
@@ -62,7 +79,7 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
   };
   const header = (back: boolean) => (
     <div className="flex items-center justify-between gap-3">
-      <h3 className="font-display text-lg leading-snug">{title}</h3>
+      <h3 className="font-display text-base leading-snug sm:text-lg">{title}</h3>
       {/* A small pill drawn inside a full 44px tap target (the button itself is transparent). */}
       <button
         ref={back ? backButton : frontButton}
@@ -110,12 +127,12 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
           <p className={NOTE}>{t(`sweepNote_${sweep.parameter}`, { base: sweep.base ?? "" })}</p>
           {/* Never narrower than readable: on a phone the panel's chart scrolls sideways. */}
           <div className="mt-3 overflow-x-auto" tabIndex={flipped ? -1 : 0} role="region" aria-label={title}>
-            <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full min-w-[22rem]" role="img" aria-label={title}>
-              <text x={MARGIN.left} y={10} className="fill-ink-muted text-[10px]">{`${t("sweepAxisY")} (%)`}</text>
+            <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full sm:min-w-[22rem]" role="img" aria-label={title}>
+              <text x={MARGIN.left} y={10} className={`fill-ink-muted ${AXIS_TEXT}`}>{`${t("sweepAxisY")} (%)`}</text>
               {ticks.map((tick) => (
                 <g key={tick}>
                   <line x1={MARGIN.left} x2={MARGIN.left + plotWidth} y1={y(tick)} y2={y(tick)} className="stroke-line" strokeWidth={1} />
-                  <text x={MARGIN.left - 7} y={y(tick) + 4} textAnchor="end" className="fill-ink-muted text-[10px] tabular">
+                  <text x={MARGIN.left - 7} y={y(tick) + 4} textAnchor="end" className={`fill-ink-muted ${AXIS_TEXT} tabular`}>
                     {pct(tick)}
                   </text>
                 </g>
@@ -130,14 +147,16 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
                   x={x(value)}
                   y={MARGIN.top + plotHeight + 16}
                   textAnchor="middle"
-                  className={`text-[10px] tabular ${value === sweep.base ? "fill-ink font-semibold" : "fill-ink-muted"}`}
+                  className={`${AXIS_TEXT} tabular ${value === sweep.base ? "fill-ink font-semibold" : "fill-ink-muted"}`}
                 >
                   {valueLabel(value)}
                 </text>
               ))}
-              <text x={MARGIN.left + plotWidth / 2} y={HEIGHT - 6} textAnchor="middle" className="fill-ink-muted text-[10px]">
-                {sweep.base !== null ? t("sweepAxisXBase", { axis: t(`sweepAxisX_${sweep.parameter}`), base: valueLabel(sweep.base) }) : t(`sweepAxisX_${sweep.parameter}`)}
-              </text>
+              {narrow ? null : (
+                <text x={MARGIN.left + plotWidth / 2} y={HEIGHT - 6} textAnchor="middle" className={`fill-ink-muted ${AXIS_TEXT}`}>
+                  {axisTitle}
+                </text>
+              )}
 
               {POLICY_ORDER.map((policy: PolicyKey, order) => {
                 const present = points
@@ -186,12 +205,13 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
               {labels.map((label) => (
                 <motion.g key={label.policy} {...fade(baseDelay + 1)}>
                   <line x1={x(maxX) + 7} x2={x(maxX) + 16} y1={label.y} y2={label.y} style={{ stroke: POLICY_COLOUR[label.policy] }} strokeWidth={2} />
-                  <text x={x(maxX) + 20} y={label.y + 3.5} className="fill-ink text-[10.5px]">
+                  <text x={x(maxX) + 20} y={label.y + 3.5} className={`fill-ink ${LINE_TEXT}`}>
                     {t(`policyShort_${label.policy}`)}
                   </text>
                 </motion.g>
               ))}
             </svg>
+            {narrow ? <p className="mt-1 text-center text-[0.6875rem] text-ink-muted">{axisTitle}</p> : null}
           </div>
         </div>
         <div inert={!flipped} aria-hidden={!flipped} className={`${FACE} [transform:rotateY(180deg)] ${flipped ? "" : "pointer-events-none"}`}>
@@ -247,7 +267,7 @@ function SweepPanel({ sweep, index }: { sweep: Sweep; index: number }) {
 export function SweepChart({ results }: { results: ProofResults }) {
   const t = useTranslations("proof");
   const legend = (
-    <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-full border border-line bg-surface px-4 py-2 text-sm" aria-label={t("sweepLegend")}>
+    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-line bg-surface px-4 py-2 text-[0.8125rem] sm:justify-center sm:gap-x-5 sm:rounded-full sm:text-sm" aria-label={t("sweepLegend")}>
       {POLICY_ORDER.map((policy) => (
         <li key={policy} className="flex items-center gap-2">
           <span aria-hidden className="h-0.5 w-5 rounded-full" style={{ background: POLICY_COLOUR[policy] }} />
@@ -257,9 +277,9 @@ export function SweepChart({ results }: { results: ProofResults }) {
     </ul>
   );
   return (
-    <section aria-labelledby="sweep-title" className="mt-20 min-w-0">
+    <section aria-labelledby="sweep-title" className="mt-14 sm:mt-20 min-w-0">
       <SectionHeader id="sweep-title" title={t("sweepTitle")} body={t("sweepBody", { runs: results.sweepRuns, centre: results.sweeps[0]?.centre ?? "" })} aside={legend} />
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:mt-8 sm:gap-5 md:grid-cols-2">
         {results.sweeps.map((sweep, index) => (
           <SweepPanel key={sweep.parameter} sweep={sweep} index={index} />
         ))}

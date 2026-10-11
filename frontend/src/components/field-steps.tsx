@@ -43,23 +43,26 @@ export function VillageStep({
   const filtered = (villages ?? []).filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase()));
   return (
     <fieldset>
-      <legend className="font-display text-2xl">{tr("villageQuestion")}</legend>
+      <legend className="font-display text-xl leading-snug sm:text-2xl">{tr("villageQuestion")}</legend>
       <label className="relative mt-3 block">
         <span className="sr-only">{tr("villageSearch")}</span>
         <Search aria-hidden className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-ink-muted" strokeWidth={1.75} />
         <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={tr("villageSearch")} className="min-h-12 w-full rounded-control border border-line-strong bg-paper pl-10 pr-3" />
       </label>
       {villages === null ? (
-        <Skeleton className="mt-3 h-40" />
+        <Skeleton className="mt-3 h-[17.5rem]" />
       ) : (
-        <div className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+        // A fixed-height box (about four rows): a long list scrolls inside it, and a search that leaves
+        // two villages, or none, never changes the size of the form around it.
+        <div className="mt-3 grid h-[17.5rem] grid-cols-2 content-start gap-2 overflow-y-auto overscroll-contain pr-1">
+          {filtered.length === 0 ? <p className="col-span-2 px-1 pt-2 text-sm text-ink-muted sm:text-base">{tr("villageNone")}</p> : null}
           {filtered.map((item) => (
             <button
               key={item.id}
               type="button"
               aria-pressed={villageId === item.id}
               onClick={() => onPick(item.id)}
-              className={`min-h-12 rounded-control border px-3 text-left ${villageId === item.id ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
+              className={`flex min-h-14 items-center rounded-control border px-3 py-2 text-left text-base leading-snug break-words ${villageId === item.id ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
             >
               {item.name}
             </button>
@@ -75,8 +78,8 @@ export function AcresStep({ acres, onChange }: { acres: number; onChange: (updat
   const tc = useTranslations("common");
   return (
     <fieldset>
-      <legend className="font-display text-2xl">{tr("acresQuestion")}</legend>
-      <div className="mt-6 flex items-center justify-center gap-6">
+      <legend className="font-display text-xl leading-snug sm:text-2xl">{tr("acresQuestion")}</legend>
+      <div className="mt-6 flex items-center justify-center gap-4 sm:gap-6">
         <button type="button" aria-label={tr("decrease")} onClick={() => onChange((value) => Math.max(0.5, value - 0.5))} className="grid size-14 place-items-center rounded-full border border-line-strong bg-paper">
           <Minus aria-hidden className="size-6" strokeWidth={1.75} />
         </button>
@@ -85,8 +88,8 @@ export function AcresStep({ acres, onChange }: { acres: number; onChange: (updat
           <Plus aria-hidden className="size-6" strokeWidth={1.75} />
         </button>
       </div>
-      <p className="mt-2 text-center text-ink-muted">{tc("acres", { acres })}</p>
-      <p className="mt-4 text-base text-ink-muted">{tr("acresHelp")}</p>
+      <p className="mt-2 text-center text-sm sm:text-base text-ink-muted">{tc("acres", { acres })}</p>
+      <p className="mt-4 text-sm sm:text-base text-ink-muted">{tr("acresHelp")}</p>
     </fieldset>
   );
 }
@@ -96,7 +99,7 @@ export function ReadyStep({ options, readyDate, onPick }: { options: string[]; r
   const dates = useDates();
   return (
     <fieldset>
-      <legend className="font-display text-2xl">{tr("readyQuestion")}</legend>
+      <legend className="font-display text-xl leading-snug sm:text-2xl">{tr("readyQuestion")}</legend>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {options.map((iso, index) => (
           <button
@@ -104,14 +107,14 @@ export function ReadyStep({ options, readyDate, onPick }: { options: string[]; r
             type="button"
             aria-pressed={readyDate === iso}
             onClick={() => onPick(iso)}
-            className={`min-h-14 rounded-control border px-3 text-left ${readyDate === iso ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
+            className={`min-h-14 rounded-control border px-3 py-2 text-left text-base ${readyDate === iso ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink/50"}`}
           >
             <span className="block text-sm opacity-80">{index === 0 ? tr("today") : index === 1 ? tr("tomorrow") : dates.weekday(iso)}</span>
             <span className="block tabular">{dates.dayMonth(iso)}</span>
           </button>
         ))}
       </div>
-      <p className="mt-3 text-base text-ink-muted">{tr("readyHelp")}</p>
+      <p className="mt-3 text-sm sm:text-base text-ink-muted">{tr("readyHelp")}</p>
     </fieldset>
   );
 }
@@ -121,7 +124,7 @@ export function WaitStep({ question, help, waitDays, onChange, readyDate }: { qu
   const dates = useDates();
   return (
     <div>
-      <p className="font-display text-2xl">{question}</p>
+      <p className="font-display text-xl leading-snug sm:text-2xl">{question}</p>
       <div className="mt-4">
         <Slider
           label={t("stepWait")}
@@ -134,7 +137,7 @@ export function WaitStep({ question, help, waitDays, onChange, readyDate }: { qu
           maxLabel={t("waitMax")}
         />
       </div>
-      <p className="mt-3 text-base text-ink-muted">{help}</p>
+      <p className="mt-3 text-sm sm:text-base text-ink-muted">{help}</p>
     </div>
   );
 }

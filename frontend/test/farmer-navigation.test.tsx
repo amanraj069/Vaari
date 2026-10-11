@@ -38,16 +38,18 @@ describe("Back", () => {
 
 describe("Open WhatsApp", () => {
   it.each([
-    ["en", "Sat Sri Akal", "Say hi to Vaari"],
-    ["pa", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ", "“ਸਤ ਸ੍ਰੀ ਅਕਾਲ”"],
-    ["hi", "सत श्री अकाल", "“सत श्री अकाल”"],
-  ] as const)("in %s types %s, in the link and the chat; the card says how", (locale, greeting, said) => {
+    ["en", "Sat Sri Akal"],
+    ["pa", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ"],
+    ["hi", "सत श्री अकाल"],
+  ] as const)("in %s types %s in the link and the chat, with phone mockup visible and no extra text fields", (locale, greeting) => {
     const { container } = renderWithIntl(<WhatsAppStart number="910000000000" />, locale);
     const link = container.querySelector("a[href^='https://wa.me/']");
     expect(link).toHaveAttribute("href", whatsappStartUrl("910000000000", greeting));
     expect(link?.getAttribute("href")).toBe(`https://wa.me/910000000000?text=${encodeURIComponent(greeting)}`);
     expect(screen.getByRole("img", { name: new RegExp(greeting) })).toBeInTheDocument();
-    expect(container.textContent).toContain(said);
+    expect(screen.queryByText(/No app to learn/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Example chat")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prefer to chat?")).not.toBeInTheDocument();
     // No line under the button explaining what it does.
     expect(container.querySelector("a + p")).toBeNull();
   });
