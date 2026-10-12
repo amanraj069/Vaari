@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://main.d2n4tg60h10ven.amplifyapp.com/"><b>Live app</b></a> ·
-  <a href="https://www.youtube.com/watch?v=nkL7OkR4PrQ"><b>Demo video (3 min)</b></a> ·
+  <a href="https://youtu.be/LLdcgSdiGdA"><b>Demo video (3 min)</b></a> ·
   <a href="https://main.d2n4tg60h10ven.amplifyapp.com/proof"><b>The evidence</b></a> ·
   <a href="#run-it-yourself">Run it yourself</a>
 </p>
@@ -35,8 +35,8 @@ Built in four days for the **WeMakeDevs x AWS Environmental Hacks**, Air track, 
 ## Watch it
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=nkL7OkR4PrQ">
-    <img src="https://img.youtube.com/vi/nkL7OkR4PrQ/maxresdefault.jpg" alt="Vaari demo video on YouTube" width="720">
+  <a href="https://youtu.be/LLdcgSdiGdA">
+    <img src="https://img.youtube.com/vi/LLdcgSdiGdA/maxresdefault.jpg" alt="Vaari demo video on YouTube" width="720">
   </a>
 </p>
 
